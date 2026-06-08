@@ -71,3 +71,46 @@ class VerifyRequest(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+
+
+# ── Admin ──
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AdminLoginResponse(BaseModel):
+    token: str
+
+
+class AdminStudentRow(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: str
+    batch: Batch
+    join_date: date
+    period: str
+    amount_paise: int
+    is_prorata: bool
+    status: str  # 'paid' | 'unpaid'
+    whatsapp_url: Optional[str] = None  # present only for unpaid students
+
+
+class BatchStat(BaseModel):
+    batch: Batch
+    batch_label: str
+    total_students: int
+    paid_count: int
+    unpaid_count: int
+    revenue_paise: int
+
+
+class AdminStats(BaseModel):
+    period: str
+    total_students: int
+    paid_count: int
+    unpaid_count: int
+    revenue_paise: int
+    attendance_this_month: int
+    per_batch: list[BatchStat]

@@ -166,6 +166,47 @@
   background: var(--unpaid-bg);
 }
 
+/* ── Admin tabs ── */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+}
+.tab:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text);
+}
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.admin-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 600px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+}
+.wa-btn {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #25d366;
+  color: #06351b;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* ── History table ── */
 .history table {
   width: 100%;

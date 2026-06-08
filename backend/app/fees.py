@@ -38,6 +38,12 @@ def period_of(d: date) -> str:
     return d.strftime("%Y-%m")
 
 
+def period_label(period: str) -> str:
+    """'2026-06' -> 'June 2026' for human-facing messages."""
+    year, month = parse_period(period)
+    return f"{calendar.month_name[month]} {year}"
+
+
 def parse_period(period: str) -> tuple[int, int]:
     year_s, month_s = period.split("-")
     year, month = int(year_s), int(month_s)
