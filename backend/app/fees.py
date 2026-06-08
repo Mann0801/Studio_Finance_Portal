@@ -51,6 +51,15 @@ def days_in_month(period: str) -> int:
     return calendar.monthrange(year, month)[1]
 
 
+def month_range(period: str) -> tuple[str, str]:
+    """(first day, first day of next month) as ISO date strings — for [start, end)
+    range queries over a calendar month."""
+    year, month = parse_period(period)
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    return start.isoformat(), end.isoformat()
+
+
 def _round_to_rupee_paise(paise: Decimal) -> int:
     """Round a paise amount to the nearest whole rupee, returned as paise."""
     rupees = (paise / Decimal(100)).quantize(Decimal(1), rounding=ROUND_HALF_UP)

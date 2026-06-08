@@ -19,14 +19,11 @@ _bearer = HTTPBearer(auto_error=True)
 ADMIN_TOKEN_TTL_SECONDS = 60 * 60 * 12  # 12h
 
 
-def get_current_student_id(
-    creds: HTTPAuthorizationCredentials = Depends(_bearer),
-) -> str:
-    """Verify a Supabase student JWT and return the user id (``sub``)."""
+def _decode_student_jwt(token: str) -> dict:
     settings = get_settings()
     try:
-        payload = jwt.decode(
-            creds.credentials,
+        return jwt.decode(
+            token,
             settings.supabase_jwt_secret,
             algorithms=["HS256"],
             audience="authenticated",
@@ -36,10 +33,28 @@ def get_current_student_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
+
+
+def get_current_student(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> dict:
+    """Verify a Supabase student JWT; return ``{"id": ..., "email": ...}``.
+
+    Email is read from the verified token (not client input) so it can't be
+    spoofed at signup.
+    """
+    payload = _decode_student_jwt(creds.credentials)
     sub = payload.get("sub")
     if not sub:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    return sub
+    return {"id": sub, "email": payload.get("email", "")}
+
+
+def get_current_student_id(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """Verify a Supabase student JWT and return the user id (``sub``)."""
+    return get_current_student(creds)["id"]
 
 
 def create_admin_token() -> str:

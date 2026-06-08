@@ -22,9 +22,12 @@ def health() -> dict:
     return {"status": "ok", "studio": settings.studio_name}
 
 
-# Routers are mounted as they are implemented in later build steps.
-# from .routers import students, payments, attendance, admin, webhooks
-# app.include_router(students.router)
+from .routers import students  # noqa: E402
+
+app.include_router(students.router)
+
+# Mounted in later build steps:
+# from .routers import payments, attendance, admin, webhooks
 # app.include_router(payments.router)
 # app.include_router(attendance.router)
 # app.include_router(admin.router)
