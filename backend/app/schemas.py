@@ -47,3 +47,27 @@ class DashboardOut(BaseModel):
     current: CurrentDue
     history: list[PaymentOut]
     attendance_this_month: int
+
+
+class OrderRequest(BaseModel):
+    # Optional; defaults to the current calendar month. The amount is NEVER taken
+    # from the client — the server computes it from batch + join date + period.
+    period: Optional[str] = None
+
+
+class OrderResponse(BaseModel):
+    key_id: str           # Razorpay public key id, for the checkout widget
+    order_id: str
+    amount_paise: int
+    currency: str = "INR"
+    period: str
+    studio_name: str
+    prefill_name: str
+    prefill_email: str
+    prefill_contact: str
+
+
+class VerifyRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str

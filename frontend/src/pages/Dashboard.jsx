@@ -1,18 +1,39 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { rupees } from '../lib/batches'
+import { payForCurrentMonth } from '../lib/razorpay'
 import { useAuth } from '../context/AuthContext'
 
 export default function Dashboard() {
   const { signOut } = useAuth()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [paying, setPaying] = useState(false)
+  const [payMsg, setPayMsg] = useState('')
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api('/api/me/dashboard')
       .then(setData)
       .catch((e) => setError(e.message))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function onPay() {
+    setPayMsg('')
+    setPaying(true)
+    try {
+      await payForCurrentMonth()
+      setPayMsg('Payment successful!')
+      load()
+    } catch (e) {
+      setPayMsg(e.message)
+    } finally {
+      setPaying(false)
+    }
+  }
 
   if (error) return <div className="center error">{error}</div>
   if (!data) return <div className="center muted">Loading your dashboard…</div>
@@ -43,9 +64,12 @@ export default function Dashboard() {
           </span>
           {current.is_prorata && <p className="muted small">Pro-rated first month</p>}
           {!paid && (
-            <button className="primary" disabled title="Payments arrive in the next step">
-              Pay now (coming soon)
+            <button className="primary" onClick={onPay} disabled={paying}>
+              {paying ? 'Processing…' : `Pay ${rupees(current.amount_paise)}`}
             </button>
+          )}
+          {payMsg && (
+            <p className={payMsg.includes('successful') ? 'notice' : 'error'}>{payMsg}</p>
           )}
         </div>
 
