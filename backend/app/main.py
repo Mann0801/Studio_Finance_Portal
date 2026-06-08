@@ -1,0 +1,31 @@
+"""FastAPI entrypoint: app setup, CORS, router mounting, health check."""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .config import get_settings
+
+settings = get_settings()
+
+app = FastAPI(title="Studio Finance API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health", tags=["meta"])
+def health() -> dict:
+    return {"status": "ok", "studio": settings.studio_name}
+
+
+# Routers are mounted as they are implemented in later build steps.
+# from .routers import students, payments, attendance, admin, webhooks
+# app.include_router(students.router)
+# app.include_router(payments.router)
+# app.include_router(attendance.router)
+# app.include_router(admin.router)
+# app.include_router(webhooks.router)
