@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     studio_name: str = "Your Studio Name"
     cors_origins: str = "http://localhost:5173"
     timezone: str = "Asia/Kolkata"
+    # Public URL of the student portal — used in WhatsApp/email reminder links.
+    student_portal_url: str = "http://localhost:5173"
 
     # Supabase
     supabase_url: str = ""
