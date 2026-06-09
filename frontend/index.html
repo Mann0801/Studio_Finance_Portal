@@ -2,11 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon-maskable.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0f0d" />
+    <meta name="description" content="Studio fees, payments and attendance — in your pocket." />
+    <!-- iOS standalone / installable hints -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Studio" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Studio</title>
   </head>
   <body>
+    <!-- Splash: visible immediately, removed by the app once mounted. -->
+    <div id="splash">
+      <div class="splash-logo">
+        <svg viewBox="0 0 48 48" width="72" height="72" aria-hidden="true">
+          <rect x="3" y="19" width="6" height="10" rx="2" fill="#16a34a" />
+          <rect x="39" y="19" width="6" height="10" rx="2" fill="#16a34a" />
+          <rect x="9" y="21" width="4" height="6" rx="1.5" fill="#22c55e" />
+          <rect x="35" y="21" width="4" height="6" rx="1.5" fill="#22c55e" />
+          <rect x="13" y="22" width="22" height="4" rx="2" fill="#4ade80" />
+        </svg>
+      </div>
+      <div class="splash-name">Studio</div>
+      <div class="splash-spinner"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

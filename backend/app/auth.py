@@ -13,41 +13,34 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .config import get_settings
+from .db import get_supabase
 
 _bearer = HTTPBearer(auto_error=True)
 
 ADMIN_TOKEN_TTL_SECONDS = 60 * 60 * 12  # 12h
 
 
-def _decode_student_jwt(token: str) -> dict:
-    settings = get_settings()
+def get_current_student(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> dict:
+    """Verify a Supabase student access token via the Auth API; return
+    ``{"id": ..., "email": ...}``.
+
+    Validating through Supabase (rather than decoding a JWT locally) works
+    regardless of the project's token-signing scheme, and the email comes from
+    the verified user record (not client input) so it can't be spoofed at signup.
+    """
     try:
-        return jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-    except jwt.PyJWTError:
+        resp = get_supabase().auth.get_user(creds.credentials)
+        user = getattr(resp, "user", None)
+    except Exception:
+        user = None
+    if not user or not user.id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
-
-
-def get_current_student(
-    creds: HTTPAuthorizationCredentials = Depends(_bearer),
-) -> dict:
-    """Verify a Supabase student JWT; return ``{"id": ..., "email": ...}``.
-
-    Email is read from the verified token (not client input) so it can't be
-    spoofed at signup.
-    """
-    payload = _decode_student_jwt(creds.credentials)
-    sub = payload.get("sub")
-    if not sub:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    return {"id": sub, "email": payload.get("email", "")}
+    return {"id": user.id, "email": user.email or ""}
 
 
 def get_current_student_id(

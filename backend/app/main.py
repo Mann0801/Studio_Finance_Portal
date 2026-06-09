@@ -22,12 +22,13 @@ def health() -> dict:
     return {"status": "ok", "studio": settings.studio_name}
 
 
-from .routers import admin, payments, students, webhooks  # noqa: E402
+from .routers import admin, announcements, payments, students, webhooks  # noqa: E402
 
 app.include_router(students.router)
 app.include_router(payments.router)
 app.include_router(webhooks.router)
 app.include_router(admin.router)
+app.include_router(announcements.router)
 
 # Mounted in later build steps:
 # from .routers import attendance

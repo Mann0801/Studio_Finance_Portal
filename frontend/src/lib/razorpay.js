@@ -16,10 +16,16 @@ function loadCheckout() {
 /**
  * Run the full pay flow for a period (default: current month):
  * create a server order -> open Razorpay Checkout -> verify the callback.
- * Resolves with the verified period on success; rejects on failure/dismissal.
+ *
+ * The amount is server-computed and locked into the order — the checkout shows
+ * it pre-filled and the student cannot change it. Resolves with
+ * `{ period, amountPaise, paymentId }` on success; rejects on failure/dismissal.
  */
-export async function payForCurrentMonth() {
-  const order = await api('/api/payments/order', { method: 'POST', body: {} })
+export async function payForMonth(period) {
+  const order = await api('/api/payments/order', {
+    method: 'POST',
+    body: period ? { period } : {},
+  })
   await loadCheckout()
 
   return new Promise((resolve, reject) => {
@@ -28,14 +34,14 @@ export async function payForCurrentMonth() {
       order_id: order.order_id,
       amount: order.amount_paise, // display only; the order is the source of truth
       currency: order.currency,
-      name: order.studio_name,
+      name: order.studio_name || 'Studio',
       description: `Fee for ${order.period}`,
       prefill: {
         name: order.prefill_name,
         email: order.prefill_email,
         contact: order.prefill_contact,
       },
-      theme: { color: '#6d5efc' },
+      theme: { color: '#16a34a' },
       handler: async (resp) => {
         try {
           const result = await api('/api/payments/verify', {
@@ -46,7 +52,11 @@ export async function payForCurrentMonth() {
               razorpay_signature: resp.razorpay_signature,
             },
           })
-          resolve(result.period)
+          resolve({
+            period: result.period,
+            amountPaise: order.amount_paise,
+            paymentId: resp.razorpay_payment_id,
+          })
         } catch (err) {
           reject(err)
         }
@@ -61,3 +71,6 @@ export async function payForCurrentMonth() {
     rzp.open()
   })
 }
+
+// Back-compat alias.
+export const payForCurrentMonth = () => payForMonth()

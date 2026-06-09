@@ -1,8 +1,10 @@
 """Tests for the pro-rata / full-fee logic — the correctness-critical core."""
 from datetime import date
 
+import pytest
+
 from app.constants import Batch
-from app.fees import compute_due
+from app.fees import compute_due, previous_period
 
 
 def test_full_fee_for_month_after_join():
@@ -51,3 +53,11 @@ def test_join_on_last_day_is_one_day():
     # June 30 days; join on the 30th -> 1 day. 2000 * 1/30 = 66.67 -> 67.
     due = compute_due(Batch.zumba, date(2026, 6, 30), "2026-06")
     assert due.amount_paise == 67_00
+
+
+@pytest.mark.parametrize(
+    "period,expected",
+    [("2026-06", "2026-05"), ("2026-01", "2025-12"), ("2026-12", "2026-11")],
+)
+def test_previous_period(period, expected):
+    assert previous_period(period) == expected

@@ -1,8 +1,9 @@
 """Razorpay webhook — authoritative server-to-server payment confirmation.
 
 Configure in the Razorpay dashboard with the URL
-``https://<your-backend>/api/webhooks/razorpay`` and the ``payment.captured``
-(and optionally ``order.paid``) events, using RAZORPAY_WEBHOOK_SECRET.
+``https://<your-backend>/webhook/razorpay`` (``/api/webhooks/razorpay`` is also
+accepted) and the ``payment.captured`` (and optionally ``order.paid``) events,
+using RAZORPAY_WEBHOOK_SECRET.
 """
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from ..payments_store import mark_paid
 from ..services import razorpay_service
 
-router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
+router = APIRouter(tags=["webhooks"])
 
 
 def _extract_order_and_payment(event: dict) -> tuple[str | None, str | None]:
@@ -25,7 +26,8 @@ def _extract_order_and_payment(event: dict) -> tuple[str | None, str | None]:
     return order_id, payment_id
 
 
-@router.post("/razorpay")
+@router.post("/webhook/razorpay")
+@router.post("/api/webhooks/razorpay")
 async def razorpay_webhook(
     request: Request,
     x_razorpay_signature: str = Header(default=""),

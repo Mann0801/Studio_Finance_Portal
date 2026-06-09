@@ -8,7 +8,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -30,19 +30,23 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="auth-card">
-      <h1>Admin login</h1>
+    <div className="auth-wrap">
+      <div className="auth-brand">
+        <img src="/icon.svg" alt="" className="logo" />
+        <h1>Admin</h1>
+        <p className="auth-sub">Studio management console</p>
+      </div>
       <form onSubmit={onSubmit} className="form">
         <label>
           Email
-          <input type="email" value={form.email} onChange={set('email')} required />
+          <input type="email" value={form.email} onChange={set('email')} autoComplete="username" required />
         </label>
         <label>
           Password
-          <input type="password" value={form.password} onChange={set('password')} required />
+          <input type="password" value={form.password} onChange={set('password')} autoComplete="current-password" required />
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
       </form>

@@ -52,10 +52,24 @@ create table if not exists public.attendance (
 
 create index if not exists attendance_date_idx on public.attendance (date);
 
+-- ── announcements ────────────────────────────────────────────────────────────
+-- A single banner the admin posts; all students see the latest active one.
+-- The backend (service role) writes; students read active rows.
+create table if not exists public.announcements (
+    id          uuid primary key default gen_random_uuid(),
+    message     text        not null,
+    active      boolean     not null default true,
+    created_at  timestamptz not null default now(),
+    updated_at  timestamptz not null default now()
+);
+
+create index if not exists announcements_active_idx on public.announcements (active, created_at desc);
+
 -- ── Row-Level Security ────────────────────────────────────────────────────────
-alter table public.students   enable row level security;
-alter table public.payments   enable row level security;
-alter table public.attendance enable row level security;
+alter table public.students      enable row level security;
+alter table public.payments      enable row level security;
+alter table public.attendance    enable row level security;
+alter table public.announcements enable row level security;
 
 -- Students may read only their own rows. (Service role bypasses RLS for writes.)
 drop policy if exists "students read own" on public.students;
@@ -69,3 +83,8 @@ create policy "payments read own" on public.payments
 drop policy if exists "attendance read own" on public.attendance;
 create policy "attendance read own" on public.attendance
     for select using (auth.uid() = student_id);
+
+-- Any authenticated student may read active announcements.
+drop policy if exists "announcements read active" on public.announcements;
+create policy "announcements read active" on public.announcements
+    for select using (active = true);

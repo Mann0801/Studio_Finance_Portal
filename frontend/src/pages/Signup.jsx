@@ -3,6 +3,26 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { BATCHES, rupees } from '../lib/batches'
 import { ensureProfile, savePendingProfile } from '../lib/profile'
+import { CheckIcon } from '../components/Icons'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validate(form) {
+  const errors = {}
+  if (!form.name.trim()) errors.name = 'Please enter your full name'
+  if (!form.email.trim()) errors.email = 'Email is required'
+  else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
+
+  const digits = form.phone.replace(/\D/g, '')
+  if (!form.phone.trim()) errors.phone = 'Phone number is required'
+  else if (digits.length !== 10) errors.phone = 'Enter exactly 10 digits'
+
+  if (!form.password) errors.password = 'Password is required'
+  else if (form.password.length < 6) errors.password = 'At least 6 characters'
+
+  if (!form.batch) errors.batch = 'Please select a batch'
+  return errors
+}
 
 export default function Signup() {
   const navigate = useNavigate()
@@ -11,36 +31,52 @@ export default function Signup() {
     email: '',
     phone: '',
     password: '',
-    batch: 'yoga',
+    batch: '', // nothing pre-selected — selection is mandatory
   })
+  const [errors, setErrors] = useState({})
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  const set = (k) => (e) => {
+    const value = e?.target ? e.target.value : e
+    setForm((f) => ({ ...f, [k]: value }))
+    if (submitted) setErrors((prev) => ({ ...prev, [k]: undefined }))
+  }
 
   async function onSubmit(e) {
     e.preventDefault()
     setError('')
     setNotice('')
+    setSubmitted(true)
+
+    const fieldErrors = validate(form)
+    setErrors(fieldErrors)
+    if (Object.keys(fieldErrors).length > 0) return
+
     setBusy(true)
     try {
-      const profile = { name: form.name, phone: form.phone, batch: form.batch }
+      const profile = {
+        name: form.name.trim(),
+        phone: form.phone.replace(/\D/g, ''),
+        batch: form.batch,
+      }
       const { data, error: signErr } = await supabase.auth.signUp({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
         options: { data: profile },
       })
       if (signErr) throw signErr
 
       if (data.session) {
-        // Email confirmation disabled: we have a session now — create the profile.
+        // No email confirmation required — go straight to first payment.
         await ensureProfile(profile)
-        navigate('/', { replace: true })
+        navigate('/first-payment', { replace: true })
       } else {
         // Email confirmation required: finish profile on first login.
         savePendingProfile(profile)
-        setNotice('Account created. Please confirm your email, then log in.')
+        setNotice('Account created. Please confirm your email, then log in to pay.')
       }
     } catch (err) {
       setError(err.message || 'Signup failed')
@@ -50,57 +86,96 @@ export default function Signup() {
   }
 
   return (
-    <div className="auth-card">
-      <h1>Join the studio</h1>
-      <form onSubmit={onSubmit} className="form">
+    <div className="auth-wrap">
+      <div className="auth-brand">
+        <img src="/icon.svg" alt="" className="logo" />
+        <h1>Join the studio</h1>
+        <p className="auth-sub">Create your account and pick a batch.</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="form" noValidate>
         <label>
           Full name
-          <input value={form.name} onChange={set('name')} required />
+          <input
+            value={form.name}
+            onChange={set('name')}
+            className={errors.name ? 'invalid' : ''}
+            autoComplete="name"
+          />
+          {errors.name && <span className="field-error">{errors.name}</span>}
         </label>
+
         <label>
           Email
-          <input type="email" value={form.email} onChange={set('email')} required />
+          <input
+            type="email"
+            value={form.email}
+            onChange={set('email')}
+            className={errors.email ? 'invalid' : ''}
+            autoComplete="email"
+          />
+          {errors.email && <span className="field-error">{errors.email}</span>}
         </label>
+
         <label>
           Phone
-          <input value={form.phone} onChange={set('phone')} placeholder="10-digit mobile" required />
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={form.phone}
+            onChange={set('phone')}
+            placeholder="10-digit mobile number"
+            className={errors.phone ? 'invalid' : ''}
+            autoComplete="tel"
+          />
+          {errors.phone && <span className="field-error">{errors.phone}</span>}
         </label>
+
         <label>
           Password
           <input
             type="password"
             value={form.password}
             onChange={set('password')}
-            minLength={6}
-            required
+            className={errors.password ? 'invalid' : ''}
+            autoComplete="new-password"
           />
+          {errors.password && <span className="field-error">{errors.password}</span>}
         </label>
 
-        <fieldset className="batches">
-          <legend>Choose your batch</legend>
-          {BATCHES.map((b) => (
-            <label key={b.id} className={`batch ${form.batch === b.id ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="batch"
-                value={b.id}
-                checked={form.batch === b.id}
-                onChange={set('batch')}
-              />
-              <span className="batch-name">{b.label}</span>
-              <span className="batch-price">{rupees(b.monthly * 100)}/mo</span>
-            </label>
-          ))}
-        </fieldset>
+        <div>
+          <div className="legend" style={{ marginBottom: 10 }}>Choose your batch</div>
+          <div className="batch-list">
+            {BATCHES.map((b) => (
+              <label
+                key={b.id}
+                className={`batch-opt ${form.batch === b.id ? 'selected' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="batch"
+                  value={b.id}
+                  checked={form.batch === b.id}
+                  onChange={() => set('batch')(b.id)}
+                />
+                <span className="check">{form.batch === b.id ? <CheckIcon width={13} height={13} /> : ''}</span>
+                <span className="b-name">{b.label}</span>
+                <span className="b-price">{rupees(b.monthly * 100)}/mo</span>
+              </label>
+            ))}
+          </div>
+          {errors.batch && <span className="field-error">{errors.batch}</span>}
+        </div>
 
         {error && <p className="error">{error}</p>}
         {notice && <p className="notice">{notice}</p>}
 
-        <button type="submit" disabled={busy}>
-          {busy ? 'Creating…' : 'Sign up'}
+        <button type="submit" className="btn primary lg block" disabled={busy}>
+          {busy ? 'Creating account…' : 'Sign up & continue'}
         </button>
       </form>
-      <p className="muted">
+
+      <p className="auth-foot">
         Already have an account? <Link to="/login">Log in</Link>
       </p>
     </div>
