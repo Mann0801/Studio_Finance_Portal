@@ -103,7 +103,9 @@ class BatchStat(BaseModel):
     total_students: int
     paid_count: int
     unpaid_count: int
-    revenue_paise: int
+    revenue_paise: int        # actual collected this period
+    expected_paise: int       # sum of dues for enrolled students
+    collection_rate: float    # 0–100, actual / expected
 
 
 class AdminStats(BaseModel):
@@ -111,6 +113,21 @@ class AdminStats(BaseModel):
     total_students: int
     paid_count: int
     unpaid_count: int
-    revenue_paise: int
+    revenue_paise: int                  # actual collected this period
+    expected_paise: int                 # sum of dues across all students
+    collection_rate: float              # 0–100
+    last_month_revenue_paise: int
+    revenue_change_pct: float           # % change vs last month's collection
     attendance_this_month: int
     per_batch: list[BatchStat]
+
+
+# ── Announcements ──
+class AnnouncementIn(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+
+
+class AnnouncementOut(BaseModel):
+    id: str
+    message: str
+    created_at: datetime

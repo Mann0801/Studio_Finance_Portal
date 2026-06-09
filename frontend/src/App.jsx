@@ -1,29 +1,40 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
+import BiometricGate from './components/BiometricGate'
+import StudentLayout from './components/StudentLayout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import Dashboard from './pages/Dashboard'
+import FirstPayment from './pages/FirstPayment'
+import PaymentSuccess from './pages/PaymentSuccess'
+import Home from './pages/student/Home'
+import Payments from './pages/student/Payments'
+import Attendance from './pages/student/Attendance'
+import Profile from './pages/student/Profile'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import './App.css'
+
+// Protected student area: requires a session, then a biometric unlock if enabled.
+function ProtectedShell() {
+  return (
+    <ProtectedRoute>
+      <BiometricGate>
+        <Outlet />
+      </BiometricGate>
+    </ProtectedRoute>
+  )
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             path="/admin"
@@ -33,6 +44,19 @@ export default function App() {
               </AdminRoute>
             }
           />
+
+          {/* Protected student area */}
+          <Route element={<ProtectedShell />}>
+            <Route path="/first-payment" element={<FirstPayment />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route element={<StudentLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
