@@ -17,6 +17,7 @@ class SignupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=30)
     phone: str = Field(min_length=6, max_length=20)
     batch: Batch
+    batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
 
 
 class StudentOut(BaseModel):
@@ -27,6 +28,8 @@ class StudentOut(BaseModel):
     phone: str
     batch: Batch
     batch_label: str
+    batch_slot: Optional[str] = None
+    slot_label: Optional[str] = None
     join_date: date
 
 
@@ -107,12 +110,25 @@ class AdminStudentRow(BaseModel):
     email: str
     phone: str
     batch: Batch
+    batch_slot: Optional[str] = None
+    slot_label: Optional[str] = None
     join_date: date
     period: str
     amount_paise: int
     is_prorata: bool
     status: str  # 'paid' | 'unpaid'
     whatsapp_url: Optional[str] = None  # present only for unpaid students
+
+
+class SlotStat(BaseModel):
+    slot: str
+    slot_label: str
+    total_students: int
+    paid_count: int
+    unpaid_count: int
+    revenue_paise: int
+    expected_paise: int
+    collection_rate: float    # 0–100, actual / expected
 
 
 class BatchStat(BaseModel):
@@ -124,6 +140,7 @@ class BatchStat(BaseModel):
     revenue_paise: int        # actual collected this period
     expected_paise: int       # sum of dues for enrolled students
     collection_rate: float    # 0–100, actual / expected
+    slots: list[SlotStat] = []  # per-timing breakdown (Traditional Yoga only)
 
 
 class AdminStats(BaseModel):

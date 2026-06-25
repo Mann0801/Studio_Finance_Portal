@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminApi, clearAdminToken } from '../../lib/adminApi'
-import { BATCHES, rupees } from '../../lib/batches'
+import { BATCHES, TRADITIONAL_SLOTS, slotById, rupees } from '../../lib/batches'
 import { STUDIO_NAME } from '../../lib/brand'
 import StatusBadge from '../../components/StatusBadge'
 import { WhatsAppIcon, MegaphoneIcon } from '../../components/Icons'
@@ -105,7 +105,8 @@ function AnnouncementManager() {
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [batch, setBatch] = useState('yoga')
+  const [batch, setBatch] = useState('senior_citizens_yoga')
+  const [slot, setSlot] = useState('batch1') // Traditional Yoga timing; persists across tab switches
   const [stats, setStats] = useState(null)
   const [students, setStudents] = useState(null)
   const [error, setError] = useState('')
@@ -129,19 +130,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let active = true
-    adminApi(`/api/admin/batches/${batch}`)
+    const q = batch === 'traditional_yoga' ? `?slot=${slot}` : ''
+    adminApi(`/api/admin/batches/${batch}${q}`)
       .then((d) => active && setStudents(d))
       .catch((e) => active && guard(e))
     return () => {
       active = false
     }
-  }, [batch, guard])
+  }, [batch, slot, guard])
 
   const selectBatch = (id) => {
     if (id === batch) return
     setStudents(null) // show skeleton while the new batch loads
     setBatch(id)
   }
+
+  const selectSlot = (id) => {
+    if (id === slot) return
+    setStudents(null)
+    setSlot(id)
+  }
+
+  // Look up live counts from the stats payload for tab/sub-tab badges.
+  const batchStat = (id) => stats?.per_batch.find((b) => b.batch === id)
+  const slotStat = (id) => batchStat('traditional_yoga')?.slots.find((s) => s.slot === id)
 
   return (
     <div className="app-shell">
@@ -227,6 +239,22 @@ export default function AdminDashboard() {
                     <span className="muted small">{rupees(b.revenue_paise)} of {rupees(b.expected_paise)}</span>
                   </div>
                   <div className="bar"><span style={{ width: `${Math.min(b.collection_rate, 100)}%` }} /></div>
+
+                  {/* Per-timing breakdown for Traditional Yoga */}
+                  {b.slots?.length > 0 && (
+                    <div className="slot-breakdown">
+                      {b.slots.map((s) => (
+                        <div key={s.slot} className="between slot-row">
+                          <span className="muted small">
+                            {slotById(s.slot)?.label || s.slot} · {s.slot_label}
+                          </span>
+                          <span className="muted small">
+                            {rupees(s.revenue_paise)} / {rupees(s.expected_paise)} · {s.paid_count}/{s.total_students}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -243,16 +271,37 @@ export default function AdminDashboard() {
           <h2>Students</h2>
         </div>
         <div className="chips">
-          {BATCHES.map((b) => (
-            <button
-              key={b.id}
-              className={`chip ${batch === b.id ? 'active' : ''}`}
-              onClick={() => selectBatch(b.id)}
-            >
-              {b.label}
-            </button>
-          ))}
+          {BATCHES.map((b) => {
+            const count = batchStat(b.id)?.total_students
+            return (
+              <button
+                key={b.id}
+                className={`chip ${batch === b.id ? 'active' : ''}`}
+                onClick={() => selectBatch(b.id)}
+              >
+                {b.label}{count != null ? ` (${count})` : ''}
+              </button>
+            )
+          })}
         </div>
+
+        {/* Traditional Yoga timing sub-tabs */}
+        {batch === 'traditional_yoga' && (
+          <div className="chips sub-chips">
+            {TRADITIONAL_SLOTS.map((s) => {
+              const count = slotStat(s.id)?.total_students
+              return (
+                <button
+                  key={s.id}
+                  className={`chip ${slot === s.id ? 'active' : ''}`}
+                  onClick={() => selectSlot(s.id)}
+                >
+                  {s.label}{count != null ? ` (${count})` : ''}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {error && <p className="error">{error}</p>}
 
@@ -268,7 +317,10 @@ export default function AdminDashboard() {
                 <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
                 <div className="s-info">
                   <div className="s-name">{s.name}</div>
-                  <div className="s-sub">{rupees(s.amount_paise)} · {s.phone}</div>
+                  <div className="s-sub">
+                    {rupees(s.amount_paise)} · {s.phone}
+                    {s.slot_label ? ` · ${s.slot_label}` : ''}
+                  </div>
                 </div>
                 <div className="s-right">
                   <StatusBadge status={s.status} />

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { checkUsername, signUpWithPassword, setLastUsername } from '../lib/auth'
-import { BATCHES, rupees } from '../lib/batches'
+import { batchById } from '../lib/batches'
 import { STUDIO_NAME } from '../lib/brand'
-import { CheckIcon } from '../components/Icons'
+import BatchPicker from '../components/BatchPicker'
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -21,6 +21,8 @@ function validate(form, usernameState) {
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (!form.batch) errors.batch = 'Please select a batch'
+  else if (batchById(form.batch)?.hasSlots && !form.batch_slot)
+    errors.batch = 'Please choose a timing for Traditional Yoga'
   return errors
 }
 
@@ -33,6 +35,7 @@ export default function Signup() {
     password: '',
     phone: '',
     batch: '',
+    batch_slot: null,
   })
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
@@ -85,6 +88,7 @@ export default function Signup() {
           username: form.username.trim(),
           phone: form.phone.replace(/\D/g, ''),
           batch: form.batch,
+          batch_slot: form.batch_slot,
         },
       })
       // 3) Already signed in — straight to the first payment.
@@ -179,26 +183,15 @@ export default function Signup() {
           {errors.phone && <span className="field-error">{errors.phone}</span>}
         </label>
 
-        <div>
-          <div className="legend" style={{ marginBottom: 10 }}>Choose your batch</div>
-          <div className="batch-list">
-            {BATCHES.map((b) => (
-              <label key={b.id} className={`batch-opt ${form.batch === b.id ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="batch"
-                  value={b.id}
-                  checked={form.batch === b.id}
-                  onChange={() => set('batch')(b.id)}
-                />
-                <span className="check">{form.batch === b.id ? <CheckIcon width={13} height={13} /> : ''}</span>
-                <span className="b-name">{b.label}</span>
-                <span className="b-price">{rupees(b.monthly * 100)}/mo</span>
-              </label>
-            ))}
-          </div>
-          {errors.batch && <span className="field-error">{errors.batch}</span>}
-        </div>
+        <BatchPicker
+          batch={form.batch}
+          slot={form.batch_slot}
+          error={errors.batch}
+          onSelect={(batch, slot) => {
+            setForm((f) => ({ ...f, batch, batch_slot: slot }))
+            if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
+          }}
+        />
 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn primary lg block" disabled={busy}>

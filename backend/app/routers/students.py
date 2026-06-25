@@ -6,7 +6,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
-from ..constants import BATCH_LABELS, Batch
+from ..constants import BATCH_LABELS, TRADITIONAL_SLOTS, Batch, batch_info, slot_label
 from ..db import get_supabase
 from ..fees import compute_due, current_period, now_local
 from ..schemas import (
@@ -25,6 +25,7 @@ USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,30}$")
 
 def _student_out(row: dict) -> StudentOut:
     batch = Batch(row["batch"])
+    slot = row.get("batch_slot")
     return StudentOut(
         id=row["id"],
         name=row["name"],
@@ -33,6 +34,8 @@ def _student_out(row: dict) -> StudentOut:
         phone=row["phone"],
         batch=batch,
         batch_label=BATCH_LABELS[batch],
+        batch_slot=slot,
+        slot_label=slot_label(slot),
         join_date=row["join_date"],
     )
 
@@ -66,6 +69,15 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     if taken.data:
         raise HTTPException(status_code=409, detail="That username is taken")
 
+    # Timing slot: required (and validated) for batches that have slots; ignored
+    # otherwise so a stray value can't be stored against a slot-less batch.
+    slot = (body.batch_slot or "").strip() or None
+    if batch_info(body.batch).has_slots:
+        if slot not in TRADITIONAL_SLOTS:
+            raise HTTPException(status_code=422, detail="Please choose a timing slot")
+    else:
+        slot = None
+
     row = {
         "id": student["id"],
         "name": body.name.strip(),
@@ -73,6 +85,7 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
         "email": student["email"] or None,
         "phone": phone,
         "batch": body.batch.value,
+        "batch_slot": slot,
         "join_date": now_local().date().isoformat(),
     }
     inserted = sb.table("students").insert(row).execute()
