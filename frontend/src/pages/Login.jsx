@@ -23,8 +23,7 @@ export default function Login() {
     try {
       await loginWithUsername(form.username, form.password)
       setLastUsername(form.username.trim())
-      // A freshly created account goes to first payment; returning users home.
-      navigate(state?.newAccount ? '/first-payment' : '/', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed')
     } finally {

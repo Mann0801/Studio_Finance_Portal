@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { checkUsername, setLastUsername } from '../lib/auth'
 import { BATCHES, rupees } from '../lib/batches'
@@ -16,19 +15,19 @@ function validate(form, usernameState) {
   else if (!USERNAME_RE.test(form.username.trim()))
     errors.username = '3–30 letters, numbers or underscores'
   else if (usernameState === 'taken') errors.username = 'That username is taken'
-  if (!form.password) errors.password = 'Set a password'
-  else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (!form.batch) errors.batch = 'Please select a batch'
   return errors
 }
 
+// Fallback screen: reached only when an authenticated user has no students row
+// yet (e.g. signup created the auth account but /api/signup didn't finish). The
+// password is already set during signup, so we only collect the profile here.
 export default function ProfileSetup() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '',
     username: '',
-    password: '',
     phone: '',
     batch: '',
   })
@@ -73,10 +72,7 @@ export default function ProfileSetup() {
 
     setBusy(true)
     try {
-      // 1) Set the password on the OTP-verified account.
-      const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
-      if (pwErr) throw pwErr
-      // 2) Create the student profile (idempotent; enforces unique username).
+      // Create the student profile (idempotent; enforces unique username).
       await api('/api/signup', {
         method: 'POST',
         body: {
@@ -86,17 +82,8 @@ export default function ProfileSetup() {
           batch: form.batch,
         },
       })
-      // 3) Sign out and send them to the login page to sign in for real.
       setLastUsername(form.username.trim())
-      await supabase.auth.signOut()
-      navigate('/login', {
-        replace: true,
-        state: {
-          username: form.username.trim(),
-          newAccount: true,
-          notice: 'Account created — please log in to continue.',
-        },
-      })
+      navigate('/first-payment', { replace: true })
     } catch (err) {
       setError(err.message || 'Could not complete setup')
     } finally {
@@ -140,19 +127,6 @@ export default function ProfileSetup() {
             <span className="field-error">That username is taken</span>
           )}
           {errors.username && !trimmedUsername && <span className="field-error">{errors.username}</span>}
-        </label>
-
-        <label>
-          Password
-          <input
-            type="password"
-            value={form.password}
-            onChange={set('password')}
-            className={errors.password ? 'invalid' : ''}
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-          />
-          {errors.password && <span className="field-error">{errors.password}</span>}
         </label>
 
         <label>

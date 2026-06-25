@@ -6,9 +6,9 @@ import StudentLayout from './components/StudentLayout'
 import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import AuthCallback from './pages/AuthCallback'
 import ProfileSetup from './pages/ProfileSetup'
 import ForgotPassword from './pages/ForgotPassword'
+import Reset from './pages/Reset'
 import FirstPayment from './pages/FirstPayment'
 import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
@@ -36,8 +36,8 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset" element={<Reset />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             path="/admin"
