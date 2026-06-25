@@ -7,14 +7,17 @@ const DashboardContext = createContext(null)
 /* Loads /api/me/dashboard once for the student area and shares it across the
    Home / Payments / Profile tabs. `reload()` refreshes after a payment so the
    UI flips to Paid immediately. */
+// True when the backend says the profile doesn't exist yet (signup incomplete).
+const isMissingProfile = (msg) => /complete signup|profile not found/i.test(msg || '')
+
 export function DashboardProvider({ children }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [needsProfile, setNeedsProfile] = useState(false)
 
   const fetchDashboard = useCallback(async () => {
-    // If a profile was stashed during signup (email-confirmation flow), make
-    // sure it exists before we ask for the dashboard.
+    // If a profile was stashed during signup, make sure it exists first.
     await ensureProfile()
     return api('/api/me/dashboard')
   }, [])
@@ -26,7 +29,8 @@ export function DashboardProvider({ children }) {
       setData(d)
       setError('')
     } catch (e) {
-      setError(e.message)
+      if (isMissingProfile(e.message)) setNeedsProfile(true)
+      else setError(e.message)
     }
   }, [fetchDashboard])
 
@@ -40,7 +44,9 @@ export function DashboardProvider({ children }) {
           setError('')
         }
       } catch (e) {
-        if (active) setError(e.message)
+        if (!active) return
+        if (isMissingProfile(e.message)) setNeedsProfile(true)
+        else setError(e.message)
       } finally {
         if (active) setLoading(false)
       }
@@ -51,7 +57,7 @@ export function DashboardProvider({ children }) {
   }, [fetchDashboard])
 
   return (
-    <DashboardContext.Provider value={{ data, loading, error, reload }}>
+    <DashboardContext.Provider value={{ data, loading, error, needsProfile, reload }}>
       {children}
     </DashboardContext.Provider>
   )

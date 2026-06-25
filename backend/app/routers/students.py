@@ -1,6 +1,8 @@
 """Student-facing routes: signup (profile + batch) and read-only dashboard."""
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
@@ -18,13 +20,16 @@ from ..util import normalize_phone
 
 router = APIRouter(prefix="/api", tags=["students"])
 
+USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,30}$")
+
 
 def _student_out(row: dict) -> StudentOut:
     batch = Batch(row["batch"])
     return StudentOut(
         id=row["id"],
         name=row["name"],
-        email=row["email"],
+        username=row.get("username"),
+        email=row.get("email"),
         phone=row["phone"],
         batch=batch,
         batch_label=BATCH_LABELS[batch],
@@ -50,16 +55,38 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
+    username = body.username.strip()
+    if not USERNAME_RE.match(username):
+        raise HTTPException(
+            status_code=422,
+            detail="Username must be 3–30 letters, numbers or underscores",
+        )
+    # Case-insensitive uniqueness (ilike with no wildcards is an exact match).
+    taken = sb.table("students").select("id").ilike("username", username).execute()
+    if taken.data:
+        raise HTTPException(status_code=409, detail="That username is taken")
+
     row = {
         "id": student["id"],
         "name": body.name.strip(),
-        "email": student["email"],
+        "username": username,
+        "email": student["email"] or None,
         "phone": phone,
         "batch": body.batch.value,
         "join_date": now_local().date().isoformat(),
     }
     inserted = sb.table("students").insert(row).execute()
     return _student_out(inserted.data[0])
+
+
+@router.get("/me/profile", response_model=StudentOut)
+def my_profile(student=Depends(get_current_student)):
+    """Return the authenticated user's profile, or 404 if they haven't completed
+    signup yet. Used right after OTP verification to route new vs returning users."""
+    res = get_supabase().table("students").select("*").eq("id", student["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+    return _student_out(res.data[0])
 
 
 @router.get("/me/dashboard", response_model=DashboardOut)

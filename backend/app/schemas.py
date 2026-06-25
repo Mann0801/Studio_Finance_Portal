@@ -10,9 +10,11 @@ from .constants import Batch
 
 
 class SignupRequest(BaseModel):
-    # Account (email + password) is created on the frontend via Supabase Auth;
-    # this call only attaches profile + batch to the authenticated user.
+    # The account (identity + password) is created on the frontend via Supabase
+    # Auth after OTP verification; this call attaches the profile to the verified
+    # user: display name, a unique username, phone and chosen batch.
     name: str = Field(min_length=1, max_length=120)
+    username: str = Field(min_length=3, max_length=30)
     phone: str = Field(min_length=6, max_length=20)
     batch: Batch
 
@@ -20,11 +22,28 @@ class SignupRequest(BaseModel):
 class StudentOut(BaseModel):
     id: str
     name: str
-    email: str
+    username: Optional[str] = None
+    email: Optional[str] = None
     phone: str
     batch: Batch
     batch_label: str
     join_date: date
+
+
+# ── Auth (username + password login, username availability) ──
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=30)
+    password: str = Field(min_length=1)
+
+
+class SessionResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+
+
+class UsernameAvailability(BaseModel):
+    available: bool
+    reason: Optional[str] = None
 
 
 class PaymentOut(BaseModel):
