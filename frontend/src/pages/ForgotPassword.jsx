@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { sendMagicLink } from '../lib/auth'
+import { sendResetEmail } from '../lib/auth'
 import { STUDIO_NAME } from '../lib/brand'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -20,8 +20,7 @@ export default function ForgotPassword() {
     }
     setBusy(true)
     try {
-      // Don't create accounts for unknown emails; tag the link as a reset.
-      await sendMagicLink(email, { createUser: false, intent: 'reset' })
+      await sendResetEmail(email)
       setStep('sent')
     } catch (err) {
       setError(err.message || 'Could not send the email')
