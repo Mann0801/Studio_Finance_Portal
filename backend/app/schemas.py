@@ -189,6 +189,40 @@ class AdminPaymentRow(BaseModel):
     method: str = "Online"  # the gateway instrument isn't stored; generic label
 
 
+class StudentPaymentRow(BaseModel):
+    period: str
+    amount_paise: int
+    paid_at: Optional[datetime] = None
+    method: str = "Online"
+    status: str  # 'created' | 'paid' | 'failed'
+
+
+class AdminStudentDetail(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None
+    phone: str
+    batch: Batch
+    batch_label: str
+    batch_slot: Optional[str] = None
+    slot_label: Optional[str] = None
+    join_date: date
+    days_member: int
+    # This month
+    period: str
+    amount_paise: int          # paid amount if paid, else the due amount
+    is_prorata: bool
+    status: str                # 'paid' | 'unpaid'
+    # Lifetime
+    total_paid_paise: int
+    last_payment_paise: Optional[int] = None
+    last_payment_at: Optional[datetime] = None
+    payments: list[StudentPaymentRow]
+    # Attendance: classes scheduled this month (attendance itself isn't tracked)
+    classes_this_month: int
+    whatsapp_url: Optional[str] = None
+
+
 # ── Announcements ──
 class AnnouncementIn(BaseModel):
     message: str = Field(min_length=1, max_length=500)
