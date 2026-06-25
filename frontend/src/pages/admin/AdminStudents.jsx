@@ -103,7 +103,7 @@ export default function AdminStudents() {
                 className={`chip ${slot === s.id ? 'active' : ''}`}
                 onClick={() => selectSlot(s.id)}
               >
-                {s.label}{count != null ? ` (${count})` : ''}
+                {s.time}{count != null ? ` (${count})` : ''}
               </button>
             )
           })}
