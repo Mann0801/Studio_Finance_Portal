@@ -92,6 +92,18 @@ def _count_session_days(
     )
 
 
+def classes_in_month(batch: Batch, period: str) -> int:
+    """Number of scheduled classes for ``batch`` in ``period``. Session batches
+    use their package size / matching weekend days; monthly batches meet Mon–Fri."""
+    info = batch_info(batch)
+    year, month = parse_period(period)
+    if info.billing == SESSION:
+        return info.sessions_per_month or _count_session_days(
+            year, month, info.session_weekdays
+        )
+    return _count_session_days(year, month, (0, 1, 2, 3, 4))
+
+
 @dataclass(frozen=True)
 class DueAmount:
     period: str

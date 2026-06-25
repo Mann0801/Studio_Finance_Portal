@@ -14,7 +14,14 @@ from ..constants import (
     slot_label,
 )
 from ..db import get_supabase
-from ..fees import compute_due, current_period, previous_period
+from ..fees import (
+    classes_in_month,
+    compute_due,
+    current_period,
+    now_local,
+    previous_period,
+)
+from ..payments_store import is_period_paid, mark_paid_cash
 from ..schemas import (
     ActivityPayment,
     ActivitySignup,
@@ -23,11 +30,18 @@ from ..schemas import (
     AdminLoginResponse,
     AdminPaymentRow,
     AdminStats,
+    AdminStudentDetail,
     AdminStudentRow,
     BatchStat,
     SlotStat,
+    StudentPaymentRow,
 )
 from ..services.whatsapp import reminder_link
+
+
+def _payment_method(row: dict) -> str:
+    """Cash payments have no Razorpay payment id; everything else is online."""
+    return "Online" if row.get("razorpay_payment_id") else "Cash"
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -272,7 +286,7 @@ def payment_history(limit: int = 100):
     sb = get_supabase()
     pays = (
         sb.table("payments")
-        .select("id, student_id, amount_paise, period, paid_at")
+        .select("id, student_id, amount_paise, period, paid_at, razorpay_payment_id")
         .eq("status", "paid")
         .order("paid_at", desc=True)
         .limit(limit)
@@ -296,7 +310,112 @@ def payment_history(limit: int = 100):
                 amount_paise=p["amount_paise"],
                 period=p["period"],
                 paid_at=p.get("paid_at"),
-                method="Online",
+                method=_payment_method(p),
             )
         )
     return rows
+
+
+def _build_student_detail(s: dict) -> AdminStudentDetail:
+    sb = get_supabase()
+    batch = Batch(s["batch"])
+    join_date = _as_date(s["join_date"])
+    period = current_period()
+    due = compute_due(batch, join_date, period)
+
+    pays = (
+        sb.table("payments")
+        .select("period, amount_paise, paid_at, status, razorpay_payment_id")
+        .eq("student_id", s["id"])
+        .order("period", desc=True)
+        .execute()
+    ).data
+    paid_rows = [p for p in pays if p["status"] == "paid"]
+    total_paid = sum(p["amount_paise"] for p in paid_rows)
+    last = max(paid_rows, key=lambda p: p.get("paid_at") or "", default=None)
+    this_paid = next((p for p in paid_rows if p["period"] == period), None)
+
+    history = [
+        StudentPaymentRow(
+            period=p["period"],
+            amount_paise=p["amount_paise"],
+            paid_at=p.get("paid_at"),
+            method=_payment_method(p),
+            status=p["status"],
+        )
+        for p in pays
+    ]
+
+    sl = slot_label(s.get("batch_slot"))
+    wa = None
+    if not this_paid and due.amount_paise > 0:
+        label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
+        wa = reminder_link(s["phone"], s["name"], label, due.amount_paise, period)
+
+    return AdminStudentDetail(
+        id=s["id"],
+        name=s["name"],
+        email=s.get("email"),
+        phone=s["phone"],
+        batch=batch,
+        batch_label=BATCH_LABELS[batch],
+        batch_slot=s.get("batch_slot"),
+        slot_label=sl,
+        join_date=join_date,
+        days_member=max((now_local().date() - join_date).days, 0),
+        period=period,
+        amount_paise=this_paid["amount_paise"] if this_paid else due.amount_paise,
+        is_prorata=due.is_prorata,
+        status="paid" if this_paid else "unpaid",
+        total_paid_paise=total_paid,
+        last_payment_paise=last["amount_paise"] if last else None,
+        last_payment_at=last.get("paid_at") if last else None,
+        payments=history,
+        classes_this_month=classes_in_month(batch, period),
+        whatsapp_url=wa,
+    )
+
+
+def _load_student_or_404(student_id: str) -> dict:
+    res = get_supabase().table("students").select("*").eq("id", student_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return res.data[0]
+
+
+@router.get(
+    "/students/{student_id}",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def student_detail(student_id: str):
+    return _build_student_detail(_load_student_or_404(student_id))
+
+
+@router.post(
+    "/students/{student_id}/mark-paid",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def mark_student_paid(student_id: str):
+    """Manually mark this month paid (e.g. the student paid cash). Idempotent."""
+    s = _load_student_or_404(student_id)
+    period = current_period()
+    if not is_period_paid(student_id, period):
+        due = compute_due(Batch(s["batch"]), _as_date(s["join_date"]), period)
+        mark_paid_cash(student_id, period, due.amount_paise, due.is_prorata)
+    return _build_student_detail(s)
+
+
+@router.delete("/students/{student_id}", dependencies=[Depends(require_admin)])
+def delete_student(student_id: str):
+    """Remove a student (and their payments). Deletes the Supabase Auth user,
+    which cascades to the students + payments rows; falls back to a direct row
+    delete if the auth user is already gone."""
+    sb = get_supabase()
+    _load_student_or_404(student_id)
+    try:
+        sb.auth.admin.delete_user(student_id)
+    except Exception:
+        sb.table("students").delete().eq("id", student_id).execute()
+    return {"status": "deleted"}

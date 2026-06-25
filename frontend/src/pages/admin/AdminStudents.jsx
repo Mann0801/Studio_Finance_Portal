@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { BATCHES, TRADITIONAL_SLOTS, rupees } from '../../lib/batches'
@@ -13,6 +14,7 @@ const FILTERS = [
 ]
 
 export default function AdminStudents() {
+  const navigate = useNavigate()
   const { stats, guard } = useAdmin()
   const [batch, setBatch] = useState('senior_citizens_yoga')
   const [slot, setSlot] = useState('batch1') // persists across tab switches
@@ -132,7 +134,14 @@ export default function AdminStudents() {
       ) : (
         <div className="stack" style={{ gap: 10 }}>
           {visible.map((s) => (
-            <div className="student-card" key={s.id}>
+            <div
+              className="student-card tappable"
+              key={s.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/admin/students/${s.id}`)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
+            >
               <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
               <div className="s-info">
                 <div className="s-name">{s.name}</div>
@@ -144,7 +153,13 @@ export default function AdminStudents() {
               <div className="s-right">
                 <StatusBadge status={s.status} />
                 {s.whatsapp_url && (
-                  <a className="wa-btn" href={s.whatsapp_url} target="_blank" rel="noreferrer">
+                  <a
+                    className="wa-btn"
+                    href={s.whatsapp_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <WhatsAppIcon width={16} height={16} /> Message
                   </a>
                 )}

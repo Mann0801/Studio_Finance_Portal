@@ -34,6 +34,26 @@ def upsert_created_order(
     ).execute()
 
 
+def mark_paid_cash(
+    student_id: str, period: str, amount_paise: int, is_prorata: bool
+) -> None:
+    """Record a manual (cash) payment as paid for a (student, period). No Razorpay
+    payment id — that's how a cash payment is distinguished from an online one."""
+    get_supabase().table("payments").upsert(
+        {
+            "student_id": student_id,
+            "period": period,
+            "amount_paise": amount_paise,
+            "is_prorata": is_prorata,
+            "status": "paid",
+            "razorpay_order_id": f"cash-{student_id[:8]}-{period}",
+            "razorpay_payment_id": None,
+            "paid_at": now_local().isoformat(),
+        },
+        on_conflict="student_id,period",
+    ).execute()
+
+
 def get_payment_by_order(order_id: str) -> Optional[dict]:
     res = (
         get_supabase()
