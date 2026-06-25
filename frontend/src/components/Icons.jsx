@@ -24,14 +24,6 @@ export const PaymentIcon = (p) => (
   </svg>
 )
 
-export const AttendanceIcon = (p) => (
-  <svg {...base} {...p}>
-    <rect x="3" y="4.5" width="18" height="16" rx="3" />
-    <path d="M3 9h18M8 3v3M16 3v3" />
-    <path d="m9 14 2 2 4-4" />
-  </svg>
-)
-
 export const ProfileIcon = (p) => (
   <svg {...base} {...p}>
     <circle cx="12" cy="8" r="3.5" />
@@ -49,15 +41,6 @@ export const MegaphoneIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M3 11v2a1 1 0 0 0 1 1h2l9 5V5l-9 5H4a1 1 0 0 0-1 1Z" />
     <path d="M18 8a4 4 0 0 1 0 8" />
-  </svg>
-)
-
-export const FingerprintIcon = (p) => (
-  <svg {...base} {...p}>
-    <path d="M12 11a2.5 2.5 0 0 1 2.5 2.5c0 2-.5 4-1.2 5.5" />
-    <path d="M7 19c1-1.7 1.5-3.7 1.5-5.5A3.5 3.5 0 0 1 12 10a3.5 3.5 0 0 1 3.5 3.5c0 1-.1 2-.3 3" />
-    <path d="M4.5 16c.7-1 1-2.3 1-3.5a6.5 6.5 0 0 1 11-4.7" />
-    <path d="M19.5 13.5c.1-.6.1-1.2.1-1.5" />
   </svg>
 )
 

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..auth import create_admin_token, require_admin, verify_admin_credentials
 from ..constants import BATCH_LABELS, Batch
 from ..db import get_supabase
-from ..fees import compute_due, current_period, month_range, previous_period
+from ..fees import compute_due, current_period, previous_period
 from ..schemas import (
     AdminLoginRequest,
     AdminLoginResponse,
@@ -143,15 +143,6 @@ def stats():
     else:
         revenue_change_pct = 100.0 if total_revenue > 0 else 0.0
 
-    start, end = month_range(period)
-    att = (
-        sb.table("attendance")
-        .select("id", count="exact")
-        .gte("date", start)
-        .lt("date", end)
-        .execute()
-    )
-
     return AdminStats(
         period=period,
         total_students=total_students,
@@ -162,6 +153,5 @@ def stats():
         collection_rate=_collection_rate(total_revenue, total_expected),
         last_month_revenue_paise=last_month_revenue,
         revenue_change_pct=revenue_change_pct,
-        attendance_this_month=att.count or 0,
         per_batch=per_batch,
     )

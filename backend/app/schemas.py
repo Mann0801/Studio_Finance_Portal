@@ -46,7 +46,6 @@ class DashboardOut(BaseModel):
     student: StudentOut
     current: CurrentDue
     history: list[PaymentOut]
-    attendance_this_month: int
 
 
 class OrderRequest(BaseModel):
@@ -118,7 +117,6 @@ class AdminStats(BaseModel):
     collection_rate: float              # 0–100
     last_month_revenue_paise: int
     revenue_change_pct: float           # % change vs last month's collection
-    attendance_this_month: int
     per_batch: list[BatchStat]
 
 

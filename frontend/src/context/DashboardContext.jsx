@@ -5,8 +5,8 @@ import { ensureProfile } from '../lib/profile'
 const DashboardContext = createContext(null)
 
 /* Loads /api/me/dashboard once for the student area and shares it across the
-   Home / Payments / Attendance / Profile tabs. `reload()` refreshes after a
-   payment so the UI flips to Paid immediately. */
+   Home / Payments / Profile tabs. `reload()` refreshes after a payment so the
+   UI flips to Paid immediately. */
 export function DashboardProvider({ children }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)

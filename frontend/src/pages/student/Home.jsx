@@ -30,7 +30,7 @@ export default function Home() {
   if (error) return <p className="error" style={{ marginTop: 24 }}>{error}</p>
   if (!data) return null
 
-  const { student, current, history, attendance_this_month } = data
+  const { student, current, history } = data
   const paid = current.status === 'paid'
   const recent = history.slice(0, 3)
 
@@ -68,18 +68,6 @@ export default function Home() {
         )}
         {paid && <p className="sub" style={{ marginTop: 14 }}>You're all set for this month 🎉</p>}
         {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
-      </div>
-
-      {/* Attendance summary */}
-      <div className="stat-grid" style={{ marginTop: 16 }}>
-        <div className="stat">
-          <div className="num">{attendance_this_month}</div>
-          <div className="label">Classes this month</div>
-        </div>
-        <Link to="/attendance" className="stat" style={{ textDecoration: 'none' }}>
-          <div className="num" style={{ color: 'var(--accent-bright)' }}>›</div>
-          <div className="label">View attendance</div>
-        </Link>
       </div>
 
       {/* Recent payments */}
