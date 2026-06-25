@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminApi, setAdminToken } from '../../lib/adminApi'
+import { STUDIO_NAME } from '../../lib/brand'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -33,6 +34,7 @@ export default function AdminLogin() {
     <div className="auth-wrap">
       <div className="auth-brand">
         <img src="/icon.svg" alt="" className="logo" />
+        <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Admin</h1>
         <p className="auth-sub">Studio management console</p>
       </div>

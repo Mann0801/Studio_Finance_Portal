@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
+import { STUDIO_NAME } from '../../lib/brand'
 import StatusBadge from '../../components/StatusBadge'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
@@ -38,8 +39,8 @@ export default function Home() {
     <>
       <div className="topbar">
         <div className="greeting">
-          <div className="hello">Welcome back</div>
-          <h1>{student.name.split(' ')[0]}</h1>
+          <div className="hello brand-tag">{STUDIO_NAME}</div>
+          <h1>Hi, {student.name.split(' ')[0]}</h1>
           <div className="hello" style={{ marginTop: 4 }}>{student.batch_label} batch</div>
         </div>
         <div className="avatar">{student.name.charAt(0).toUpperCase()}</div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { ensureProfile } from '../lib/profile'
+import { STUDIO_NAME } from '../lib/brand'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -31,8 +32,9 @@ export default function Login() {
     <div className="auth-wrap">
       <div className="auth-brand">
         <img src="/icon.svg" alt="" className="logo" />
+        <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Welcome back</h1>
-        <p className="auth-sub">Log in to your studio account.</p>
+        <p className="auth-sub">Log in to your account.</p>
       </div>
 
       <form onSubmit={onSubmit} className="form">

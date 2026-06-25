@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import StudentLayout from './components/StudentLayout'
+import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import FirstPayment from './pages/FirstPayment'
@@ -27,6 +28,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <InstallPrompt />
         <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
