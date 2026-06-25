@@ -156,6 +156,39 @@ class AdminStats(BaseModel):
     per_batch: list[BatchStat]
 
 
+# ── Admin: activity feed + payment history ──
+class ActivityPayment(BaseModel):
+    name: str
+    batch: Batch
+    batch_label: str
+    amount_paise: int
+    paid_at: Optional[datetime] = None
+
+
+class ActivitySignup(BaseModel):
+    name: str
+    batch: Batch
+    batch_label: str
+    join_date: date
+
+
+class AdminActivity(BaseModel):
+    recent_payments: list[ActivityPayment]
+    recent_signups: list[ActivitySignup]
+
+
+class AdminPaymentRow(BaseModel):
+    id: str
+    name: str
+    batch: Batch
+    batch_label: str
+    slot_label: Optional[str] = None
+    amount_paise: int
+    period: str
+    paid_at: Optional[datetime] = None
+    method: str = "Online"  # the gateway instrument isn't stored; generic label
+
+
 # ── Announcements ──
 class AnnouncementIn(BaseModel):
     message: str = Field(min_length=1, max_length=500)

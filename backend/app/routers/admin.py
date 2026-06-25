@@ -16,8 +16,12 @@ from ..constants import (
 from ..db import get_supabase
 from ..fees import compute_due, current_period, previous_period
 from ..schemas import (
+    ActivityPayment,
+    ActivitySignup,
+    AdminActivity,
     AdminLoginRequest,
     AdminLoginResponse,
+    AdminPaymentRow,
     AdminStats,
     AdminStudentRow,
     BatchStat,
@@ -192,3 +196,107 @@ def stats():
         revenue_change_pct=revenue_change_pct,
         per_batch=per_batch,
     )
+
+
+def _students_by_id(ids: list[str]) -> dict[str, dict]:
+    if not ids:
+        return {}
+    rows = (
+        get_supabase()
+        .table("students")
+        .select("id, name, batch, batch_slot")
+        .in_("id", list(set(ids)))
+        .execute()
+        .data
+    )
+    return {s["id"]: s for s in rows}
+
+
+@router.get("/activity", response_model=AdminActivity, dependencies=[Depends(require_admin)])
+def activity():
+    """Home feed: the last 5 payments received and last 3 new signups."""
+    sb = get_supabase()
+    pays = (
+        sb.table("payments")
+        .select("student_id, amount_paise, paid_at")
+        .eq("status", "paid")
+        .order("paid_at", desc=True)
+        .limit(5)
+        .execute()
+    ).data
+    smap = _students_by_id([p["student_id"] for p in pays])
+
+    recent_payments: list[ActivityPayment] = []
+    for p in pays:
+        s = smap.get(p["student_id"])
+        if not s:
+            continue
+        batch = Batch(s["batch"])
+        recent_payments.append(
+            ActivityPayment(
+                name=s["name"],
+                batch=batch,
+                batch_label=BATCH_LABELS[batch],
+                amount_paise=p["amount_paise"],
+                paid_at=p.get("paid_at"),
+            )
+        )
+
+    signups = (
+        sb.table("students")
+        .select("name, batch, join_date, created_at")
+        .order("created_at", desc=True)
+        .limit(3)
+        .execute()
+    ).data
+    recent_signups = [
+        ActivitySignup(
+            name=s["name"],
+            batch=Batch(s["batch"]),
+            batch_label=BATCH_LABELS[Batch(s["batch"])],
+            join_date=_as_date(s["join_date"]),
+        )
+        for s in signups
+    ]
+
+    return AdminActivity(recent_payments=recent_payments, recent_signups=recent_signups)
+
+
+@router.get(
+    "/payments",
+    response_model=list[AdminPaymentRow],
+    dependencies=[Depends(require_admin)],
+)
+def payment_history(limit: int = 100):
+    """All received payments, newest first (joined to student name + batch)."""
+    sb = get_supabase()
+    pays = (
+        sb.table("payments")
+        .select("id, student_id, amount_paise, period, paid_at")
+        .eq("status", "paid")
+        .order("paid_at", desc=True)
+        .limit(limit)
+        .execute()
+    ).data
+    smap = _students_by_id([p["student_id"] for p in pays])
+
+    rows: list[AdminPaymentRow] = []
+    for p in pays:
+        s = smap.get(p["student_id"])
+        if not s:
+            continue
+        batch = Batch(s["batch"])
+        rows.append(
+            AdminPaymentRow(
+                id=p["id"],
+                name=s["name"],
+                batch=batch,
+                batch_label=BATCH_LABELS[batch],
+                slot_label=slot_label(s.get("batch_slot")),
+                amount_paise=p["amount_paise"],
+                period=p["period"],
+                paid_at=p.get("paid_at"),
+                method="Online",
+            )
+        )
+    return rows

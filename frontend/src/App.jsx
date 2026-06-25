@@ -14,8 +14,12 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
 import Profile from './pages/student/Profile'
+import AdminLayout from './components/AdminLayout'
 import AdminLogin from './pages/admin/AdminLogin'
-import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminHome from './pages/admin/AdminHome'
+import AdminStudents from './pages/admin/AdminStudents'
+import AdminPayments from './pages/admin/AdminPayments'
+import AdminSettings from './pages/admin/AdminSettings'
 import './App.css'
 
 // Protected student area: requires a signed-in session.
@@ -40,13 +44,17 @@ export default function App() {
           <Route path="/reset" element={<Reset />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route
-            path="/admin"
             element={
               <AdminRoute>
-                <AdminDashboard />
+                <AdminLayout />
               </AdminRoute>
             }
-          />
+          >
+            <Route path="/admin" element={<AdminHome />} />
+            <Route path="/admin/students" element={<AdminStudents />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+          </Route>
 
           {/* Protected student area */}
           <Route element={<ProtectedShell />}>
