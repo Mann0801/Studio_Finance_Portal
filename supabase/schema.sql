@@ -11,12 +11,20 @@
 create table if not exists public.students (
     id          uuid primary key references auth.users (id) on delete cascade,
     name        text        not null,
-    phone       text        not null,        -- normalized, with country code (e.g. 91XXXXXXXXXX)
-    email       text        not null,
+    username    text,                         -- unique handle chosen at profile setup
+    phone       text        not null,         -- normalized, with country code (e.g. 91XXXXXXXXXX)
+    email       text,                         -- present for email signups; null for phone-only
     batch       text        not null check (batch in ('yoga', 'zumba', 'gymnastics')),
     join_date   date        not null,
     created_at  timestamptz not null default now()
 );
+
+-- Auth redesign: ensure the username column + a case-insensitive unique index
+-- exist even on databases created before this change. Email is now optional
+-- (phone-only signups have no email).
+alter table public.students add column if not exists username text;
+alter table public.students alter column email drop not null;
+create unique index if not exists students_username_key on public.students (lower(username));
 
 -- ── payments ────────────────────────────────────────────────────────────────
 -- One row per (student, calendar month). amount_paise is the server-computed,

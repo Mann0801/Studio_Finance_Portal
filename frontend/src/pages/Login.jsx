@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { ensureProfile } from '../lib/profile'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { loginWithUsername, getLastUsername, setLastUsername } from '../lib/auth'
 import { STUDIO_NAME } from '../lib/brand'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ email: '', password: '' })
+  const { state } = useLocation()
+  const [form, setForm] = useState({
+    username: state?.username || getLastUsername(),
+    password: '',
+  })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const notice = state?.notice || ''
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -17,10 +21,10 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      const { error: signErr } = await supabase.auth.signInWithPassword(form)
-      if (signErr) throw signErr
-      await ensureProfile()
-      navigate('/', { replace: true })
+      await loginWithUsername(form.username, form.password)
+      setLastUsername(form.username.trim())
+      // A freshly created account goes to first payment; returning users home.
+      navigate(state?.newAccount ? '/first-payment' : '/', { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed')
     } finally {
@@ -34,13 +38,22 @@ export default function Login() {
         <img src="/icon.svg" alt="" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Welcome back</h1>
-        <p className="auth-sub">Log in to your account.</p>
+        <p className="auth-sub">Log in with your username and password.</p>
       </div>
+
+      {notice && <p className="notice" style={{ textAlign: 'center', marginBottom: 14 }}>{notice}</p>}
 
       <form onSubmit={onSubmit} className="form">
         <label>
-          Email
-          <input type="email" value={form.email} onChange={set('email')} autoComplete="email" required />
+          Username
+          <input
+            value={form.username}
+            onChange={set('username')}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck="false"
+            required
+          />
         </label>
         <label>
           Password
@@ -56,6 +69,9 @@ export default function Login() {
         <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
+        <Link to="/forgot-password" className="link-btn" style={{ alignSelf: 'center' }}>
+          Forgot password?
+        </Link>
       </form>
 
       <p className="auth-foot">

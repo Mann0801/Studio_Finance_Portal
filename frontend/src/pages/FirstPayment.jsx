@@ -28,7 +28,12 @@ export default function FirstPayment() {
         }
         setData(d)
       } catch (e) {
-        if (active) setError(e.message)
+        if (!active) return
+        if (/complete signup|profile not found/i.test(e.message)) {
+          navigate('/profile-setup', { replace: true })
+        } else {
+          setError(e.message)
+        }
       }
     })()
     return () => {
