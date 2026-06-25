@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { BATCHES, rupees } from '../lib/batches'
 import { ensureProfile, savePendingProfile } from '../lib/profile'
 import { CheckIcon } from '../components/Icons'
+import { STUDIO_NAME } from '../lib/brand'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -89,6 +90,7 @@ export default function Signup() {
     <div className="auth-wrap">
       <div className="auth-brand">
         <img src="/icon.svg" alt="" className="logo" />
+        <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Join the studio</h1>
         <p className="auth-sub">Create your account and pick a batch.</p>
       </div>

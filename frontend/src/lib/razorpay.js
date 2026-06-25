@@ -41,7 +41,7 @@ export async function payForMonth(period) {
         email: order.prefill_email,
         contact: order.prefill_contact,
       },
-      theme: { color: '#16a34a' },
+      theme: { color: '#3b82f6' },
       handler: async (resp) => {
         try {
           const result = await api('/api/payments/verify', {

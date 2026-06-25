@@ -74,6 +74,11 @@
   color: var(--muted);
   font-size: 14px;
 }
+.greeting .brand-tag {
+  color: var(--accent-bright);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
 .greeting h1 {
   font-size: 24px;
   margin-top: 2px;
@@ -99,6 +104,7 @@
   border-radius: var(--r);
   padding: 18px;
   box-shadow: var(--shadow-soft);
+  animation: card-in 0.28s ease both;
 }
 .card.flush {
   padding: 0;
@@ -114,13 +120,14 @@
 
 /* Hero payment card */
 .pay-card {
-  background: linear-gradient(160deg, #16271d 0%, #101713 100%);
+  background: linear-gradient(160deg, #18233f 0%, #0e1018 100%);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 22px;
   box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
+  animation: card-in 0.3s ease both;
 }
 .pay-card::before {
   content: '';
@@ -159,6 +166,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 16px;
+  animation: card-in 0.28s ease both;
 }
 .stat .num {
   font-size: 26px;
@@ -228,10 +236,10 @@
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
-  transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1.2), background 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -242,7 +250,8 @@
 }
 .btn.primary {
   background: var(--accent);
-  color: #04130a;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.32);
 }
 .btn.primary:hover:not(:disabled) {
   background: var(--accent-bright);
@@ -314,20 +323,34 @@
   max-width: 440px;
   margin: 0 auto;
   padding: 28px 22px calc(28px + env(safe-area-inset-bottom, 0px));
+  animation: page-in 0.28s ease both;
 }
 .auth-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 26px;
 }
 .auth-brand .logo {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
+  animation: splash-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+}
+.auth-brand .brand-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(100deg, var(--accent-bright), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-top: 2px;
 }
 .auth-brand h1 {
-  font-size: 24px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
 }
 .auth-sub {
   color: var(--muted);
@@ -385,7 +408,7 @@
 .batch-opt.selected .check {
   border-color: var(--accent-bright);
   background: var(--accent-bright);
-  color: #04130a;
+  color: #fff;
   font-size: 13px;
   font-weight: 900;
 }
@@ -408,7 +431,7 @@
   z-index: 50;
   height: var(--nav-h);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: rgba(13, 19, 16, 0.92);
+  background: rgba(10, 10, 15, 0.92);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   display: flex;
@@ -428,14 +451,23 @@
   cursor: pointer;
   min-height: 64px;
   text-decoration: none;
+  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 .bottom-nav .tab svg {
   width: 24px;
   height: 24px;
   stroke: currentColor;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+}
+.bottom-nav .tab:active svg {
+  transform: scale(0.82);
 }
 .bottom-nav .tab.active {
   color: var(--accent-bright);
+}
+.bottom-nav .tab.active svg {
+  animation: tab-pop 0.3s ease;
 }
 
 /* ── Announcement banner ── */
@@ -444,10 +476,11 @@
   align-items: flex-start;
   gap: 10px;
   background: var(--accent-soft);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 14px;
   padding: 12px 14px;
   margin-bottom: 16px;
+  animation: card-in 0.28s ease both;
 }
 .announce .ic {
   color: var(--accent-bright);
@@ -544,7 +577,7 @@
 }
 .chip.active {
   background: var(--accent);
-  color: #04130a;
+  color: #fff;
   border-color: var(--accent);
 }
 
@@ -557,6 +590,7 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 14px;
+  animation: card-in 0.28s ease both;
 }
 .student-card .s-info {
   min-width: 0;
@@ -664,6 +698,58 @@
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+/* ── PWA install prompt ── */
+.install-prompt {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--nav-h) + 12px);
+  z-index: 80;
+  max-width: 456px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  animation: sheet-up 0.3s ease both;
+}
+.install-prompt .install-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.install-prompt .install-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.install-prompt .install-text strong {
+  font-size: 14px;
+}
+.install-prompt .install-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.install-prompt .install-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
 /* ── Success screen ── */
 .success-wrap {
   min-height: 100svh;
@@ -676,6 +762,7 @@
   gap: 8px;
 }
 .success-check {
+  position: relative;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -685,6 +772,35 @@
   color: var(--paid);
   margin-bottom: 8px;
   animation: splash-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+}
+.success-check::before,
+.success-check::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--paid);
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+.success-check::after {
+  animation-delay: 0.6s;
+}
+
+/* Confetti pieces over the success screen */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.confetti i {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
 }
 .success-amt {
   font-size: 40px;

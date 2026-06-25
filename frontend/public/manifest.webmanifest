@@ -1,13 +1,13 @@
 {
-  "name": "Studio — Fitness Studio",
-  "short_name": "Studio",
-  "description": "Pay your studio fees, track attendance and stay updated.",
+  "name": "I'm Possible Fit",
+  "short_name": "I'm Possible Fit",
+  "description": "Pay your studio fees and stay updated with I'm Possible Fit.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b0f0d",
-  "theme_color": "#0b0f0d",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
   "categories": ["health", "fitness", "lifestyle"],
   "icons": [
     {

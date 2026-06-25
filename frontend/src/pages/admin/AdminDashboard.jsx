@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminApi, clearAdminToken } from '../../lib/adminApi'
 import { BATCHES, rupees } from '../../lib/batches'
+import { STUDIO_NAME } from '../../lib/brand'
 import StatusBadge from '../../components/StatusBadge'
 import { WhatsAppIcon, MegaphoneIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
@@ -147,7 +148,7 @@ export default function AdminDashboard() {
       <div className="page">
         <div className="topbar">
           <div className="greeting">
-            <div className="hello">Admin console</div>
+            <div className="hello brand-tag">{STUDIO_NAME}</div>
             <h1>Overview</h1>
           </div>
           <button className="link-btn" onClick={logout}>Log out</button>
