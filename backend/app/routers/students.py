@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ..auth import get_current_student
 from ..constants import BATCH_LABELS, Batch
 from ..db import get_supabase
-from ..fees import compute_due, current_period, month_range, now_local
+from ..fees import compute_due, current_period, now_local
 from ..schemas import (
     CurrentDue,
     DashboardOut,
@@ -106,20 +106,8 @@ def dashboard(student=Depends(get_current_student)):
         for p in payments
     ]
 
-    start, end = month_range(period)
-    att = (
-        sb.table("attendance")
-        .select("id", count="exact")
-        .eq("student_id", student["id"])
-        .gte("date", start)
-        .lt("date", end)
-        .execute()
-    )
-    attendance_count = att.count or 0
-
     return DashboardOut(
         student=_student_out(student_row),
         current=current,
         history=history,
-        attendance_this_month=attendance_count,
     )

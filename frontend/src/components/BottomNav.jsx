@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { HomeIcon, PaymentIcon, AttendanceIcon, ProfileIcon } from './Icons'
+import { HomeIcon, PaymentIcon, ProfileIcon } from './Icons'
 
 const TABS = [
   { to: '/', label: 'Home', Icon: HomeIcon, end: true },
   { to: '/payments', label: 'Payments', Icon: PaymentIcon },
-  { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon },
   { to: '/profile', label: 'Profile', Icon: ProfileIcon },
 ]
 

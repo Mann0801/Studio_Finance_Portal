@@ -40,18 +40,6 @@ create table if not exists public.payments (
 create index if not exists payments_period_idx on public.payments (period);
 create index if not exists payments_order_idx  on public.payments (razorpay_order_id);
 
--- ── attendance ──────────────────────────────────────────────────────────────
--- One row per (student, day). Unique constraint enforces "once per day".
-create table if not exists public.attendance (
-    id          uuid primary key default gen_random_uuid(),
-    student_id  uuid not null references public.students (id) on delete cascade,
-    date        date not null,                    -- IST calendar date
-    created_at  timestamptz not null default now(),
-    unique (student_id, date)
-);
-
-create index if not exists attendance_date_idx on public.attendance (date);
-
 -- ── announcements ────────────────────────────────────────────────────────────
 -- A single banner the admin posts; all students see the latest active one.
 -- The backend (service role) writes; students read active rows.
@@ -68,7 +56,6 @@ create index if not exists announcements_active_idx on public.announcements (act
 -- ── Row-Level Security ────────────────────────────────────────────────────────
 alter table public.students      enable row level security;
 alter table public.payments      enable row level security;
-alter table public.attendance    enable row level security;
 alter table public.announcements enable row level security;
 
 -- Students may read only their own rows. (Service role bypasses RLS for writes.)
@@ -78,10 +65,6 @@ create policy "students read own" on public.students
 
 drop policy if exists "payments read own" on public.payments;
 create policy "payments read own" on public.payments
-    for select using (auth.uid() = student_id);
-
-drop policy if exists "attendance read own" on public.attendance;
-create policy "attendance read own" on public.attendance
     for select using (auth.uid() = student_id);
 
 -- Any authenticated student may read active announcements.

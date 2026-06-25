@@ -1,7 +1,7 @@
 # Studio Finance — Fitness Studio Management
 
 A mobile-first PWA for a fitness studio: students sign up, pick a batch, and pay
-monthly fees online via Razorpay; the admin tracks payment status, attendance,
+monthly fees online via Razorpay; the admin tracks payment status,
 revenue analytics, and posts announcements.
 
 ## Stack
@@ -14,8 +14,7 @@ revenue analytics, and posts announcements.
 ## Features
 - **Students:** signup with mandatory fields (name, email, 10-digit phone,
   password, batch), immediate pro-rated first payment, dashboard with payment
-  status, attendance and history, biometric (Face ID / fingerprint) unlock,
-  announcement banner, installable on the home screen.
+  status and history, announcement banner, installable on the home screen.
 - **Admin:** single login, stats strip, revenue analytics (this vs last month,
   per-batch expected vs collected and collection rate), batch chips, student
   cards with one-tap WhatsApp reminders, post/edit/delete announcements.
@@ -46,7 +45,7 @@ frontend/vercel.json Vercel config (SPA rewrite + PWA headers)
 
 ### Database
 Run `supabase/schema.sql` in the Supabase SQL editor (creates `students`,
-`payments`, `attendance`, `announcements` + RLS policies).
+`payments`, `announcements` + RLS policies).
 
 ### Backend
 ```bash

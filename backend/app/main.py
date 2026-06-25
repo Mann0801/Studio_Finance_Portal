@@ -29,7 +29,3 @@ app.include_router(payments.router)
 app.include_router(webhooks.router)
 app.include_router(admin.router)
 app.include_router(announcements.router)
-
-# Mounted in later build steps:
-# from .routers import attendance
-# app.include_router(attendance.router)

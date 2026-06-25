@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
-import BiometricGate from './components/BiometricGate'
 import StudentLayout from './components/StudentLayout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -10,19 +9,16 @@ import FirstPayment from './pages/FirstPayment'
 import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
-import Attendance from './pages/student/Attendance'
 import Profile from './pages/student/Profile'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import './App.css'
 
-// Protected student area: requires a session, then a biometric unlock if enabled.
+// Protected student area: requires a signed-in session.
 function ProtectedShell() {
   return (
     <ProtectedRoute>
-      <BiometricGate>
-        <Outlet />
-      </BiometricGate>
+      <Outlet />
     </ProtectedRoute>
   )
 }
@@ -52,7 +48,6 @@ export default function App() {
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/payments" element={<Payments />} />
-              <Route path="/attendance" element={<Attendance />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
           </Route>
