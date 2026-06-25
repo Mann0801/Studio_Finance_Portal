@@ -14,7 +14,11 @@ create table if not exists public.students (
     username    text,                         -- unique handle chosen at profile setup
     phone       text        not null,         -- normalized, with country code (e.g. 91XXXXXXXXXX)
     email       text,                         -- present for email signups; null for phone-only
-    batch       text        not null check (batch in ('yoga', 'zumba', 'gymnastics')),
+    batch       text        not null check (batch in (
+                    'senior_citizens_yoga', 'traditional_yoga', 'weight_loss_yoga',
+                    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga'
+                )),
+    batch_slot  text,                         -- timing slot for Traditional Yoga ('batch1'..'batch4'); null otherwise
     join_date   date        not null,
     created_at  timestamptz not null default now()
 );
@@ -25,6 +29,18 @@ create table if not exists public.students (
 alter table public.students add column if not exists username text;
 alter table public.students alter column email drop not null;
 create unique index if not exists students_username_key on public.students (lower(username));
+
+-- Batch expansion: timing slots + the new batch catalogue. Drop the old check
+-- constraint FIRST, then remap the old single 'yoga' value to Traditional Yoga,
+-- then add the new constraint (order matters — the remap must not be blocked by
+-- the old constraint).
+alter table public.students add column if not exists batch_slot text;
+alter table public.students drop constraint if exists students_batch_check;
+update public.students set batch = 'traditional_yoga' where batch = 'yoga';
+alter table public.students add constraint students_batch_check check (batch in (
+    'senior_citizens_yoga', 'traditional_yoga', 'weight_loss_yoga',
+    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga'
+));
 
 -- ── payments ────────────────────────────────────────────────────────────────
 -- One row per (student, calendar month). amount_paise is the server-computed,

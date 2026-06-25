@@ -6,7 +6,13 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import create_admin_token, require_admin, verify_admin_credentials
-from ..constants import BATCH_LABELS, Batch
+from ..constants import (
+    BATCH_LABELS,
+    TRADITIONAL_SLOTS,
+    Batch,
+    batch_info,
+    slot_label,
+)
 from ..db import get_supabase
 from ..fees import compute_due, current_period, previous_period
 from ..schemas import (
@@ -15,6 +21,7 @@ from ..schemas import (
     AdminStats,
     AdminStudentRow,
     BatchStat,
+    SlotStat,
 )
 from ..services.whatsapp import reminder_link
 
@@ -60,12 +67,15 @@ def login(body: AdminLoginRequest):
     response_model=list[AdminStudentRow],
     dependencies=[Depends(require_admin)],
 )
-def list_batch(batch: Batch):
+def list_batch(batch: Batch, slot: str | None = None):
     sb = get_supabase()
     period = current_period()
     students = (
         sb.table("students").select("*").eq("batch", batch.value).order("name").execute()
     ).data
+    # Traditional Yoga is filtered down to a single timing slot when requested.
+    if batch_info(batch).has_slots and slot:
+        students = [s for s in students if s.get("batch_slot") == slot]
     paid = _paid_amounts_for_period(period, [s["id"] for s in students])
 
     rows: list[AdminStudentRow] = []
@@ -74,11 +84,11 @@ def list_batch(batch: Batch):
         due = compute_due(batch, join_date, period)
         is_paid = s["id"] in paid
         amount = paid[s["id"]] if is_paid else due.amount_paise
+        sl = slot_label(s.get("batch_slot"))
         wa = None
         if not is_paid and amount > 0:
-            wa = reminder_link(
-                s["phone"], s["name"], BATCH_LABELS[batch], amount, period
-            )
+            label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
+            wa = reminder_link(s["phone"], s["name"], label, amount, period)
         rows.append(
             AdminStudentRow(
                 id=s["id"],
@@ -86,6 +96,8 @@ def list_batch(batch: Batch):
                 email=s["email"],
                 phone=s["phone"],
                 batch=batch,
+                batch_slot=s.get("batch_slot"),
+                slot_label=sl,
                 join_date=join_date,
                 period=period,
                 amount_paise=amount,
@@ -102,14 +114,11 @@ def stats():
     sb = get_supabase()
     period = current_period()
     prev = previous_period(period)
-    students = sb.table("students").select("id, batch, join_date").execute().data
+    students = sb.table("students").select("id, batch, batch_slot, join_date").execute().data
     paid = _paid_amounts_for_period(period)
     last_month_paid = _paid_amounts_for_period(prev)
 
-    per_batch: list[BatchStat] = []
-    total_paid = total_students = total_revenue = total_expected = 0
-    for batch in Batch:
-        members = [s for s in students if s["batch"] == batch.value]
+    def _group_stat(batch: Batch, members: list[dict]):
         paid_ids = [s["id"] for s in members if s["id"] in paid]
         revenue = sum(paid[sid] for sid in paid_ids)
         # Expected = sum of what each enrolled student owes for this period
@@ -118,6 +127,33 @@ def stats():
             compute_due(batch, _as_date(s["join_date"]), period).amount_paise
             for s in members
         )
+        return paid_ids, revenue, expected
+
+    per_batch: list[BatchStat] = []
+    total_paid = total_students = total_revenue = total_expected = 0
+    for batch in Batch:
+        members = [s for s in students if s["batch"] == batch.value]
+        paid_ids, revenue, expected = _group_stat(batch, members)
+
+        # Per-timing breakdown for batches with slots (Traditional Yoga).
+        slots: list[SlotStat] = []
+        if batch_info(batch).has_slots:
+            for slot_key, slot_name in TRADITIONAL_SLOTS.items():
+                smembers = [s for s in members if s.get("batch_slot") == slot_key]
+                s_paid_ids, s_rev, s_exp = _group_stat(batch, smembers)
+                slots.append(
+                    SlotStat(
+                        slot=slot_key,
+                        slot_label=slot_name,
+                        total_students=len(smembers),
+                        paid_count=len(s_paid_ids),
+                        unpaid_count=len(smembers) - len(s_paid_ids),
+                        revenue_paise=s_rev,
+                        expected_paise=s_exp,
+                        collection_rate=_collection_rate(s_rev, s_exp),
+                    )
+                )
+
         per_batch.append(
             BatchStat(
                 batch=batch,
@@ -128,6 +164,7 @@ def stats():
                 revenue_paise=revenue,
                 expected_paise=expected,
                 collection_rate=_collection_rate(revenue, expected),
+                slots=slots,
             )
         )
         total_students += len(members)

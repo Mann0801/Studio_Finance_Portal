@@ -37,6 +37,12 @@ export const CheckIcon = (p) => (
   </svg>
 )
 
+export const CloseIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+)
+
 export const MegaphoneIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M3 11v2a1 1 0 0 0 1 1h2l9 5V5l-9 5H4a1 1 0 0 0-1 1Z" />

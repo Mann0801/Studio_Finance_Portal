@@ -462,10 +462,99 @@
   font-weight: 700;
   color: var(--text);
 }
+.batch-opt {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+}
+.batch-opt .b-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.batch-opt .b-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.batch-opt .b-slot {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent-bright);
+  margin-top: 2px;
+}
+.batch-opt .b-slot.muted-warn {
+  color: var(--unpaid);
+  font-weight: 600;
+}
 .batch-opt .b-price {
   margin-left: auto;
+  align-self: flex-start;
   color: var(--muted);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Timing bottom sheet (Traditional Yoga) ── */
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.sheet-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slot-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  padding: 14px 16px;
+  min-height: 58px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: var(--card-2);
+  cursor: pointer;
+}
+.slot-opt.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.slot-opt .slot-name {
+  font-weight: 800;
+}
+.slot-opt .slot-time {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+.slot-opt .slot-check {
+  margin-left: auto;
+  color: var(--accent-bright);
+  display: grid;
+  place-items: center;
 }
 
 /* ── Bottom navigation ── */
@@ -625,6 +714,23 @@
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+/* Traditional Yoga timing sub-tabs + per-slot revenue breakdown */
+.sub-chips {
+  margin-top: -4px;
+  padding-top: 0;
+}
+.slot-breakdown {
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.slot-breakdown .slot-row {
+  gap: 10px;
 }
 
 /* ── Admin: student cards ── */
