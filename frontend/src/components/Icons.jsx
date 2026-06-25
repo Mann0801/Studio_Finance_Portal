@@ -37,6 +37,31 @@ export const CheckIcon = (p) => (
   </svg>
 )
 
+export const SearchIcon = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.2-3.2" />
+  </svg>
+)
+
+export const UsersIcon = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+    <path d="M16 5.2a3 3 0 0 1 0 5.6" />
+    <path d="M17.5 14.4c2.2.5 3.8 2.3 3.8 4.6" />
+  </svg>
+)
+
+export const SettingsIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+    <circle cx="9" cy="6" r="2" />
+    <circle cx="15" cy="12" r="2" />
+    <circle cx="8" cy="18" r="2" />
+  </svg>
+)
+
 export const CloseIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M6 6l12 12M18 6 6 18" />

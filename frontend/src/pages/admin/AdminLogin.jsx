@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { adminApi, setAdminToken } from '../../lib/adminApi'
+import { adminApi, setAdminToken, setAdminEmail } from '../../lib/adminApi'
 import { STUDIO_NAME } from '../../lib/brand'
 
 export default function AdminLogin() {
@@ -22,6 +22,7 @@ export default function AdminLogin() {
         auth: false,
       })
       setAdminToken(token)
+      setAdminEmail(form.email)
       navigate('/admin', { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed')
