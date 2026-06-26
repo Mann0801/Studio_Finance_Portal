@@ -181,22 +181,6 @@ export default function AdminStudentDetail() {
             </div>
           )}
 
-          {/* Attendance */}
-          <div className="section-h" style={{ marginTop: 20, marginBottom: 8 }}>
-            <h2>Attendance</h2>
-          </div>
-          <div className="card">
-            <div className="between">
-              <span className="muted">Classes this month</span>
-              <strong>— / {data.classes_this_month}</strong>
-            </div>
-            <div className="bar" style={{ opacity: 0.5 }}><span style={{ width: '0%' }} /></div>
-            <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-              Attendance tracking isn’t enabled yet — {data.classes_this_month} classes are
-              scheduled this month.
-            </p>
-          </div>
-
           {/* Actions */}
           <div className="stack" style={{ marginTop: 20, gap: 10 }}>
             {data.whatsapp_url && (

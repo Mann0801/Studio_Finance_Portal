@@ -15,7 +15,6 @@ from ..constants import (
 )
 from ..db import get_supabase
 from ..fees import (
-    classes_in_month,
     compute_due,
     current_period,
     now_local,
@@ -371,7 +370,6 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         last_payment_paise=last["amount_paise"] if last else None,
         last_payment_at=last.get("paid_at") if last else None,
         payments=history,
-        classes_this_month=classes_in_month(batch, period),
         whatsapp_url=wa,
     )
 

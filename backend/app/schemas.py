@@ -228,8 +228,6 @@ class AdminStudentDetail(BaseModel):
     last_payment_paise: Optional[int] = None
     last_payment_at: Optional[datetime] = None
     payments: list[StudentPaymentRow]
-    # Attendance: classes scheduled this month (attendance itself isn't tracked)
-    classes_this_month: int
     whatsapp_url: Optional[str] = None
 
 
