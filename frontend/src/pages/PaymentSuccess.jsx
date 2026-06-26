@@ -1,5 +1,6 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { rupees } from '../lib/batches'
+import { STUDIO_NAME } from '../lib/brand'
 import { CheckIcon } from '../components/Icons'
 
 function periodLabel(period) {
@@ -43,6 +44,12 @@ export default function PaymentSuccess() {
   // Direct visits with no payment context go home.
   if (!state?.period) return <Navigate to="/" replace />
 
+  const paidOn = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
   return (
     <div className="success-wrap page">
       <Confetti />
@@ -51,18 +58,64 @@ export default function PaymentSuccess() {
       </div>
       <h1>Payment successful</h1>
       <div className="success-amt">{rupees(state.amountPaise)}</div>
-      <p className="muted">{periodLabel(state.period)} fee</p>
-      <p className="muted small" style={{ marginTop: 4 }}>
-        {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-      </p>
-      {state.paymentId && (
-        <p className="muted small" style={{ marginTop: 6 }}>
-          Ref: {state.paymentId}
-        </p>
-      )}
+
+      {/* Receipt — the student can screenshot this for their records. */}
+      <div className="receipt">
+        <div className="receipt-head">
+          <img src="/icon.svg" alt="" className="receipt-logo" />
+          <div>
+            <div className="receipt-studio">{STUDIO_NAME}</div>
+            <div className="muted small">Fee receipt</div>
+          </div>
+        </div>
+        <div className="receipt-rows">
+          {state.studentName && (
+            <div className="receipt-row">
+              <span className="muted">Student</span>
+              <span>{state.studentName}</span>
+            </div>
+          )}
+          {state.batchLabel && (
+            <div className="receipt-row">
+              <span className="muted">Batch</span>
+              <span>
+                {state.batchLabel}
+                {state.slotLabel ? ` · ${state.slotLabel}` : ''}
+              </span>
+            </div>
+          )}
+          <div className="receipt-row">
+            <span className="muted">Month</span>
+            <span>{periodLabel(state.period)}</span>
+          </div>
+          <div className="receipt-row">
+            <span className="muted">Amount</span>
+            <span style={{ fontWeight: 700 }}>{rupees(state.amountPaise)}</span>
+          </div>
+          <div className="receipt-row">
+            <span className="muted">Paid on</span>
+            <span>{paidOn}</span>
+          </div>
+          <div className="receipt-row">
+            <span className="muted">Method</span>
+            <span>Online</span>
+          </div>
+          {state.paymentId && (
+            <div className="receipt-row">
+              <span className="muted">Reference</span>
+              <span className="receipt-ref">{state.paymentId}</span>
+            </div>
+          )}
+          <div className="receipt-row">
+            <span className="muted">Status</span>
+            <span className="receipt-paid">Paid</span>
+          </div>
+        </div>
+      </div>
+
       <button
         className="btn primary lg block"
-        style={{ marginTop: 28, maxWidth: 320 }}
+        style={{ marginTop: 24, maxWidth: 320 }}
         onClick={() => navigate('/', { replace: true })}
       >
         Go to dashboard

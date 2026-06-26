@@ -4,6 +4,7 @@ import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
 import { STUDIO_NAME } from '../../lib/brand'
 import StatusBadge from '../../components/StatusBadge'
+import { CheckIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
 function periodLabel(period) {
@@ -47,29 +48,36 @@ export default function Home() {
       </div>
 
       {/* Hero payment card */}
-      <div className="pay-card">
-        <div className="between">
-          <span className="card-title">{paid ? 'Paid this month' : 'Amount due'}</span>
-          <StatusBadge status={current.status} />
+      {paid ? (
+        <div className="pay-card paid-card">
+          <div className="paid-badge"><CheckIcon width={26} height={26} /></div>
+          <div className="paid-title">You're all paid up</div>
+          <div className="period">{periodLabel(current.period)} · {rupees(current.amount_paise)} paid</div>
         </div>
-        <div className="amount">{rupees(current.amount_paise)}</div>
-        <div className="period">
-          {periodLabel(current.period)}
-          {current.is_prorata ? ' · pro-rated first month' : ''}
+      ) : (
+        <div className="pay-card">
+          <div className="between">
+            <span className="card-title">Amount due</span>
+            <StatusBadge status={current.status} />
+          </div>
+          <div className="amount">{rupees(current.amount_paise)}</div>
+          <div className="period">
+            {periodLabel(current.period)}
+            {current.is_prorata ? ' · pro-rated first month' : ''}
+          </div>
+          {current.amount_paise > 0 && (
+            <button
+              className="btn primary lg block"
+              style={{ marginTop: 18 }}
+              onClick={() => pay()}
+              disabled={paying}
+            >
+              {paying ? 'Processing…' : `Pay ${rupees(current.amount_paise)} now`}
+            </button>
+          )}
+          {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
         </div>
-        {!paid && current.amount_paise > 0 && (
-          <button
-            className="btn primary lg block"
-            style={{ marginTop: 18 }}
-            onClick={() => pay()}
-            disabled={paying}
-          >
-            {paying ? 'Processing…' : `Pay ${rupees(current.amount_paise)} now`}
-          </button>
-        )}
-        {paid && <p className="sub" style={{ marginTop: 14 }}>You're all set for this month 🎉</p>}
-        {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
-      </div>
+      )}
 
       {/* Recent payments */}
       <div className="section-h" style={{ marginTop: 22 }}>

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { slotById, rupees } from '../../lib/batches'
-import { SearchIcon } from '../../components/Icons'
+import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
+import { toCsv, downloadCsv } from '../../lib/csv'
 
 function pct(n) {
   const sign = n > 0 ? '+' : ''
@@ -23,10 +24,12 @@ function periodLabel(period) {
 export default function AdminPayments() {
   const { stats, guard } = useAdmin()
   const [history, setHistory] = useState(null)
+  const [unpaid, setUnpaid] = useState(null)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     adminApi('/api/admin/payments').then(setHistory).catch(guard)
+    adminApi('/api/admin/unpaid').then(setUnpaid).catch(guard)
   }, [guard])
 
   const visible = useMemo(() => {
@@ -34,6 +37,22 @@ export default function AdminPayments() {
     const q = search.trim().toLowerCase()
     return q ? history.filter((p) => p.name.toLowerCase().includes(q)) : history
   }, [history, search])
+
+  const exportCsv = () => {
+    if (!history || history.length === 0) return
+    const headers = ['Name', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Paid on']
+    const rows = history.map((p) => [
+      p.name,
+      p.batch_label,
+      p.slot_label || '',
+      periodLabel(p.period),
+      (p.amount_paise / 100).toFixed(2),
+      p.method,
+      p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-IN') : '',
+    ])
+    const stamp = new Date().toISOString().slice(0, 10)
+    downloadCsv(`payments-${stamp}.csv`, toCsv(headers, rows))
+  }
 
   return (
     <>
@@ -71,6 +90,47 @@ export default function AdminPayments() {
             <div className="label">vs last month</div>
           </div>
         </div>
+      )}
+
+      {/* Send reminders to unpaid students */}
+      <div className="section-h" style={{ marginTop: 20, marginBottom: 4 }}>
+        <h2>Send reminders</h2>
+        {unpaid && unpaid.length > 0 && (
+          <span className="muted small">{unpaid.length} unpaid</span>
+        )}
+      </div>
+      {unpaid === null ? (
+        <ListSkeleton rows={2} />
+      ) : unpaid.length === 0 ? (
+        <div className="card empty">Everyone's paid this month 🎉</div>
+      ) : (
+        <>
+          <p className="muted small" style={{ margin: '0 0 8px' }}>
+            Tap to open WhatsApp with a prefilled reminder for each student.
+          </p>
+          <div className="card flush list">
+            {unpaid.map((s) => (
+              <div className="list-item pay-row" key={s.id}>
+                <div className="li-main">
+                  <div className="feed-name">{s.name}</div>
+                  <div className="muted small">
+                    {rupees(s.amount_paise)} due{s.slot_label ? ` · ${s.slot_label}` : ''}
+                  </div>
+                </div>
+                {s.whatsapp_url && (
+                  <a
+                    className="wa-btn"
+                    href={s.whatsapp_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <WhatsAppIcon width={16} height={16} /> Remind
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Per-batch revenue breakdown */}
@@ -112,6 +172,11 @@ export default function AdminPayments() {
       {/* Payment history */}
       <div className="section-h" style={{ marginTop: 20, marginBottom: 4 }}>
         <h2>Payment history</h2>
+        {history && history.length > 0 && (
+          <button type="button" className="link-btn" onClick={exportCsv}>
+            <DownloadIcon width={15} height={15} /> Export CSV
+          </button>
+        )}
       </div>
       <div className="search">
         <SearchIcon width={18} height={18} />
