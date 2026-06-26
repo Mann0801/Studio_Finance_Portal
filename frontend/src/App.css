@@ -220,6 +220,29 @@
   font-size: 13px;
   margin-top: 2px;
 }
+.pay-card.paid-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 26px 22px;
+}
+.paid-badge {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--paid);
+  color: #fff;
+  margin-bottom: 4px;
+}
+.paid-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
 
 /* ── Stat tiles ── */
 .stat-grid {
@@ -341,6 +364,9 @@
   color: #06351b;
 }
 .link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: transparent;
   border: none;
   color: var(--muted);
@@ -1101,4 +1127,59 @@
   font-size: 40px;
   font-weight: 800;
   margin: 4px 0;
+}
+
+/* ── Fee receipt (screenshot-friendly) ── */
+.receipt {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 18px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 16px;
+  padding: 16px 18px;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.receipt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed var(--border, #e5e7eb);
+}
+.receipt-logo {
+  width: 34px;
+  height: 34px;
+}
+.receipt-studio {
+  font-weight: 800;
+  font-size: 15px;
+}
+.receipt-rows {
+  display: flex;
+  flex-direction: column;
+}
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border, #f0f0f0);
+}
+.receipt-row:last-child {
+  border-bottom: none;
+}
+.receipt-row > span:last-child {
+  text-align: right;
+}
+.receipt-ref {
+  font-size: 12px;
+  word-break: break-all;
+}
+.receipt-paid {
+  color: var(--paid);
+  font-weight: 700;
 }

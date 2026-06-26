@@ -225,6 +225,51 @@ def _students_by_id(ids: list[str]) -> dict[str, dict]:
     return {s["id"]: s for s in rows}
 
 
+@router.get(
+    "/unpaid",
+    response_model=list[AdminStudentRow],
+    dependencies=[Depends(require_admin)],
+)
+def unpaid_students():
+    """Every student who still owes this month, newest-joined last, each with a
+    prefilled WhatsApp reminder link. Powers the admin "Send reminders" list."""
+    sb = get_supabase()
+    period = current_period()
+    students = sb.table("students").select("*").order("name").execute().data
+    paid = _paid_amounts_for_period(period, [s["id"] for s in students])
+
+    rows: list[AdminStudentRow] = []
+    for s in students:
+        if s["id"] in paid:
+            continue
+        batch = Batch(s["batch"])
+        due = compute_due(batch, _as_date(s["join_date"]), period)
+        if due.amount_paise <= 0:
+            continue
+        sl = slot_label(s.get("batch_slot"))
+        label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
+        rows.append(
+            AdminStudentRow(
+                id=s["id"],
+                name=s["name"],
+                email=s["email"],
+                phone=s["phone"],
+                batch=batch,
+                batch_slot=s.get("batch_slot"),
+                slot_label=sl,
+                join_date=_as_date(s["join_date"]),
+                period=period,
+                amount_paise=due.amount_paise,
+                is_prorata=due.is_prorata,
+                status="unpaid",
+                whatsapp_url=reminder_link(
+                    s["phone"], s["name"], label, due.amount_paise, period
+                ),
+            )
+        )
+    return rows
+
+
 @router.get("/activity", response_model=AdminActivity, dependencies=[Depends(require_admin)])
 def activity():
     """Home feed: the last 5 payments received and last 3 new signups."""
