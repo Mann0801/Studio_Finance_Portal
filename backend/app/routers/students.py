@@ -15,12 +15,24 @@ from ..schemas import (
     PaymentOut,
     SignupRequest,
     StudentOut,
+    UpdateProfileRequest,
 )
 from ..util import normalize_phone
 
 router = APIRouter(prefix="/api", tags=["students"])
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,30}$")
+
+
+def _resolve_slot(batch: Batch, raw_slot: str | None) -> str | None:
+    """Validate the timing slot for a batch. Slot is required (and must be a known
+    key) for batches that have slots; ignored (forced to None) otherwise."""
+    slot = (raw_slot or "").strip() or None
+    if batch_info(batch).has_slots:
+        if slot not in TRADITIONAL_SLOTS:
+            raise HTTPException(status_code=422, detail="Please choose a timing slot")
+        return slot
+    return None
 
 
 def _student_out(row: dict) -> StudentOut:
@@ -71,12 +83,7 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
 
     # Timing slot: required (and validated) for batches that have slots; ignored
     # otherwise so a stray value can't be stored against a slot-less batch.
-    slot = (body.batch_slot or "").strip() or None
-    if batch_info(body.batch).has_slots:
-        if slot not in TRADITIONAL_SLOTS:
-            raise HTTPException(status_code=422, detail="Please choose a timing slot")
-    else:
-        slot = None
+    slot = _resolve_slot(body.batch, body.batch_slot)
 
     row = {
         "id": student["id"],
@@ -100,6 +107,37 @@ def my_profile(student=Depends(get_current_student)):
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found; complete signup")
     return _student_out(res.data[0])
+
+
+@router.patch("/me/profile", response_model=StudentOut)
+def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_student)):
+    """Let a student edit their own display name, phone and chosen batch/timing.
+
+    Username and email (the login identity) are intentionally not editable here.
+    Changing the batch recomputes the fee on the next dashboard load.
+    """
+    sb = get_supabase()
+    res = sb.table("students").select("*").eq("id", student["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+
+    try:
+        phone = normalize_phone(body.phone)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    slot = _resolve_slot(body.batch, body.batch_slot)
+
+    updates = {
+        "name": body.name.strip(),
+        "phone": phone,
+        "batch": body.batch.value,
+        "batch_slot": slot,
+    }
+    updated = (
+        sb.table("students").update(updates).eq("id", student["id"]).execute()
+    )
+    return _student_out(updated.data[0])
 
 
 @router.get("/me/dashboard", response_model=DashboardOut)

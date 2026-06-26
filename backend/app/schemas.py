@@ -20,6 +20,16 @@ class SignupRequest(BaseModel):
     batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
 
 
+class UpdateProfileRequest(BaseModel):
+    # Self-service profile edit from the student Profile tab. Username and email
+    # (the login identity) are not editable here; only display/contact details and
+    # the chosen batch + timing slot.
+    name: str = Field(min_length=1, max_length=120)
+    phone: str = Field(min_length=6, max_length=20)
+    batch: Batch
+    batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
+
+
 class StudentOut(BaseModel):
     id: str
     name: str
