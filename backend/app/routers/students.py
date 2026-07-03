@@ -1,8 +1,6 @@
 """Student-facing routes: signup (profile + batch) and read-only dashboard."""
 from __future__ import annotations
 
-import re
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
@@ -20,8 +18,6 @@ from ..schemas import (
 from ..util import normalize_phone
 
 router = APIRouter(prefix="/api", tags=["students"])
-
-USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,30}$")
 
 
 def _resolve_slot(batch: Batch, raw_slot: str | None) -> str | None:
@@ -41,7 +37,6 @@ def _student_out(row: dict) -> StudentOut:
     return StudentOut(
         id=row["id"],
         name=row["name"],
-        username=row.get("username"),
         email=row.get("email"),
         phone=row["phone"],
         batch=batch,
@@ -70,17 +65,6 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
-    username = body.username.strip()
-    if not USERNAME_RE.match(username):
-        raise HTTPException(
-            status_code=422,
-            detail="Username must be 3–30 letters, numbers or underscores",
-        )
-    # Case-insensitive uniqueness (ilike with no wildcards is an exact match).
-    taken = sb.table("students").select("id").ilike("username", username).execute()
-    if taken.data:
-        raise HTTPException(status_code=409, detail="That username is taken")
-
     # Timing slot: required (and validated) for batches that have slots; ignored
     # otherwise so a stray value can't be stored against a slot-less batch.
     slot = _resolve_slot(body.batch, body.batch_slot)
@@ -88,7 +72,6 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     row = {
         "id": student["id"],
         "name": body.name.strip(),
-        "username": username,
         "email": student["email"] or None,
         "phone": phone,
         "batch": body.batch.value,
@@ -113,7 +96,7 @@ def my_profile(student=Depends(get_current_student)):
 def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_student)):
     """Let a student edit their own display name, phone and chosen batch/timing.
 
-    Username and email (the login identity) are intentionally not editable here.
+    Email (the login identity) is intentionally not editable here.
     Changing the batch recomputes the fee on the next dashboard load.
     """
     sb = get_supabase()

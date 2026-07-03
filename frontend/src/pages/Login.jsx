@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { loginWithUsername, getLastUsername, setLastUsername } from '../lib/auth'
+import { loginWithEmail, getLastEmail, setLastEmail } from '../lib/auth'
 import { STUDIO_NAME } from '../lib/brand'
 
 export default function Login() {
   const navigate = useNavigate()
   const { state } = useLocation()
   const [form, setForm] = useState({
-    username: state?.username || getLastUsername(),
+    email: state?.email || getLastEmail(),
     password: '',
   })
   const [error, setError] = useState('')
@@ -21,8 +21,8 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      await loginWithUsername(form.username, form.password)
-      setLastUsername(form.username.trim())
+      await loginWithEmail(form.email, form.password)
+      setLastEmail(form.email.trim().toLowerCase())
       navigate('/', { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed')
@@ -37,18 +37,19 @@ export default function Login() {
         <img src="/icon.svg" alt="" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Welcome back</h1>
-        <p className="auth-sub">Log in with your username and password.</p>
+        <p className="auth-sub">Log in with your email and password.</p>
       </div>
 
       {notice && <p className="notice" style={{ textAlign: 'center', marginBottom: 14 }}>{notice}</p>}
 
       <form onSubmit={onSubmit} className="form">
         <label>
-          Username
+          Email
           <input
-            value={form.username}
-            onChange={set('username')}
-            autoComplete="username"
+            type="email"
+            value={form.email}
+            onChange={set('email')}
+            autoComplete="email"
             autoCapitalize="none"
             spellCheck="false"
             required

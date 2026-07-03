@@ -108,12 +108,6 @@ export default function Profile() {
           </div>
 
           <div className="card flush list">
-            {data.student.username && (
-              <div className="list-item">
-                <span className="muted">Username</span>
-                <span className="li-main" style={{ fontSize: 14 }}>@{data.student.username}</span>
-              </div>
-            )}
             {data.student.email && (
               <div className="list-item">
                 <span className="muted">Email</span>
