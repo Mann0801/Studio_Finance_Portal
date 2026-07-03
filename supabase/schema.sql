@@ -11,9 +11,8 @@
 create table if not exists public.students (
     id          uuid primary key references auth.users (id) on delete cascade,
     name        text        not null,
-    username    text,                         -- unique handle chosen at profile setup
     phone       text        not null,         -- normalized, with country code (e.g. 91XXXXXXXXXX)
-    email       text,                         -- present for email signups; null for phone-only
+    email       text,                         -- the login identity (Supabase Auth email)
     batch       text        not null check (batch in (
                     'senior_citizens_yoga', 'traditional_yoga', 'weight_loss_yoga',
                     'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga'
@@ -23,12 +22,11 @@ create table if not exists public.students (
     created_at  timestamptz not null default now()
 );
 
--- Auth redesign: ensure the username column + a case-insensitive unique index
--- exist even on databases created before this change. Email is now optional
--- (phone-only signups have no email).
-alter table public.students add column if not exists username text;
+-- Email-only auth: signup + login run on email + password. Drop the legacy
+-- username column and its unique index (the index drops with the column).
+drop index if exists public.students_username_key;
+alter table public.students drop column if exists username;
 alter table public.students alter column email drop not null;
-create unique index if not exists students_username_key on public.students (lower(username));
 
 -- Batch expansion: timing slots + the new batch catalogue. Drop the old check
 -- constraint FIRST, then remap the old single 'yoga' value to Traditional Yoga,
