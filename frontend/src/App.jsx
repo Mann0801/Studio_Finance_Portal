@@ -18,6 +18,7 @@ import AdminLayout from './components/AdminLayout'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminHome from './pages/admin/AdminHome'
 import AdminStudents from './pages/admin/AdminStudents'
+import AddStudent from './pages/admin/AddStudent'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminPayments from './pages/admin/AdminPayments'
 import AdminSettings from './pages/admin/AdminSettings'
@@ -53,6 +54,7 @@ export default function App() {
           >
             <Route path="/admin" element={<AdminHome />} />
             <Route path="/admin/students" element={<AdminStudents />} />
+            <Route path="/admin/students/new" element={<AddStudent />} />
             <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/settings" element={<AdminSettings />} />

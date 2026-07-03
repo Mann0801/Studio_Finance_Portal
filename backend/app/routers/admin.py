@@ -1,6 +1,7 @@
 """Admin routes: single hardcoded login, per-batch student lists, and stats."""
 from __future__ import annotations
 
+import secrets
 from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,17 +26,21 @@ from ..schemas import (
     ActivityPayment,
     ActivitySignup,
     AdminActivity,
+    AdminCreateStudentRequest,
+    AdminCreateStudentResponse,
     AdminLoginRequest,
     AdminLoginResponse,
     AdminPaymentRow,
     AdminStats,
     AdminStudentDetail,
     AdminStudentRow,
+    AdminUpdateStudentRequest,
     BatchStat,
     SlotStat,
     StudentPaymentRow,
 )
 from ..services.whatsapp import reminder_link
+from ..util import normalize_phone
 
 
 def _payment_method(row: dict) -> str:
@@ -47,6 +52,17 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 def _as_date(value) -> _date:
     return _date.fromisoformat(value) if isinstance(value, str) else value
+
+
+def _resolve_slot(batch: Batch, raw_slot: str | None) -> str | None:
+    """Validate the timing slot: required (and a known key) for batches that have
+    slots, forced to None otherwise."""
+    slot = (raw_slot or "").strip() or None
+    if batch_info(batch).has_slots:
+        if slot not in TRADITIONAL_SLOTS:
+            raise HTTPException(status_code=422, detail="Please choose a timing slot")
+        return slot
+    return None
 
 
 def _paid_amounts_for_period(period: str, student_ids: list[str] | None = None) -> dict[str, int]:
@@ -433,6 +449,95 @@ def _load_student_or_404(student_id: str) -> dict:
 )
 def student_detail(student_id: str):
     return _build_student_detail(_load_student_or_404(student_id))
+
+
+@router.post(
+    "/students",
+    response_model=AdminCreateStudentResponse,
+    dependencies=[Depends(require_admin)],
+)
+def create_student(body: AdminCreateStudentRequest):
+    """Register a walk-in member. Creates the Supabase Auth user (so they can log
+    in later with email + password) plus the matching students row. If no password
+    is given, a temporary one is generated and returned for the admin to share."""
+    sb = get_supabase()
+    email = body.email.strip().lower()
+
+    try:
+        phone = normalize_phone(body.phone)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    slot = _resolve_slot(body.batch, body.batch_slot)
+
+    generated = not (body.password and body.password.strip())
+    password = body.password.strip() if not generated else secrets.token_urlsafe(9)
+    if not generated and len(password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+
+    # Create the auth user (email pre-confirmed so they can log in immediately).
+    try:
+        created = sb.auth.admin.create_user(
+            {"email": email, "password": password, "email_confirm": True}
+        )
+        user = getattr(created, "user", None) or created
+        user_id = user.id if hasattr(user, "id") else user["id"]
+    except Exception as exc:  # noqa: BLE001 — surface a friendly duplicate message
+        if "already" in str(exc).lower() or "registered" in str(exc).lower():
+            raise HTTPException(status_code=409, detail="That email is already registered")
+        raise HTTPException(status_code=400, detail="Could not create the account")
+
+    join_date = body.join_date or now_local().date()
+    row = {
+        "id": user_id,
+        "name": body.name.strip(),
+        "email": email,
+        "phone": phone,
+        "batch": body.batch.value,
+        "batch_slot": slot,
+        "join_date": join_date.isoformat(),
+    }
+    try:
+        inserted = sb.table("students").insert(row).execute()
+    except Exception:
+        # Roll back the orphaned auth user so a retry can reuse the email.
+        try:
+            sb.auth.admin.delete_user(user_id)
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail="Could not save the student")
+
+    detail = _build_student_detail(inserted.data[0])
+    return AdminCreateStudentResponse(
+        student=detail,
+        temp_password=password if generated else None,
+    )
+
+
+@router.patch(
+    "/students/{student_id}",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def update_student(student_id: str, body: AdminUpdateStudentRequest):
+    """Edit a member's name, phone and batch/timing. Email is not editable here."""
+    sb = get_supabase()
+    _load_student_or_404(student_id)
+
+    try:
+        phone = normalize_phone(body.phone)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    slot = _resolve_slot(body.batch, body.batch_slot)
+    updates = {
+        "name": body.name.strip(),
+        "phone": phone,
+        "batch": body.batch.value,
+        "batch_slot": slot,
+    }
+    updated = sb.table("students").update(updates).eq("id", student_id).execute()
+    return _build_student_detail(updated.data[0])
 
 
 @router.post(

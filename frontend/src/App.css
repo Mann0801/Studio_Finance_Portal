@@ -355,6 +355,16 @@
   border: 1px solid var(--border);
   color: var(--text);
 }
+/* Compact header action button (e.g. Add / Edit in a topbar). */
+.btn.add-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  gap: 5px;
+}
 .btn.danger {
   background: var(--unpaid-bg);
   color: var(--unpaid);

@@ -4,7 +4,7 @@ import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { BATCHES, TRADITIONAL_SLOTS, rupees } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
-import { WhatsAppIcon, SearchIcon } from '../../components/Icons'
+import { WhatsAppIcon, SearchIcon, PlusIcon } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
 
 const FILTERS = [
@@ -63,6 +63,9 @@ export default function AdminStudents() {
         <div className="greeting">
           <h1>Students</h1>
         </div>
+        <button className="btn primary add-btn" onClick={() => navigate('/admin/students/new')}>
+          <PlusIcon width={18} height={18} /> Add
+        </button>
       </div>
 
       {/* Search */}
