@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { rupees } from '../../lib/batches'
+import { rupees, batchById } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
-import { WhatsAppIcon, ArrowLeftIcon } from '../../components/Icons'
+import BatchPicker from '../../components/BatchPicker'
+import { WhatsAppIcon, ArrowLeftIcon, EditIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
@@ -24,6 +25,9 @@ export default function AdminStudentDetail() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState(null)
+  const [formError, setFormError] = useState('')
 
   const load = useCallback(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -34,6 +38,46 @@ export default function AdminStudentDetail() {
   useEffect(() => load(), [load])
 
   const back = () => navigate('/admin/students')
+
+  function startEdit() {
+    setFormError('')
+    setForm({
+      name: data.name,
+      phone: data.phone,
+      batch: data.batch,
+      batch_slot: data.batch_slot ?? null,
+    })
+    setEditing(true)
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault()
+    setFormError('')
+    if (!form.name.trim()) return setFormError('Please enter their full name')
+    if (form.phone.replace(/\D/g, '').length !== 10) return setFormError('Phone must be 10 digits')
+    if (batchById(form.batch)?.hasSlots && !form.batch_slot)
+      return setFormError('Please choose a timing for Traditional Yoga')
+
+    setBusy(true)
+    try {
+      const updated = await adminApi(`/api/admin/students/${id}`, {
+        method: 'PATCH',
+        body: {
+          name: form.name.trim(),
+          phone: form.phone.replace(/\D/g, ''),
+          batch: form.batch,
+          batch_slot: form.batch_slot,
+        },
+      })
+      setData(updated)
+      reloadStats()
+      setEditing(false)
+    } catch (err) {
+      setFormError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function markPaid() {
     setBusy(true)
@@ -69,11 +113,57 @@ export default function AdminStudentDetail() {
           <ArrowLeftIcon width={22} height={22} />
         </button>
         <div className="greeting">
-          <h1>Student</h1>
+          <h1>{editing ? 'Edit student' : 'Student'}</h1>
         </div>
+        {data && !editing && (
+          <button className="btn ghost add-btn" onClick={startEdit}>
+            <EditIcon width={16} height={16} /> Edit
+          </button>
+        )}
       </div>
 
-      {!data ? (
+      {editing && data ? (
+        <form onSubmit={saveEdit} className="form" style={{ marginTop: 8 }}>
+          <label>
+            Full name
+            <input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            Phone
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, '') }))}
+              maxLength={10}
+            />
+          </label>
+          <BatchPicker
+            batch={form.batch}
+            slot={form.batch_slot}
+            onSelect={(batch, slot) => setForm((f) => ({ ...f, batch, batch_slot: slot }))}
+          />
+          {formError && <p className="error">{formError}</p>}
+          <div className="stack" style={{ gap: 10 }}>
+            <button type="submit" className="btn primary lg block" disabled={busy}>
+              {busy ? 'Saving…' : 'Save changes'}
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => setEditing(false)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+          </div>
+          <div style={{ height: 28 }} />
+        </form>
+      ) : !data ? (
         <>
           <div style={{ display: 'grid', placeItems: 'center', gap: 12, padding: '16px 0 8px' }}>
             <Skeleton height={84} width={84} radius={999} />

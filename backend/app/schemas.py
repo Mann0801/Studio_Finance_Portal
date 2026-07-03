@@ -213,6 +213,32 @@ class AdminStudentDetail(BaseModel):
     whatsapp_url: Optional[str] = None
 
 
+class AdminCreateStudentRequest(BaseModel):
+    # Admin registers a walk-in. Email is the login identity; a password is set so
+    # the member can sign in later (auto-generated and returned if left blank).
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(min_length=3, max_length=254)
+    phone: str = Field(min_length=6, max_length=20)
+    batch: Batch
+    batch_slot: Optional[str] = None
+    join_date: Optional[date] = None  # defaults to today
+    password: Optional[str] = Field(default=None, max_length=72)
+
+
+class AdminUpdateStudentRequest(BaseModel):
+    # Admin fixes a member's details. Email (the login identity) is not editable.
+    name: str = Field(min_length=1, max_length=120)
+    phone: str = Field(min_length=6, max_length=20)
+    batch: Batch
+    batch_slot: Optional[str] = None
+
+
+class AdminCreateStudentResponse(BaseModel):
+    student: AdminStudentDetail
+    # The temporary password to share, present only when it was auto-generated.
+    temp_password: Optional[str] = None
+
+
 # ── Announcements ──
 class AnnouncementIn(BaseModel):
     message: str = Field(min_length=1, max_length=500)
