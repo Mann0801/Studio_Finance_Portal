@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str = ""
     supabase_service_role_key: str = ""
-    # Public anon/publishable key — used server-side only for the password
-    # grant (username login), never for privileged writes.
+    # Public anon/publishable key. Login now runs on the frontend via Supabase
+    # directly, so this is currently unused server-side; kept for compatibility.
     supabase_anon_key: str = ""
     supabase_jwt_secret: str = ""
 
