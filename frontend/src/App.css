@@ -1193,3 +1193,135 @@
   color: var(--paid);
   font-weight: 700;
 }
+
+/* ── Legal / policy pages ── */
+.legal-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 20px calc(48px + env(safe-area-inset-bottom, 0px));
+  animation: page-in 0.28s ease both;
+}
+.legal-top {
+  margin-bottom: 18px;
+}
+.legal-brand {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  background: linear-gradient(100deg, var(--accent-bright), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.legal-h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.legal-updated {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 22px;
+}
+.legal-body {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.legal-body h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 26px 0 8px;
+  color: var(--text);
+}
+.legal-body p {
+  margin: 0 0 12px;
+}
+.legal-body ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.legal-body li {
+  margin: 0 0 6px;
+}
+.legal-body a {
+  color: var(--accent-bright);
+}
+.legal-contact {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 6px 16px;
+  margin: 16px 0;
+}
+.lc-row {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lc-row:last-child {
+  border-bottom: none;
+}
+.lc-k {
+  flex: 0 0 84px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.lc-v {
+  flex: 1;
+  font-size: 14px;
+  word-break: break-word;
+}
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.legal-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+.legal-nav a:hover {
+  color: var(--accent-bright);
+}
+
+/* Policy links at the bottom of public (auth) pages */
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+.legal-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.legal-links a:hover {
+  color: var(--accent-bright);
+}
+.legal-links .sep {
+  color: var(--muted);
+  opacity: 0.5;
+  margin: 0 2px;
+}
+.consent-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.consent-note a {
+  color: var(--accent-bright);
+}

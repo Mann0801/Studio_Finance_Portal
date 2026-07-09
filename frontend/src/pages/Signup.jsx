@@ -5,6 +5,7 @@ import { signUpWithPassword, setLastEmail } from '../lib/auth'
 import { batchById } from '../lib/batches'
 import { STUDIO_NAME } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
+import LegalFooter from '../components/LegalFooter'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -147,11 +148,17 @@ export default function Signup() {
         <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Creating account…' : 'Create account'}
         </button>
+        <p className="consent-note">
+          By creating an account you agree to our <Link to="/terms">Terms</Link> and{' '}
+          <Link to="/privacy">Privacy Policy</Link>.
+        </p>
       </form>
 
       <p className="auth-foot">
         Already have an account? <Link to="/login">Log in</Link>
       </p>
+
+      <LegalFooter />
     </div>
   )
 }

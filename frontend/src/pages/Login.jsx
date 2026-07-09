@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginWithEmail, getLastEmail, setLastEmail } from '../lib/auth'
 import { STUDIO_NAME } from '../lib/brand'
+import LegalFooter from '../components/LegalFooter'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -77,6 +78,8 @@ export default function Login() {
       <p className="auth-foot">
         New here? <Link to="/signup">Create an account</Link>
       </p>
+
+      <LegalFooter />
     </div>
   )
 }
