@@ -2,6 +2,21 @@ import { supabase } from './supabase'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
+/** Turn a FastAPI error body into a readable string.
+ *  `detail` may be a string, or a list/object of validation errors ({loc,msg,type}). */
+function errorMessage(data, status) {
+  const d = data?.detail
+  if (typeof d === 'string' && d) return d
+  if (Array.isArray(d)) {
+    const msgs = d
+      .map((e) => (typeof e === 'string' ? e : e?.msg))
+      .filter(Boolean)
+    if (msgs.length) return msgs.join('; ')
+  }
+  if (d && typeof d === 'object' && d.msg) return d.msg
+  return `Request failed (${status})`
+}
+
 /**
  * Call the backend API, attaching the current Supabase access token as a
  * Bearer credential. Throws an Error with the server's detail message on non-2xx.
@@ -24,9 +39,15 @@ export async function api(path, { method = 'GET', body, auth = true } = {}) {
   })
 
   const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  let data = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    // Non-JSON response (e.g. a proxy/error page during a cold start or outage).
+    if (!res.ok) throw new Error(`Server error (${res.status}). Please try again in a moment.`)
+  }
   if (!res.ok) {
-    throw new Error(data?.detail || `Request failed (${res.status})`)
+    throw new Error(errorMessage(data, res.status))
   }
   return data
 }
