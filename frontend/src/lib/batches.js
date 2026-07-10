@@ -45,6 +45,13 @@ export const BATCHES = [
     schedule: '',
     price: '₹2,000/month',
   },
+  // TEMP: for verifying live payments end-to-end. Remove after testing.
+  {
+    id: 'test_course',
+    label: 'Test Course',
+    schedule: 'Test only — verifies live payments',
+    price: '₹10',
+  },
 ]
 
 // Traditional Yoga timing slots. `id` values must match the backend.

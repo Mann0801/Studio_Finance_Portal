@@ -15,7 +15,7 @@ create table if not exists public.students (
     email       text,                         -- the login identity (Supabase Auth email)
     batch       text        not null check (batch in (
                     'senior_citizens_yoga', 'traditional_yoga', 'weight_loss_yoga',
-                    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga'
+                    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga', 'test_course'
                 )),
     batch_slot  text,                         -- timing slot for Traditional Yoga ('batch1'..'batch4'); null otherwise
     join_date   date        not null,
@@ -37,7 +37,7 @@ alter table public.students drop constraint if exists students_batch_check;
 update public.students set batch = 'traditional_yoga' where batch = 'yoga';
 alter table public.students add constraint students_batch_check check (batch in (
     'senior_citizens_yoga', 'traditional_yoga', 'weight_loss_yoga',
-    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga'
+    'prenatal_yoga', 'gymnastics', 'zumba', 'kids_yoga', 'test_course'
 ));
 
 -- ── payments ────────────────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ class Batch(str, Enum):
     gymnastics = "gymnastics"
     zumba = "zumba"
     kids_yoga = "kids_yoga"
+    test_course = "test_course"  # TEMP: ₹10 flat, for verifying live payments end-to-end
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,12 @@ BATCHES_INFO: dict[Batch, BatchInfo] = {
         session_weekdays=(5, 6), sessions_per_month=8,
     ),
     Batch.kids_yoga: BatchInfo("Kids Yoga", "", MONTHLY, 2000_00),
+    # TEMP test course: SESSION billing with a 1-session cap and every weekday as a
+    # session day → always exactly ₹10, no pro-rata. Remove after payment testing.
+    Batch.test_course: BatchInfo(
+        "Test Course", "Test only — verifies live payments", SESSION, 10_00,
+        session_weekdays=(0, 1, 2, 3, 4, 5, 6), sessions_per_month=1,
+    ),
 }
 
 # Traditional Yoga timing slots (stored on students.batch_slot).
