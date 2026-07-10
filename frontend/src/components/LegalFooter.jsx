@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 const LINKS = [
+  { to: '/plans', label: 'Classes & Pricing' },
   { to: '/terms', label: 'Terms' },
   { to: '/privacy', label: 'Privacy' },
   { to: '/refund', label: 'Refunds' },

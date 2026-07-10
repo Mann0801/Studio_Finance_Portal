@@ -22,6 +22,7 @@ import AddStudent from './pages/admin/AddStudent'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminPayments from './pages/admin/AdminPayments'
 import AdminSettings from './pages/admin/AdminSettings'
+import Plans from './pages/Plans'
 import Terms from './pages/legal/Terms'
 import Privacy from './pages/legal/Privacy'
 import RefundPolicy from './pages/legal/RefundPolicy'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset" element={<Reset />} />
+          <Route path="/plans" element={<Plans />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<RefundPolicy />} />

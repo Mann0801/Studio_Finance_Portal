@@ -78,6 +78,9 @@ export default function Login() {
       <p className="auth-foot">
         New here? <Link to="/signup">Create an account</Link>
       </p>
+      <p className="auth-foot" style={{ marginTop: 6 }}>
+        <Link to="/plans">Browse our classes &amp; pricing →</Link>
+      </p>
 
       <LegalFooter />
     </div>
