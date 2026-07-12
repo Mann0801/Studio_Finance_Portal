@@ -32,9 +32,10 @@ export default function Home() {
   if (error) return <p className="error" style={{ marginTop: 24 }}>{error}</p>
   if (!data) return null
 
-  const { student, current, history } = data
+  const { student, current, history, outstanding = [] } = data
   const paid = current.status === 'paid'
-  const recent = history.slice(0, 3)
+  const outstandingPeriods = new Set(outstanding.map((p) => p.period))
+  const recent = history.filter((p) => !outstandingPeriods.has(p.period)).slice(0, 3)
 
   return (
     <>
@@ -77,6 +78,17 @@ export default function Home() {
           )}
           {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
         </div>
+      )}
+
+      {outstanding.length > 0 && (
+        <Link to="/payments" className="due-alert">
+          <span>
+            {outstanding.length === 1
+              ? '1 earlier month is unpaid'
+              : `${outstanding.length} earlier months are unpaid`}
+          </span>
+          <span className="due-alert-cta">Pay now →</span>
+        </Link>
       )}
 
       {/* Recent payments */}

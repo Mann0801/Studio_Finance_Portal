@@ -13,6 +13,11 @@ export default function Payments() {
   const { data, loading, error } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
 
+  // Months surfaced above as payable dues shouldn't also appear as "Pending"
+  // rows in History (they'd be the same month listed twice).
+  const outstandingPeriods = new Set((data?.outstanding ?? []).map((p) => p.period))
+  const historyRows = (data?.history ?? []).filter((p) => !outstandingPeriods.has(p.period))
+
   return (
     <>
       <div className="topbar">
@@ -57,14 +62,41 @@ export default function Payments() {
             {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
           </div>
 
+          {data.outstanding?.length > 0 && (
+            <>
+              <div className="section-h" style={{ marginTop: 22 }}>
+                <h2>Earlier months due</h2>
+              </div>
+              <div className="card flush list">
+                {data.outstanding.map((p) => (
+                  <div className="list-item" key={p.period}>
+                    <div>
+                      <div className="li-main">{periodLabel(p.period)}</div>
+                      <div className="li-sub">
+                        {p.is_prorata ? 'Pro-rated · ' : ''}Unpaid
+                      </div>
+                    </div>
+                    <button
+                      className="btn primary sm"
+                      onClick={() => pay(p.period)}
+                      disabled={paying}
+                    >
+                      {paying ? '…' : `Pay ${rupees(p.amount_paise)}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           <div className="section-h" style={{ marginTop: 22 }}>
             <h2>History</h2>
           </div>
-          {data.history.length === 0 ? (
+          {historyRows.length === 0 ? (
             <div className="card empty">No payments yet.</div>
           ) : (
             <div className="card flush list">
-              {data.history.map((p) => (
+              {historyRows.map((p) => (
                 <div className="list-item" key={p.period}>
                   <div>
                     <div className="li-main">{periodLabel(p.period)}</div>

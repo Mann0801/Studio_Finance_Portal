@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ..auth import get_current_student
 from ..constants import BATCH_LABELS, TRADITIONAL_SLOTS, Batch, batch_info, slot_label
 from ..db import get_supabase
-from ..fees import compute_due, current_period, now_local
+from ..fees import compute_due, current_period, now_local, period_of, previous_period
 from ..schemas import (
     CurrentDue,
     DashboardOut,
@@ -156,6 +156,26 @@ def dashboard(student=Depends(get_current_student)):
         status="paid" if period in paid_periods else "unpaid",
     )
 
+    # Earlier months (join month .. last month) the student still owes. Walk back
+    # from the previous month to the join month; skip anything already paid or
+    # with nothing due. Newest first.
+    join_period = period_of(join_date)
+    outstanding: list[CurrentDue] = []
+    p = previous_period(period)
+    while p >= join_period:
+        if p not in paid_periods:
+            past_due = compute_due(batch, join_date, p)
+            if past_due.amount_paise > 0:
+                outstanding.append(
+                    CurrentDue(
+                        period=p,
+                        amount_paise=past_due.amount_paise,
+                        is_prorata=past_due.is_prorata,
+                        status="unpaid",
+                    )
+                )
+        p = previous_period(p)
+
     history = [
         PaymentOut(
             period=p["period"],
@@ -170,5 +190,6 @@ def dashboard(student=Depends(get_current_student)):
     return DashboardOut(
         student=_student_out(student_row),
         current=current,
+        outstanding=outstanding,
         history=history,
     )

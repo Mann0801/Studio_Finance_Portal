@@ -350,6 +350,34 @@
   font-size: 16px;
   border-radius: 16px;
 }
+.btn.sm {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+/* Compact banner on Home linking to unpaid earlier months. */
+.due-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+.due-alert-cta {
+  color: var(--accent-bright);
+  font-weight: 700;
+  white-space: nowrap;
+}
 .btn.ghost {
   background: transparent;
   border: 1px solid var(--border);
