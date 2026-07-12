@@ -59,6 +59,9 @@ class CurrentDue(BaseModel):
 class DashboardOut(BaseModel):
     student: StudentOut
     current: CurrentDue
+    # Unpaid months before the current one (join month up to last month), each
+    # with its server-computed amount. Lets a student clear earlier dues.
+    outstanding: list[CurrentDue] = []
     history: list[PaymentOut]
 
 
