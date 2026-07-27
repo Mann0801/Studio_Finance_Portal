@@ -25,13 +25,25 @@ export async function adminApi(path, { method = 'GET', body, auth = true } = {})
     body: body ? JSON.stringify(body) : undefined,
   })
 
-  if (res.status === 401) {
-    clearAdminToken()
-    throw new Error('Session expired — please log in again')
+  const text = await res.text()
+  let data = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    // Non-JSON body (e.g. a proxy/error page during a Render cold start).
+    if (!res.ok) throw new Error(`Server error (${res.status}). Please try again in a moment.`)
   }
 
-  const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  if (res.status === 401) {
+    // A rejected token means the stored session is stale — clear it and say so.
+    // A 401 on the login call itself is just bad credentials; show the real reason.
+    if (auth) {
+      clearAdminToken()
+      throw new Error('Session expired — please log in again')
+    }
+    throw new Error(data?.detail || 'Invalid admin credentials')
+  }
+
   if (!res.ok) throw new Error(data?.detail || `Request failed (${res.status})`)
   return data
 }
