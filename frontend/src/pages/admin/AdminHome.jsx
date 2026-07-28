@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
-import { STUDIO_NAME } from '../../lib/brand'
+import { LOGO_SRC } from '../../lib/brand'
 import { Skeleton } from '../../components/Skeleton'
 
 function greeting() {
@@ -42,7 +42,7 @@ export default function AdminHome() {
     <>
       <div className="topbar">
         <div className="greeting">
-          <div className="hello brand-tag">{STUDIO_NAME}</div>
+          <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />
           <h1>{greeting()}</h1>
           <div className="hello" style={{ marginTop: 4 }}>{todayLabel()}</div>
         </div>

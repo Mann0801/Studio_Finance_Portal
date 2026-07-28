@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 
 const DISMISS_KEY = 'install:dismissed'
 
@@ -75,7 +75,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="install-prompt" role="dialog" aria-label="Install app">
-      <img src="/icon.svg" alt="" className="install-icon" />
+      <img src={LOGO_SRC} alt="" className="install-icon" />
       <div className="install-text">
         <strong>Install {STUDIO_NAME}</strong>
         {iosHint ? (

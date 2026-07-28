@@ -145,6 +145,13 @@
   font-weight: 700;
   letter-spacing: 0.01em;
 }
+.greeting .topbar-logo {
+  display: block;
+  height: 34px;
+  width: auto;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
 .greeting h1 {
   font-size: 24px;
   margin-top: 2px;
@@ -463,8 +470,11 @@
   margin-bottom: 26px;
 }
 .auth-brand .logo {
-  width: 64px;
-  height: 64px;
+  width: 190px;
+  max-width: 62%;
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 194, 243, 0.25);
   animation: splash-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2);
 }
 .auth-brand .brand-name {
@@ -580,6 +590,44 @@
   color: var(--muted);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ── Inline timing dropdown (Traditional Yoga) ── */
+/* Each batch + its (optional) timing dropdown stack together; the 10px list gap
+   separates batches, the 8px here keeps the dropdown tucked under its card. */
+.batch-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.slot-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1.5px solid var(--accent);
+  border-radius: 16px;
+  background: var(--accent-soft);
+  overflow: hidden;
+  animation: slot-expand 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: top;
+}
+.slot-inline .slot-inline-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-bright);
+}
+@keyframes slot-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    max-height: 420px;
+  }
 }
 
 /* ── Timing bottom sheet (Traditional Yoga) ── */
@@ -1077,9 +1125,9 @@
   animation: sheet-up 0.3s ease both;
 }
 .install-prompt .install-icon {
-  width: 38px;
+  width: auto;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 .install-prompt .install-text {
@@ -1188,8 +1236,9 @@
   border-bottom: 1px dashed var(--border, #e5e7eb);
 }
 .receipt-logo {
-  width: 34px;
-  height: 34px;
+  width: auto;
+  height: 30px;
+  border-radius: 6px;
 }
 .receipt-studio {
   font-weight: 800;

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginWithEmail, getLastEmail, setLastEmail } from '../lib/auth'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import LegalFooter from '../components/LegalFooter'
 
 export default function Login() {
@@ -35,7 +35,7 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <div className="auth-brand">
-        <img src="/icon.svg" alt="" className="logo" />
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Welcome back</h1>
         <p className="auth-sub">Log in with your email and password.</p>

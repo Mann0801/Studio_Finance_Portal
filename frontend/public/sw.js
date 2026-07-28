@@ -7,8 +7,8 @@
  *  - Everything else (the API on another origin, Razorpay, Supabase): passthrough
  *    — never cache dynamic/authenticated requests.
  */
-const CACHE = 'studio-shell-v2'
-const SHELL = ['/', '/index.html', '/icon.svg', '/icon-maskable.svg', '/manifest.webmanifest']
+const CACHE = 'studio-shell-v3'
+const SHELL = ['/', '/index.html', '/logo.png', '/favicon.png', '/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()))
