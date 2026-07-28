@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { signUpWithPassword, setLastEmail } from '../lib/auth'
 import { batchById } from '../lib/batches'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
 
@@ -78,7 +78,7 @@ export default function Signup() {
   return (
     <div className="auth-wrap page">
       <div className="auth-brand">
-        <img src="/icon.svg" alt="" className="logo" />
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Create your account</h1>
         <p className="auth-sub">A few details and you’re in.</p>

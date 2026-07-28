@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { ensureProfile } from '../lib/profile'
 import { payForMonth } from '../lib/razorpay'
 import { rupees } from '../lib/batches'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import { CardSkeleton } from '../components/Skeleton'
 
 /* Shown immediately after signup: the student pays their (pro-rated) first month
@@ -57,6 +57,7 @@ export default function FirstPayment() {
   return (
     <div className="auth-wrap page">
       <div className="auth-brand">
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>You're in! 🎉</h1>
         <p className="auth-sub">Complete your first payment to get started.</p>

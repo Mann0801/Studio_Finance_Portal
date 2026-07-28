@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
-import { STUDIO_NAME } from '../../lib/brand'
+import { LOGO_SRC } from '../../lib/brand'
 import StatusBadge from '../../components/StatusBadge'
 import { CheckIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
@@ -41,7 +41,7 @@ export default function Home() {
     <>
       <div className="topbar">
         <div className="greeting">
-          <div className="hello brand-tag">{STUDIO_NAME}</div>
+          <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />
           <h1>Hi, {student.name.split(' ')[0]}</h1>
           <div className="hello" style={{ marginTop: 4 }}>{student.batch_label} batch</div>
         </div>

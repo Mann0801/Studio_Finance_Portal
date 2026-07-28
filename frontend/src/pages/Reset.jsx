@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 
 /**
  * Landing page for the password-reset email link. Supabase parses the recovery
@@ -49,7 +49,7 @@ export default function Reset() {
     return (
       <div className="auth-wrap">
         <div className="auth-brand">
-          <img src="/icon.svg" alt="" className="logo" />
+          <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
           <div className="brand-name">{STUDIO_NAME}</div>
           <h1>Link expired</h1>
           <p className="auth-sub">This reset link is invalid or has expired.</p>
@@ -62,7 +62,7 @@ export default function Reset() {
   return (
     <div className="auth-wrap">
       <div className="auth-brand">
-        <img src="/icon.svg" alt="" className="logo" />
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Set a new password</h1>
       </div>

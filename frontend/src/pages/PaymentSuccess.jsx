@@ -1,6 +1,6 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { rupees } from '../lib/batches'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import { CheckIcon } from '../components/Icons'
 
 function periodLabel(period) {
@@ -62,7 +62,7 @@ export default function PaymentSuccess() {
       {/* Receipt — the student can screenshot this for their records. */}
       <div className="receipt">
         <div className="receipt-head">
-          <img src="/icon.svg" alt="" className="receipt-logo" />
+          <img src={LOGO_SRC} alt="" className="receipt-logo" />
           <div>
             <div className="receipt-studio">{STUDIO_NAME}</div>
             <div className="muted small">Fee receipt</div>

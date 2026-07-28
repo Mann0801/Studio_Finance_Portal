@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { sendResetEmail } from '../lib/auth'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -32,7 +32,7 @@ export default function ForgotPassword() {
   return (
     <div className="auth-wrap">
       <div className="auth-brand">
-        <img src="/icon.svg" alt="" className="logo" />
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>{step === 'sent' ? 'Check your email' : 'Reset password'}</h1>
         <p className="auth-sub">

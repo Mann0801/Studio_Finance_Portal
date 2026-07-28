@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { setLastEmail } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { batchById } from '../lib/batches'
-import { STUDIO_NAME } from '../lib/brand'
+import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 
 function validate(form) {
@@ -72,6 +72,7 @@ export default function ProfileSetup() {
   return (
     <div className="auth-wrap page">
       <div className="auth-brand">
+        <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Set up your profile</h1>
         <p className="auth-sub">A few details and you’re in.</p>
