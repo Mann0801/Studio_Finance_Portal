@@ -981,6 +981,127 @@
   white-space: nowrap;
 }
 
+/* ── Admin: batch / slot overview cards (Students Level 1) ── */
+.batch-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  animation: card-in 0.28s ease both;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+.batch-card:active {
+  transform: scale(0.985);
+  border-color: var(--accent);
+}
+.batch-card .bc-main {
+  flex: 1;
+  min-width: 0;
+}
+.batch-card .bc-name {
+  font-weight: 800;
+  font-size: 16px;
+}
+.batch-card .bc-sched {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.batch-card .bc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.batch-card .bc-total {
+  color: var(--text);
+}
+.batch-card .bc-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.batch-card .bc-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.batch-card .bc-dot.paid {
+  color: var(--paid);
+}
+.batch-card .bc-dot.unpaid {
+  color: var(--unpaid);
+}
+.batch-card .bc-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.batch-card .bc-rate {
+  font-weight: 800;
+  font-size: 16px;
+}
+.batch-card .bc-rate-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-bright);
+}
+.batch-card .bc-chev {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ── Admin: payments revenue hero ── */
+.pay-hero-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 10px;
+}
+.pay-chip {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--muted);
+}
+.pay-hero-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 13.5px;
+  color: var(--text);
+}
+.pay-hero-pending .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pay-hero-pending .dot.unpaid {
+  background: var(--unpaid);
+}
+
 /* ── Admin: analytics rows ── */
 .analytics-row {
   display: flex;

@@ -57,6 +57,12 @@ export const ArrowLeftIcon = (p) => (
   </svg>
 )
 
+export const ChevronRightIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+)
+
 export const SearchIcon = (p) => (
   <svg {...base} {...p}>
     <circle cx="11" cy="11" r="7" />
