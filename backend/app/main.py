@@ -17,7 +17,9 @@ app.add_middleware(
 )
 
 
-@app.get("/health", tags=["meta"])
+# GET + HEAD so lightweight uptime monitors (which ping with HEAD by default)
+# don't get a 405. Used as the keep-warm target to stop the free tier sleeping.
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["meta"])
 def health() -> dict:
     return {"status": "ok", "studio": settings.studio_name}
 
