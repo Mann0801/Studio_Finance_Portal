@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
-import { LOGO_SRC } from '../../lib/brand'
+import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
 import StatusBadge from '../../components/StatusBadge'
 import { CheckIcon } from '../../components/Icons'
@@ -16,10 +17,28 @@ function periodLabel(period) {
 export default function Home() {
   const { data, loading, error } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
+  const { state } = useLocation()
+  const [welcome, setWelcome] = useState(Boolean(state?.welcome))
+
+  useEffect(() => {
+    if (!welcome) return
+    window.history.replaceState({}, '') // don't replay the animation on refresh/back
+    const t = setTimeout(() => setWelcome(false), 1900)
+    return () => clearTimeout(t)
+  }, [welcome])
+
+  const welcomeOverlay = welcome ? (
+    <div className="welcome-splash">
+      <div className="welcome-check"><CheckIcon width={42} height={42} /></div>
+      <div className="welcome-title">You’re in! 🎉</div>
+      <div className="welcome-sub">Welcome to {STUDIO_NAME}</div>
+    </div>
+  ) : null
 
   if (loading) {
     return (
       <>
+        {welcomeOverlay}
         <div className="topbar">
           <div className="greeting">
             <Skeleton height={14} width={90} />
@@ -30,8 +49,8 @@ export default function Home() {
       </>
     )
   }
-  if (error) return <p className="error" style={{ marginTop: 24 }}>{error}</p>
-  if (!data) return null
+  if (error) return <>{welcomeOverlay}<p className="error" style={{ marginTop: 24 }}>{error}</p></>
+  if (!data) return welcomeOverlay
 
   const { student, current, history, outstanding = [] } = data
   const paid = current.status === 'paid'
@@ -43,6 +62,7 @@ export default function Home() {
 
   return (
     <>
+      {welcomeOverlay}
       <div className="topbar">
         <div className="greeting">
           <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />

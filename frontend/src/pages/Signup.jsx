@@ -1,21 +1,28 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { signUpWithPassword, setLastEmail } from '../lib/auth'
+import { signUpWithPhone, setLastPhone } from '../lib/auth'
 import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'batch']
+
+function scrollToFirstError(errs) {
+  const first = FIELD_ORDER.find((k) => errs[k])
+  if (first) {
+    document.getElementById(`f-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
 
 function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
-  if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
+  if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (!form.password) errors.password = 'Set a password'
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
-  if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
+  if (form.confirm !== form.password) errors.confirm = 'Passwords do not match'
   if (!form.batch) errors.batch = 'Please select a class'
   else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
     errors.batch = 'Please choose a timing'
@@ -27,9 +34,9 @@ export default function Signup() {
   const { classes } = useClasses()
   const [form, setForm] = useState({
     name: '',
-    email: '',
-    password: '',
     phone: '',
+    password: '',
+    confirm: '',
     batch: '',
     batch_slot: null,
   })
@@ -44,18 +51,28 @@ export default function Signup() {
     if (submitted) setErrors((prev) => ({ ...prev, [k]: undefined }))
   }
 
+  // Live confirm-password state (updates as they type).
+  const confirmState = !form.confirm
+    ? ''
+    : form.confirm === form.password && form.password
+      ? 'match'
+      : 'mismatch'
+
   async function onSubmit(e) {
     e.preventDefault()
     setError('')
     setSubmitted(true)
     const fieldErrors = validate(form, classes)
     setErrors(fieldErrors)
-    if (Object.keys(fieldErrors).length > 0) return
+    if (Object.keys(fieldErrors).length > 0) {
+      scrollToFirstError(fieldErrors)
+      return
+    }
 
     setBusy(true)
     try {
-      // 1) Create the auth account (logs in immediately — Confirm email is off).
-      await signUpWithPassword(form.email, form.password)
+      // 1) Create the account (phone + password → logs in immediately).
+      await signUpWithPhone(form.phone, form.password)
       // 2) Create the student profile (idempotent, keyed to the verified user).
       await api('/api/signup', {
         method: 'POST',
@@ -66,11 +83,9 @@ export default function Signup() {
           batch_slot: form.batch_slot,
         },
       })
-      // 3) Already signed in. Enquiry classes have no online payment — go straight
-      //    to the dashboard (which shows a contact card); others pay first.
-      setLastEmail(form.email.trim().toLowerCase())
-      const enquiry = classById(classes, form.batch)?.fee_type === 'enquiry'
-      navigate(enquiry ? '/' : '/first-payment', { replace: true })
+      // 3) Straight to the dashboard with a quick welcome — they can pay from there.
+      setLastPhone(form.phone.replace(/\D/g, ''))
+      navigate('/', { replace: true, state: { welcome: true } })
     } catch (err) {
       setError(err.message || 'Could not create your account')
     } finally {
@@ -88,42 +103,14 @@ export default function Signup() {
       </div>
 
       <form onSubmit={onSubmit} className="form" noValidate>
-        <label>
+        <label id="f-name">
           Full name
           <input value={form.name} onChange={set('name')} className={errors.name ? 'invalid' : ''} autoComplete="name" />
           {errors.name && <span className="field-error">{errors.name}</span>}
         </label>
 
-        <label>
-          Email address
-          <input
-            type="email"
-            value={form.email}
-            onChange={set('email')}
-            className={errors.email ? 'invalid' : ''}
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck="false"
-            placeholder="you@example.com"
-          />
-          {errors.email && <span className="field-error">{errors.email}</span>}
-        </label>
-
-        <label>
-          Password
-          <input
-            type="password"
-            value={form.password}
-            onChange={set('password')}
-            className={errors.password ? 'invalid' : ''}
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-          />
-          {errors.password && <span className="field-error">{errors.password}</span>}
-        </label>
-
-        <label>
-          Phone
+        <label id="f-phone">
+          Phone number
           <input
             type="tel"
             inputMode="numeric"
@@ -137,16 +124,50 @@ export default function Signup() {
           {errors.phone && <span className="field-error">{errors.phone}</span>}
         </label>
 
-        <BatchPicker
-          classes={classes}
-          batch={form.batch}
-          slot={form.batch_slot}
-          error={errors.batch}
-          onSelect={(batch, slot) => {
-            setForm((f) => ({ ...f, batch, batch_slot: slot }))
-            if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
-          }}
-        />
+        <label id="f-password">
+          Password
+          <input
+            type="password"
+            value={form.password}
+            onChange={set('password')}
+            className={errors.password ? 'invalid' : ''}
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+          />
+          {errors.password && <span className="field-error">{errors.password}</span>}
+        </label>
+
+        <label id="f-confirm">
+          Confirm password
+          <input
+            type="password"
+            value={form.confirm}
+            onChange={set('confirm')}
+            className={errors.confirm ? 'invalid' : confirmState === 'match' ? 'valid' : ''}
+            autoComplete="new-password"
+            placeholder="Re-enter your password"
+          />
+          {errors.confirm ? (
+            <span className="field-error">{errors.confirm}</span>
+          ) : confirmState === 'match' ? (
+            <span className="field-ok">Passwords match ✓</span>
+          ) : confirmState === 'mismatch' ? (
+            <span className="field-hint">Passwords don’t match yet</span>
+          ) : null}
+        </label>
+
+        <div id="f-batch">
+          <BatchPicker
+            classes={classes}
+            batch={form.batch}
+            slot={form.batch_slot}
+            error={errors.batch}
+            onSelect={(batch, slot) => {
+              setForm((f) => ({ ...f, batch, batch_slot: slot }))
+              if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
+            }}
+          />
+        </div>
 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn primary lg block" disabled={busy}>

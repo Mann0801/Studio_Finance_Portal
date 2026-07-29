@@ -7,9 +7,6 @@ import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ProfileSetup from './pages/ProfileSetup'
-import ForgotPassword from './pages/ForgotPassword'
-import Reset from './pages/Reset'
-import FirstPayment from './pages/FirstPayment'
 import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
@@ -49,8 +46,6 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset" element={<Reset />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -78,7 +73,6 @@ export default function App() {
           {/* Protected student area */}
           <Route element={<ProtectedShell />}>
             <Route path="/profile-setup" element={<ProfileSetup />} />
-            <Route path="/first-payment" element={<FirstPayment />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />

@@ -221,10 +221,9 @@ class AdminStudentDetail(BaseModel):
 
 
 class AdminCreateStudentRequest(BaseModel):
-    # Admin registers a walk-in. Email is the login identity; a password is set so
+    # Admin registers a walk-in. Phone is the login identity; a password is set so
     # the member can sign in later (auto-generated and returned if left blank).
     name: str = Field(min_length=1, max_length=120)
-    email: str = Field(min_length=3, max_length=254)
     phone: str = Field(min_length=6, max_length=20)
     batch: str
     batch_slot: Optional[str] = None

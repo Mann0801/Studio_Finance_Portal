@@ -46,7 +46,7 @@ from ..schemas import (
     StudentPaymentRow,
 )
 from ..services.whatsapp import reminder_link
-from ..util import normalize_phone
+from ..util import normalize_phone, phone_login_email
 
 
 def _payment_method(row: dict) -> str:
@@ -575,16 +575,20 @@ def student_detail(student_id: str):
     dependencies=[Depends(require_admin)],
 )
 def create_student(body: AdminCreateStudentRequest):
-    """Register a walk-in member. Creates the Supabase Auth user (so they can log
-    in later with email + password) plus the matching students row. If no password
-    is given, a temporary one is generated and returned for the admin to share."""
+    """Register a walk-in member. Creates the Supabase Auth user (keyed to a
+    synthetic email derived from the phone, so they log in with phone + password)
+    plus the matching students row. If no password is given, a temporary one is
+    generated and returned for the admin to share."""
     sb = get_supabase()
-    email = body.email.strip().lower()
 
     try:
         phone = normalize_phone(body.phone)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    # Phone is the login identity (via a synthetic auth email — must match the
+    # frontend's phoneToEmail so the same phone always resolves to this account).
+    login_email = phone_login_email(body.phone)
 
     cls = _require_class(body.batch)
     slot = _resolve_slot(cls, body.batch_slot)
@@ -597,20 +601,20 @@ def create_student(body: AdminCreateStudentRequest):
     # Create the auth user (email pre-confirmed so they can log in immediately).
     try:
         created = sb.auth.admin.create_user(
-            {"email": email, "password": password, "email_confirm": True}
+            {"email": login_email, "password": password, "email_confirm": True}
         )
         user = getattr(created, "user", None) or created
         user_id = user.id if hasattr(user, "id") else user["id"]
     except Exception as exc:  # noqa: BLE001 — surface a friendly duplicate message
         if "already" in str(exc).lower() or "registered" in str(exc).lower():
-            raise HTTPException(status_code=409, detail="That email is already registered")
+            raise HTTPException(status_code=409, detail="That phone number is already registered")
         raise HTTPException(status_code=400, detail="Could not create the account")
 
     join_date = body.join_date or now_local().date()
     row = {
         "id": user_id,
         "name": body.name.strip(),
-        "email": email,
+        "email": None,
         "phone": phone,
         "batch": cls["id"],
         "batch_slot": slot,
@@ -619,7 +623,7 @@ def create_student(body: AdminCreateStudentRequest):
     try:
         inserted = sb.table("students").insert(row).execute()
     except Exception:
-        # Roll back the orphaned auth user so a retry can reuse the email.
+        # Roll back the orphaned auth user so a retry can reuse the phone.
         try:
             sb.auth.admin.delete_user(user_id)
         except Exception:
