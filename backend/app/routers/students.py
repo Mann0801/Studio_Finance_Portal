@@ -83,7 +83,9 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     row = {
         "id": student["id"],
         "name": body.name.strip(),
-        "email": student["email"] or None,
+        # Login identity is the phone (via a synthetic auth email); no real email
+        # is collected, so the students.email column stays null.
+        "email": None,
         "phone": phone,
         "batch": cls["id"],
         "batch_slot": slot,

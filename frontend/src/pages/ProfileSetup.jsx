@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { setLastEmail } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { setLastPhone } from '../lib/auth'
 import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
@@ -60,10 +59,8 @@ export default function ProfileSetup() {
           batch_slot: form.batch_slot,
         },
       })
-      const { data } = await supabase.auth.getUser()
-      if (data?.user?.email) setLastEmail(data.user.email)
-      const enquiry = classById(classes, form.batch)?.fee_type === 'enquiry'
-      navigate(enquiry ? '/' : '/first-payment', { replace: true })
+      setLastPhone(form.phone.replace(/\D/g, ''))
+      navigate('/', { replace: true, state: { welcome: true } })
     } catch (err) {
       setError(err.message || 'Could not complete setup')
     } finally {

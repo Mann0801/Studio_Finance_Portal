@@ -6,12 +6,9 @@ import { useClasses, classById, hasSlots } from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
 import { ArrowLeftIcon, CheckIcon } from '../../components/Icons'
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
 function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter their full name'
-  if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (form.password && form.password.length < 8) errors.password = 'At least 8 characters'
   if (!form.batch) errors.batch = 'Please select a class'
@@ -27,7 +24,6 @@ export default function AddStudent() {
   const { classes } = useClasses()
   const [form, setForm] = useState({
     name: '',
-    email: '',
     phone: '',
     batch: '',
     batch_slot: null,
@@ -61,7 +57,6 @@ export default function AddStudent() {
         method: 'POST',
         body: {
           name: form.name.trim(),
-          email: form.email.trim().toLowerCase(),
           phone: form.phone.replace(/\D/g, ''),
           batch: form.batch,
           batch_slot: form.batch_slot,
@@ -80,7 +75,7 @@ export default function AddStudent() {
   }
 
   function copyCreds() {
-    const text = `Email: ${done.student.email}\nPassword: ${done.temp_password}`
+    const text = `Phone: ${done.student.phone}\nPassword: ${done.temp_password}`
     navigator.clipboard?.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
@@ -117,8 +112,8 @@ export default function AddStudent() {
             </p>
             <div className="card flush list" style={{ marginTop: 10 }}>
               <div className="list-item">
-                <span className="muted">Email</span>
-                <span className="li-main" style={{ fontSize: 14 }}>{done.student.email}</span>
+                <span className="muted">Phone</span>
+                <span className="li-main" style={{ fontSize: 14 }}>{done.student.phone}</span>
               </div>
               <div className="list-item">
                 <span className="muted">Password</span>
@@ -143,7 +138,7 @@ export default function AddStudent() {
             onClick={() => {
               setDone(null)
               setSubmitted(false)
-              setForm({ name: '', email: '', phone: '', batch: '', batch_slot: null, join_date: '', password: '' })
+              setForm({ name: '', phone: '', batch: '', batch_slot: null, join_date: '', password: '' })
             }}
           >
             Add another
@@ -170,21 +165,6 @@ export default function AddStudent() {
           Full name
           <input value={form.name} onChange={set('name')} className={errors.name ? 'invalid' : ''} autoComplete="off" />
           {errors.name && <span className="field-error">{errors.name}</span>}
-        </label>
-
-        <label>
-          Email address
-          <input
-            type="email"
-            value={form.email}
-            onChange={set('email')}
-            className={errors.email ? 'invalid' : ''}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck="false"
-            placeholder="member@example.com"
-          />
-          {errors.email && <span className="field-error">{errors.email}</span>}
         </label>
 
         <label>

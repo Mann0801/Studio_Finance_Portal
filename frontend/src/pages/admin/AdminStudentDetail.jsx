@@ -45,7 +45,8 @@ export default function AdminStudentDetail() {
     setFormError('')
     setForm({
       name: data.name,
-      phone: data.phone,
+      // Stored with country code (91…); show just the 10 digits for editing.
+      phone: (data.phone || '').replace(/\D/g, '').slice(-10),
       batch: data.batch,
       batch_slot: data.batch_slot ?? null,
     })

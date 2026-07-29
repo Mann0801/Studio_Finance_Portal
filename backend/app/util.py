@@ -17,3 +17,14 @@ def normalize_phone(raw: str, default_country_code: str = "91") -> str:
     if not (11 <= len(digits) <= 15):
         raise ValueError("invalid phone number")
     return digits
+
+
+# Students log in with phone + password. Supabase auth is email-based, so the
+# phone maps to a synthetic internal email (never shown). MUST match the frontend
+# (lib/auth.js phoneToEmail): the last 10 digits @ this domain.
+PHONE_LOGIN_DOMAIN = "phone.iampossiblefit.com"
+
+
+def phone_login_email(raw: str) -> str:
+    digits = re.sub(r"\D", "", raw or "")[-10:]
+    return f"{digits}@{PHONE_LOGIN_DOMAIN}"

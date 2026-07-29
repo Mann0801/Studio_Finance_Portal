@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { loginWithEmail, getLastEmail, setLastEmail } from '../lib/auth'
+import { loginWithPhone, getLastPhone, setLastPhone } from '../lib/auth'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import LegalFooter from '../components/LegalFooter'
 
@@ -8,7 +8,7 @@ export default function Login() {
   const navigate = useNavigate()
   const { state } = useLocation()
   const [form, setForm] = useState({
-    email: state?.email || getLastEmail(),
+    phone: state?.phone || getLastPhone(),
     password: '',
   })
   const [error, setError] = useState('')
@@ -22,8 +22,8 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      await loginWithEmail(form.email, form.password)
-      setLastEmail(form.email.trim().toLowerCase())
+      await loginWithPhone(form.phone, form.password)
+      setLastPhone(form.phone.replace(/\D/g, ''))
       navigate('/', { replace: true })
     } catch (err) {
       setError(err.message || 'Login failed')
@@ -38,21 +38,22 @@ export default function Login() {
         <img src={LOGO_SRC} alt="I'm Possible Fit" className="logo" />
         <div className="brand-name">{STUDIO_NAME}</div>
         <h1>Welcome back</h1>
-        <p className="auth-sub">Log in with your email and password.</p>
+        <p className="auth-sub">Log in with your phone number and password.</p>
       </div>
 
       {notice && <p className="notice" style={{ textAlign: 'center', marginBottom: 14 }}>{notice}</p>}
 
       <form onSubmit={onSubmit} className="form">
         <label>
-          Email
+          Phone number
           <input
-            type="email"
-            value={form.email}
-            onChange={set('email')}
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck="false"
+            type="tel"
+            inputMode="numeric"
+            value={form.phone}
+            onChange={(e) => set('phone')({ target: { value: e.target.value.replace(/\D/g, '') } })}
+            maxLength={10}
+            placeholder="10-digit mobile number"
+            autoComplete="tel"
             required
           />
         </label>
@@ -70,9 +71,9 @@ export default function Login() {
         <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
-        <Link to="/forgot-password" className="link-btn" style={{ alignSelf: 'center' }}>
-          Forgot password?
-        </Link>
+        <p className="auth-sub" style={{ marginTop: 4 }}>
+          Forgot your password? Contact the studio to reset it.
+        </p>
       </form>
 
       <p className="auth-foot">
