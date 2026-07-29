@@ -13,6 +13,7 @@ import Payments from './pages/student/Payments'
 import Profile from './pages/student/Profile'
 import StudioContact from './pages/student/StudioContact'
 import Announcements from './pages/student/Announcements'
+import Receipt from './pages/student/Receipt'
 import AdminLayout from './components/AdminLayout'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminHome from './pages/admin/AdminHome'
@@ -79,6 +80,7 @@ export default function App() {
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/payments" element={<Payments />} />
+              <Route path="/receipt/:period" element={<Receipt />} />
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/contact" element={<StudioContact />} />
               <Route path="/profile" element={<Profile />} />

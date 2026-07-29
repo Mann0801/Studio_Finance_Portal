@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
-import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
-import { BUSINESS } from '../../lib/business'
 import StatusBadge from '../../components/StatusBadge'
+import { DownloadIcon } from '../../components/Icons'
 import { CardSkeleton, ListSkeleton } from '../../components/Skeleton'
 
 function periodLabel(period) {
@@ -12,13 +11,10 @@ function periodLabel(period) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
 }
 
-const fmtDate = (iso) =>
-  iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
-
 export default function Payments() {
   const { data, loading, error } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
-  const [receiptFor, setReceiptFor] = useState(null)
+  const navigate = useNavigate()
 
   // Months surfaced above as payable dues shouldn't also appear as "Pending"
   // rows in History (they'd be the same month listed twice).
@@ -126,8 +122,12 @@ export default function Payments() {
                   <div className="s-right" style={{ alignItems: 'flex-end', gap: 4 }}>
                     <span className="li-amt">{rupees(p.amount_paise)}</span>
                     {p.status === 'paid' ? (
-                      <button type="button" className="link-btn" onClick={() => setReceiptFor(p)}>
-                        Receipt
+                      <button
+                        type="button"
+                        className="link-btn receipt-link"
+                        onClick={() => navigate(`/receipt/${p.period}`)}
+                      >
+                        <DownloadIcon width={14} height={14} /> Receipt
                       </button>
                     ) : (
                       <StatusBadge status={p.status} />
@@ -139,39 +139,6 @@ export default function Payments() {
           )}
         </>
       ) : null}
-
-      {receiptFor && data && (
-        <div className="sheet-backdrop" onClick={() => setReceiptFor(null)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div id="receipt-doc" className="receipt-doc">
-              <div className="receipt-head">
-                <img src={LOGO_SRC} alt="" className="receipt-logo" />
-                <div>
-                  <div className="receipt-studio">{STUDIO_NAME}</div>
-                  <div className="muted small">Fee receipt</div>
-                </div>
-              </div>
-              <div className="receipt-rows">
-                <div className="receipt-row"><span className="muted">Student</span><span>{data.student.name}</span></div>
-                <div className="receipt-row">
-                  <span className="muted">Class</span>
-                  <span>{data.student.batch_label}{data.student.slot_label ? ` · ${data.student.slot_label}` : ''}</span>
-                </div>
-                <div className="receipt-row"><span className="muted">Month</span><span>{periodLabel(receiptFor.period)}</span></div>
-                <div className="receipt-row"><span className="muted">Paid on</span><span>{fmtDate(receiptFor.paid_at)}</span></div>
-                <div className="receipt-row total"><span>Amount paid</span><span>{rupees(receiptFor.amount_paise)}</span></div>
-              </div>
-              <div className="muted small" style={{ textAlign: 'center', marginTop: 12 }}>
-                Thank you! · {BUSINESS.name}
-              </div>
-            </div>
-            <div className="stack" style={{ gap: 8, marginTop: 14 }}>
-              <button className="btn primary block" onClick={() => window.print()}>Download / Print</button>
-              <button className="btn ghost block" onClick={() => setReceiptFor(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

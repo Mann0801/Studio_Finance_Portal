@@ -1824,6 +1824,11 @@
   font-weight: 800;
   font-size: 16px;
 }
+.receipt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 
 @media print {
   body * {
