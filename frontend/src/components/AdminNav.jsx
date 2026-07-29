@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useAdmin } from '../context/AdminContext'
+import ConfirmDialog from './ConfirmDialog'
 import {
   HomeIcon,
   UsersIcon,
@@ -9,6 +11,7 @@ import {
   SettingsIcon,
   MenuIcon,
   CloseIcon,
+  LogoutIcon,
 } from './Icons'
 
 const TABS = [
@@ -24,6 +27,8 @@ const TABS = [
    pages get the full screen height. Opens a right-side drawer of destinations. */
 export default function AdminNav() {
   const [open, setOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const { logout } = useAdmin()
 
   return (
     <>
@@ -52,9 +57,23 @@ export default function AdminNav() {
                 {label}
               </NavLink>
             ))}
+            <button className="menu-item danger" onClick={() => setConfirm(true)}>
+              <LogoutIcon width={22} height={22} />
+              Log out
+            </button>
           </nav>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirm}
+        title="Log out?"
+        message="You'll need to sign in to the admin console again."
+        confirmLabel="Log out"
+        danger
+        onConfirm={logout}
+        onCancel={() => setConfirm(false)}
+      />
     </>
   )
 }

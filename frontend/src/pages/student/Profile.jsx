@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import { useDashboard } from '../../context/DashboardContext'
 import { api } from '../../lib/api'
 import { changePassword } from '../../lib/auth'
@@ -32,7 +31,6 @@ function validate(form, classes) {
 }
 
 export default function Profile() {
-  const { signOut } = useAuth()
   const { data, loading, error, reload } = useDashboard()
   const { classes } = useClasses()
 
@@ -175,9 +173,6 @@ export default function Profile() {
 
           <button className="btn primary block" onClick={startEdit}>
             Edit profile
-          </button>
-          <button className="btn danger block" onClick={signOut}>
-            Log out
           </button>
         </div>
       )}

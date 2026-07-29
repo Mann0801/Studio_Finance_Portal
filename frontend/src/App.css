@@ -96,6 +96,39 @@
   background: var(--accent-soft);
   color: var(--accent-bright);
 }
+/* Button rows in the drawer (e.g. Log out) reset native button chrome. */
+button.menu-item {
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+.menu-item.danger {
+  color: var(--unpaid);
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 12px 12px;
+}
+
+/* Centered confirmation sheet (log out, etc.) */
+.confirm-sheet {
+  text-align: center;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.confirm-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.confirm-msg {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
 
 .page {
   animation: page-in 0.28s ease both;
