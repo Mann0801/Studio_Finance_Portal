@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { BATCHES, TRADITIONAL_SLOTS } from '../../lib/batches'
+import { useClasses, scheduleLabel } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
 import {
   WhatsAppIcon,
@@ -21,15 +21,15 @@ const FILTERS = [
 
 const pct = (paid, total) => (total ? Math.round((paid / total) * 100) : 0)
 
-/** A batch/slot summary card (Level 1 + the Traditional timing screen). */
-function OverviewCard({ title, subtitle, stat, onClick }) {
+/** A batch/slot summary card (Level 1 + the timing screen). */
+function OverviewCard({ title, badge, subtitle, stat, onClick }) {
   const total = stat?.total_students ?? 0
   const paid = stat?.paid_count ?? 0
   const unpaid = stat?.unpaid_count ?? 0
   return (
     <button className="batch-card" onClick={onClick}>
       <div className="bc-main">
-        <div className="bc-name">{title}</div>
+        <div className="bc-name">{title}{badge}</div>
         {subtitle && <div className="bc-sched">{subtitle}</div>}
         <div className="bc-stats">
           <span className="bc-total">{total} student{total === 1 ? '' : 's'}</span>
@@ -49,47 +49,47 @@ function OverviewCard({ title, subtitle, stat, onClick }) {
 export default function AdminStudents() {
   const navigate = useNavigate()
   const { stats, guard } = useAdmin()
+  const { classes } = useClasses()
+  const clsMap = useMemo(() => new Map((classes || []).map((c) => [c.id, c])), [classes])
+  const perBatch = stats?.per_batch || []
 
   const [view, setView] = useState('batches') // 'batches' | 'slots' | 'students'
-  const [activeBatch, setActiveBatch] = useState(null) // BATCHES entry
-  const [activeSlot, setActiveSlot] = useState(null) // slot id | null
+  const [activeBatch, setActiveBatch] = useState(null) // a per_batch entry
+  const [activeSlot, setActiveSlot] = useState(null) // slot key | null
   const [students, setStudents] = useState(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
 
-  const batchStat = (id) => stats?.per_batch.find((b) => b.batch === id)
-  const slotStat = (id) => batchStat('traditional_yoga')?.slots.find((s) => s.slot === id)
+  const slotName = (batchId, key) =>
+    clsMap.get(batchId)?.slots?.find((s) => s.key === key)?.name
 
   const fetchStudents = useCallback(
     (batchId, slotId) => {
       setStudents(null)
       const q = slotId ? `?slot=${slotId}` : ''
-      adminApi(`/api/admin/batches/${batchId}${q}`)
-        .then(setStudents)
-        .catch(guard)
+      adminApi(`/api/admin/batches/${batchId}${q}`).then(setStudents).catch(guard)
     },
     [guard],
   )
 
-  const openStudents = (batchEntry, slotId) => {
-    setActiveBatch(batchEntry)
+  const openStudents = (entry, slotId) => {
+    setActiveBatch(entry)
     setActiveSlot(slotId)
     setSearch('')
     setFilter('all')
     setView('students')
-    fetchStudents(batchEntry.id, slotId)
+    fetchStudents(entry.batch, slotId)
   }
 
-  const openBatch = (b) => {
-    if (b.hasSlots) {
-      setActiveBatch(b)
+  const openBatch = (entry) => {
+    if (entry.slots?.length) {
+      setActiveBatch(entry)
       setView('slots')
     } else {
-      openStudents(b, null)
+      openStudents(entry, null)
     }
   }
 
-  // Level 2 list: filter + search, then unpaid first / alphabetical.
   const visible = useMemo(() => {
     if (!students) return null
     const q = search.trim().toLowerCase()
@@ -105,7 +105,7 @@ export default function AdminStudents() {
       })
   }, [students, search, filter])
 
-  // ── Level 1: batches overview ──────────────────────────────────────────────
+  // ── Level 1: classes overview ──────────────────────────────────────────────
   if (view === 'batches') {
     return (
       <>
@@ -123,17 +123,23 @@ export default function AdminStudents() {
 
         {!stats ? (
           <ListSkeleton rows={5} />
+        ) : perBatch.length === 0 ? (
+          <div className="card empty">No classes yet — add one from the Classes tab.</div>
         ) : (
           <div className="stack" style={{ gap: 12 }}>
-            {BATCHES.map((b) => (
-              <OverviewCard
-                key={b.id}
-                title={b.label}
-                subtitle={b.schedule}
-                stat={batchStat(b.id)}
-                onClick={() => openBatch(b)}
-              />
-            ))}
+            {perBatch.map((e) => {
+              const cls = clsMap.get(e.batch)
+              return (
+                <OverviewCard
+                  key={e.batch}
+                  title={e.batch_label}
+                  badge={!cls ? <span className="mini-badge">Deleted</span> : null}
+                  subtitle={cls ? scheduleLabel(cls) : 'Removed class'}
+                  stat={e}
+                  onClick={() => openBatch(e)}
+                />
+              )
+            })}
           </div>
         )}
         <div style={{ height: 28 }} />
@@ -141,7 +147,7 @@ export default function AdminStudents() {
     )
   }
 
-  // ── Traditional Yoga timing picker ─────────────────────────────────────────
+  // ── Timing picker (classes with slots) ─────────────────────────────────────
   if (view === 'slots') {
     return (
       <>
@@ -150,19 +156,19 @@ export default function AdminStudents() {
             <ArrowLeftIcon width={22} height={22} />
           </button>
           <div className="greeting">
-            <h1>{activeBatch.label}</h1>
+            <h1>{activeBatch.batch_label}</h1>
             <div className="hello" style={{ marginTop: 2 }}>Choose a timing</div>
           </div>
         </div>
 
         <div className="stack" style={{ gap: 12 }}>
-          {TRADITIONAL_SLOTS.map((s) => (
+          {activeBatch.slots.map((s) => (
             <OverviewCard
-              key={s.id}
-              title={s.label}
-              subtitle={s.time}
-              stat={slotStat(s.id)}
-              onClick={() => openStudents(activeBatch, s.id)}
+              key={s.slot}
+              title={slotName(activeBatch.batch, s.slot) || s.slot_label}
+              subtitle={s.slot_label}
+              stat={s}
+              onClick={() => openStudents(activeBatch, s.slot)}
             />
           ))}
         </div>
@@ -171,12 +177,14 @@ export default function AdminStudents() {
     )
   }
 
-  // ── Level 2: students in a batch/slot ──────────────────────────────────────
-  const st = activeSlot ? slotStat(activeSlot) : batchStat(activeBatch.id)
+  // ── Level 2: students in a class/slot ──────────────────────────────────────
+  const cls = clsMap.get(activeBatch.batch)
+  const st = activeSlot ? activeBatch.slots.find((s) => s.slot === activeSlot) : activeBatch
   const total = st?.total_students ?? students?.length ?? 0
   const paidN = st?.paid_count ?? 0
   const unpaidN = st?.unpaid_count ?? 0
-  const backToLevel1 = () => setView(activeBatch.hasSlots ? 'slots' : 'batches')
+  const subtitle = activeSlot ? st?.slot_label ?? '' : cls ? scheduleLabel(cls) : ''
+  const backToLevel1 = () => setView(activeBatch.slots?.length ? 'slots' : 'batches')
 
   return (
     <>
@@ -185,10 +193,8 @@ export default function AdminStudents() {
           <ArrowLeftIcon width={22} height={22} />
         </button>
         <div className="greeting">
-          <h1>{activeBatch.label}</h1>
-          <div className="hello" style={{ marginTop: 2 }}>
-            {activeSlot ? slotStat(activeSlot)?.slot_label ?? '' : activeBatch.schedule}
-          </div>
+          <h1>{activeBatch.batch_label}</h1>
+          {subtitle && <div className="hello" style={{ marginTop: 2 }}>{subtitle}</div>}
         </div>
       </div>
 
@@ -229,7 +235,7 @@ export default function AdminStudents() {
         <ListSkeleton rows={4} />
       ) : visible.length === 0 ? (
         <div className="card empty">
-          {students && students.length > 0 ? 'No students match.' : 'No students in this batch yet.'}
+          {students && students.length > 0 ? 'No students match.' : 'No students in this class yet.'}
         </div>
       ) : (
         <div className="stack" style={{ gap: 10, marginTop: 12 }}>
@@ -248,7 +254,11 @@ export default function AdminStudents() {
                 <div className="s-sub">{s.phone}</div>
               </div>
               <div className="s-right">
-                <StatusBadge status={s.status} />
+                {s.batch_deleted ? (
+                  <span className="badge deleted">Batch Deleted</span>
+                ) : (
+                  <StatusBadge status={s.status} />
+                )}
                 {s.whatsapp_url && (
                   <a
                     className="wa-btn"

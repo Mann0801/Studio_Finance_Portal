@@ -1,10 +1,12 @@
-"""Student-facing routes: signup (profile + batch) and read-only dashboard."""
+"""Student-facing routes: signup (profile + class) and read-only dashboard."""
 from __future__ import annotations
+
+from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
-from ..constants import BATCH_LABELS, TRADITIONAL_SLOTS, Batch, batch_info, slot_label
+from ..classes_store import class_label, get_class, slot_by_key, slot_label_of
 from ..db import get_supabase
 from ..fees import compute_due, current_period, now_local, period_of, previous_period
 from ..schemas import (
@@ -20,36 +22,46 @@ from ..util import normalize_phone
 router = APIRouter(prefix="/api", tags=["students"])
 
 
-def _resolve_slot(batch: Batch, raw_slot: str | None) -> str | None:
-    """Validate the timing slot for a batch. Slot is required (and must be a known
-    key) for batches that have slots; ignored (forced to None) otherwise."""
+def _require_class(batch: str) -> dict:
+    """Resolve the class a student is joining — must exist and be active."""
+    cls = get_class(batch)
+    if not cls or not cls.get("active", True):
+        raise HTTPException(status_code=422, detail="Please choose a valid class")
+    return cls
+
+
+def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
+    """Validate the timing slot: required for classes that have slots, else None."""
     slot = (raw_slot or "").strip() or None
-    if batch_info(batch).has_slots:
-        if slot not in TRADITIONAL_SLOTS:
+    if cls.get("slots"):
+        if not slot_by_key(cls, slot):
             raise HTTPException(status_code=422, detail="Please choose a timing slot")
         return slot
     return None
 
 
-def _student_out(row: dict) -> StudentOut:
-    batch = Batch(row["batch"])
+def _student_out(row: dict, cls: dict | None = None) -> StudentOut:
+    if cls is None:
+        cls = get_class(row["batch"])
     slot = row.get("batch_slot")
     return StudentOut(
         id=row["id"],
         name=row["name"],
         email=row.get("email"),
         phone=row["phone"],
-        batch=batch,
-        batch_label=BATCH_LABELS[batch],
+        batch=row["batch"],
+        batch_label=class_label(cls),
+        fee_type=cls.get("fee_type") if cls else None,
         batch_slot=slot,
-        slot_label=slot_label(slot),
+        slot_label=slot_label_of(cls, slot),
+        batch_deleted=cls is None or not cls.get("active", True),
         join_date=row["join_date"],
     )
 
 
 @router.post("/signup", response_model=StudentOut, status_code=status.HTTP_201_CREATED)
 def signup(body: SignupRequest, student=Depends(get_current_student)):
-    """Attach profile + chosen batch to the authenticated Supabase user.
+    """Attach profile + chosen class to the authenticated Supabase user.
 
     The account itself (email/password) is created on the frontend via Supabase
     Auth; here we only create the matching ``students`` row, keyed to the verified
@@ -65,27 +77,26 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
-    # Timing slot: required (and validated) for batches that have slots; ignored
-    # otherwise so a stray value can't be stored against a slot-less batch.
-    slot = _resolve_slot(body.batch, body.batch_slot)
+    cls = _require_class(body.batch)
+    slot = _resolve_slot(cls, body.batch_slot)
 
     row = {
         "id": student["id"],
         "name": body.name.strip(),
         "email": student["email"] or None,
         "phone": phone,
-        "batch": body.batch.value,
+        "batch": cls["id"],
         "batch_slot": slot,
         "join_date": now_local().date().isoformat(),
     }
     inserted = sb.table("students").insert(row).execute()
-    return _student_out(inserted.data[0])
+    return _student_out(inserted.data[0], cls)
 
 
 @router.get("/me/profile", response_model=StudentOut)
 def my_profile(student=Depends(get_current_student)):
     """Return the authenticated user's profile, or 404 if they haven't completed
-    signup yet. Used right after OTP verification to route new vs returning users."""
+    signup yet."""
     res = get_supabase().table("students").select("*").eq("id", student["id"]).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found; complete signup")
@@ -94,10 +105,10 @@ def my_profile(student=Depends(get_current_student)):
 
 @router.patch("/me/profile", response_model=StudentOut)
 def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_student)):
-    """Let a student edit their own display name, phone and chosen batch/timing.
+    """Let a student edit their own display name, phone and chosen class/timing.
 
     Email (the login identity) is intentionally not editable here.
-    Changing the batch recomputes the fee on the next dashboard load.
+    Changing the class recomputes the fee on the next dashboard load.
     """
     sb = get_supabase()
     res = sb.table("students").select("*").eq("id", student["id"]).execute()
@@ -109,18 +120,17 @@ def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_st
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
-    slot = _resolve_slot(body.batch, body.batch_slot)
+    cls = _require_class(body.batch)
+    slot = _resolve_slot(cls, body.batch_slot)
 
     updates = {
         "name": body.name.strip(),
         "phone": phone,
-        "batch": body.batch.value,
+        "batch": cls["id"],
         "batch_slot": slot,
     }
-    updated = (
-        sb.table("students").update(updates).eq("id", student["id"]).execute()
-    )
-    return _student_out(updated.data[0])
+    updated = sb.table("students").update(updates).eq("id", student["id"]).execute()
+    return _student_out(updated.data[0], cls)
 
 
 @router.get("/me/dashboard", response_model=DashboardOut)
@@ -130,15 +140,15 @@ def dashboard(student=Depends(get_current_student)):
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found; complete signup")
     student_row = res.data[0]
-    batch = Batch(student_row["batch"])
+    cls = get_class(student_row["batch"])
+    # Deleted class → no fee computation (0 due) until reassigned.
+    fee_cls = None if (cls is None or not cls.get("active", True)) else cls
     join_date = student_row["join_date"]
     if isinstance(join_date, str):
-        from datetime import date as _date
-
         join_date = _date.fromisoformat(join_date)
 
     period = current_period()
-    due = compute_due(batch, join_date, period)
+    due = compute_due(fee_cls, join_date, period)
 
     payments = (
         sb.table("payments")
@@ -156,15 +166,14 @@ def dashboard(student=Depends(get_current_student)):
         status="paid" if period in paid_periods else "unpaid",
     )
 
-    # Earlier months (join month .. last month) the student still owes. Walk back
-    # from the previous month to the join month; skip anything already paid or
-    # with nothing due. Newest first.
+    # Earlier months (join month .. last month) the student still owes. Enquiry /
+    # deleted classes compute 0, so this stays empty for them.
     join_period = period_of(join_date)
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
         if p not in paid_periods:
-            past_due = compute_due(batch, join_date, p)
+            past_due = compute_due(fee_cls, join_date, p)
             if past_due.amount_paise > 0:
                 outstanding.append(
                     CurrentDue(
@@ -188,7 +197,7 @@ def dashboard(student=Depends(get_current_student)):
     ]
 
     return DashboardOut(
-        student=_student_out(student_row),
+        student=_student_out(student_row, cls),
         current=current,
         outstanding=outstanding,
         history=history,

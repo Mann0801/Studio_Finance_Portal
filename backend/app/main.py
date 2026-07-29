@@ -27,6 +27,7 @@ def health() -> dict:
 from .routers import (  # noqa: E402
     admin,
     announcements,
+    classes,
     payments,
     students,
     webhooks,
@@ -37,3 +38,4 @@ app.include_router(payments.router)
 app.include_router(webhooks.router)
 app.include_router(admin.router)
 app.include_router(announcements.router)
+app.include_router(classes.router)

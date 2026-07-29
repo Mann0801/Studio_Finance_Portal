@@ -7,8 +7,8 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import get_current_student
+from ..classes_store import get_class
 from ..config import get_settings
-from ..constants import Batch
 from ..db import get_supabase
 from ..fees import compute_due, current_period, period_of
 from ..payments_store import (
@@ -34,7 +34,11 @@ def _load_student(student_id: str) -> dict:
 def create_order(body: OrderRequest, student=Depends(get_current_student)):
     settings = get_settings()
     row = _load_student(student["id"])
-    batch = Batch(row["batch"])
+    cls = get_class(row["batch"])
+    if not cls or not cls.get("active", True):
+        raise HTTPException(status_code=400, detail="Your class needs to be reassigned; contact the studio")
+    if cls.get("fee_type") == "enquiry":
+        raise HTTPException(status_code=400, detail="This class has no online payment; contact the studio")
     join_date = row["join_date"]
     if isinstance(join_date, str):
         join_date = _date.fromisoformat(join_date)
@@ -45,7 +49,7 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
     if is_period_paid(student["id"], period):
         raise HTTPException(status_code=409, detail="This month is already paid")
 
-    due = compute_due(batch, join_date, period)
+    due = compute_due(cls, join_date, period)
     if due.amount_paise <= 0:
         raise HTTPException(status_code=400, detail="Nothing due for this period")
 

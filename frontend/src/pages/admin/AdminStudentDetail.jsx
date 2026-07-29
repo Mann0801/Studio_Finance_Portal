@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { rupees, batchById } from '../../lib/batches'
+import { rupees } from '../../lib/batches'
+import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
 import BatchPicker from '../../components/BatchPicker'
 import { WhatsAppIcon, ArrowLeftIcon, EditIcon } from '../../components/Icons'
@@ -21,6 +22,7 @@ export default function AdminStudentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { reloadStats } = useAdmin()
+  const { classes } = useClasses()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -55,8 +57,8 @@ export default function AdminStudentDetail() {
     setFormError('')
     if (!form.name.trim()) return setFormError('Please enter their full name')
     if (form.phone.replace(/\D/g, '').length !== 10) return setFormError('Phone must be 10 digits')
-    if (batchById(form.batch)?.hasSlots && !form.batch_slot)
-      return setFormError('Please choose a timing for Traditional Yoga')
+    if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
+      return setFormError('Please choose a timing')
 
     setBusy(true)
     try {
@@ -115,11 +117,6 @@ export default function AdminStudentDetail() {
         <div className="greeting">
           <h1>{editing ? 'Edit student' : 'Student'}</h1>
         </div>
-        {data && !editing && (
-          <button className="btn ghost add-btn" onClick={startEdit}>
-            <EditIcon width={16} height={16} /> Edit
-          </button>
-        )}
       </div>
 
       {editing && data ? (
@@ -143,6 +140,7 @@ export default function AdminStudentDetail() {
             />
           </label>
           <BatchPicker
+            classes={classes}
             batch={form.batch}
             slot={form.batch_slot}
             onSelect={(batch, slot) => setForm((f) => ({ ...f, batch, batch_slot: slot }))}
@@ -184,8 +182,17 @@ export default function AdminStudentDetail() {
               {data.slot_label ? ` · ${data.slot_label}` : ''}
             </div>
             <div style={{ marginTop: 10 }}>
-              <StatusBadge status={data.status} big />
+              {data.batch_deleted ? (
+                <span className="badge deleted big">Batch Deleted</span>
+              ) : (
+                <StatusBadge status={data.status} big />
+              )}
             </div>
+            {data.batch_deleted && (
+              <p className="muted small" style={{ marginTop: 8, textAlign: 'center' }}>
+                This class was removed. Tap Edit to reassign them to a class.
+              </p>
+            )}
           </div>
 
           {error && <p className="error">{error}</p>}
@@ -273,6 +280,9 @@ export default function AdminStudentDetail() {
 
           {/* Actions */}
           <div className="stack" style={{ marginTop: 20, gap: 10 }}>
+            <button className="btn ghost block" onClick={startEdit}>
+              <EditIcon width={16} height={16} /> Edit details
+            </button>
             {data.whatsapp_url && (
               <a className="btn block wa-cta" href={data.whatsapp_url} target="_blank" rel="noreferrer">
                 <WhatsAppIcon width={18} height={18} /> Message on WhatsApp

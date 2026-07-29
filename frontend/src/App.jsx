@@ -21,6 +21,8 @@ import AdminStudents from './pages/admin/AdminStudents'
 import AddStudent from './pages/admin/AddStudent'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminPayments from './pages/admin/AdminPayments'
+import AdminClasses from './pages/admin/AdminClasses'
+import AdminClassForm from './pages/admin/AdminClassForm'
 import AdminSettings from './pages/admin/AdminSettings'
 import Plans from './pages/Plans'
 import Terms from './pages/legal/Terms'
@@ -66,6 +68,9 @@ export default function App() {
             <Route path="/admin/students" element={<AdminStudents />} />
             <Route path="/admin/students/new" element={<AddStudent />} />
             <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
+            <Route path="/admin/classes" element={<AdminClasses />} />
+            <Route path="/admin/classes/new" element={<AdminClassForm />} />
+            <Route path="/admin/classes/:id" element={<AdminClassForm />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>

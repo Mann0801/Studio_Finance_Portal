@@ -14,6 +14,88 @@
 .app-shell.with-nav {
   padding-bottom: calc(var(--nav-h) + 18px);
 }
+/* Admin pages use a top hamburger menu, so no bottom bar to reserve for. */
+.app-shell.with-menu {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+}
+
+/* ── Admin hamburger menu ── */
+.menu-btn {
+  position: fixed;
+  top: max(12px, calc(env(safe-area-inset-top, 0px) + 10px));
+  right: 14px;
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-btn:active {
+  transform: scale(0.92);
+}
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+}
+.menu-drawer {
+  width: min(78vw, 280px);
+  height: 100%;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  padding: max(18px, calc(env(safe-area-inset-top, 0px) + 14px)) 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: drawer-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.menu-title {
+  font-weight: 800;
+  font-size: 18px;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+}
+.menu-item svg {
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+.menu-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+}
 
 .page {
   animation: page-in 0.28s ease both;
@@ -1065,6 +1147,181 @@
 .batch-card .bc-chev {
   color: var(--muted);
   margin-top: 4px;
+}
+
+/* "Deleted" tag beside a removed class name (Students Level 1). */
+.mini-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--unpaid);
+  background: var(--unpaid-bg);
+  vertical-align: middle;
+}
+.badge.deleted {
+  color: var(--unpaid);
+  background: var(--unpaid-bg);
+}
+.badge.deleted::before {
+  display: none;
+}
+
+/* ── Admin: Class Management ── */
+.class-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  animation: card-in 0.28s ease both;
+}
+.class-card .cc-main {
+  flex: 1;
+  min-width: 0;
+}
+.class-card .cc-name {
+  font-weight: 800;
+  font-size: 16px;
+}
+.class-card .cc-sched {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.class-card .cc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.class-card .cc-fee {
+  font-weight: 700;
+  color: var(--accent-bright);
+}
+.class-card .cc-count {
+  color: var(--muted);
+  font-weight: 600;
+}
+.class-card .cc-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:active {
+  transform: scale(0.92);
+}
+.icon-btn.danger {
+  color: var(--unpaid);
+}
+
+/* Tall add/edit form sheet. */
+.sheet.class-sheet {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Fee-type selector. */
+.fee-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fee-type {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.fee-type.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.fee-type .ft-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+.fee-type .ft-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Day chips. */
+.day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.day-chip {
+  min-width: 46px;
+  padding: 9px 0;
+  flex: 1;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.day-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+}
+
+/* Yes/No inline toggle. */
+.seg.toggle-seg {
+  width: auto;
+  flex: none;
+}
+
+/* Timing inputs. */
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.slots-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.slot-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+}
+.slot-edit .slot-name-in {
+  flex: 1;
+  font-weight: 700;
 }
 
 /* ── Admin: payments revenue hero ── */

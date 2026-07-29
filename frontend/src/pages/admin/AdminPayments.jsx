@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { slotById, rupees } from '../../lib/batches'
+import { rupees } from '../../lib/batches'
 import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
 import { toCsv, downloadCsv } from '../../lib/csv'
@@ -233,7 +233,7 @@ export default function AdminPayments() {
                     <div className="slot-breakdown">
                       {b.slots.map((s) => (
                         <div key={s.slot} className="between slot-row">
-                          <span className="muted small">{slotById(s.slot)?.label || s.slot} · {s.slot_label}</span>
+                          <span className="muted small">{s.slot_label || s.slot}</span>
                           <span className="muted small">
                             {rupees(s.revenue_paise)} / {rupees(s.expected_paise)} · {s.paid_count}/{s.total_students}
                           </span>
