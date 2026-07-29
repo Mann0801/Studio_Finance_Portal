@@ -22,21 +22,35 @@ function errorMessage(data, status) {
  * Bearer credential. Throws an Error with the server's detail message on non-2xx.
  */
 export async function api(path, { method = 'GET', body, auth = true } = {}) {
-  const headers = { 'Content-Type': 'application/json' }
+  const send = (token) => {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    return fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
 
+  let token = null
   if (auth) {
     const {
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated')
-    headers.Authorization = `Bearer ${session.access_token}`
+    token = session.access_token
   }
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  let res = await send(token)
+
+  // A 401 usually means the access token went stale — force a refresh and retry
+  // once, so a long-open session recovers instead of erroring out.
+  if (res.status === 401 && auth) {
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    if (refreshed?.session) {
+      res = await send(refreshed.session.access_token)
+    }
+  }
 
   const text = await res.text()
   let data = null
@@ -45,6 +59,9 @@ export async function api(path, { method = 'GET', body, auth = true } = {}) {
   } catch {
     // Non-JSON response (e.g. a proxy/error page during a cold start or outage).
     if (!res.ok) throw new Error(`Server error (${res.status}). Please try again in a moment.`)
+  }
+  if (res.status === 401 && auth) {
+    throw new Error('Your session expired — please log in again.')
   }
   if (!res.ok) {
     throw new Error(errorMessage(data, res.status))

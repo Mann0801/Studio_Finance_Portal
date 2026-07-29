@@ -73,7 +73,7 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
         period=period,
         studio_name=settings.studio_name,
         prefill_name=row["name"],
-        prefill_email=row["email"],
+        prefill_email=row.get("email") or "",  # phone-login students have no email
         prefill_contact=row["phone"],
     )
 

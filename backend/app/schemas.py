@@ -79,7 +79,7 @@ class OrderResponse(BaseModel):
     period: str
     studio_name: str
     prefill_name: str
-    prefill_email: str
+    prefill_email: str = ""      # phone-login students have no email
     prefill_contact: str
 
 
