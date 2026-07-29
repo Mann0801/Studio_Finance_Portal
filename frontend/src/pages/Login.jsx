@@ -71,9 +71,6 @@ export default function Login() {
         <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
-        <p className="auth-sub" style={{ marginTop: 4 }}>
-          Forgot your password? Contact the studio to reset it.
-        </p>
       </form>
 
       <p className="auth-foot">
