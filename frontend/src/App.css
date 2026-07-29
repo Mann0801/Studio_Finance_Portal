@@ -1808,6 +1808,22 @@
   line-height: 1.5;
   font-size: 14.5px;
 }
+.card textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+  font: inherit;
+}
+.card textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
 
 /* Downloadable / printable receipt (Payments history). */
 .receipt-doc {

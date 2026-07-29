@@ -256,6 +256,10 @@ class AnnouncementOut(BaseModel):
     created_at: datetime
 
 
+class AdminAnnouncementRow(AnnouncementOut):
+    active: bool = False  # true = currently shown as the student banner
+
+
 # ── Classes (dynamic catalogue) ──
 class ClassSlot(BaseModel):
     key: str = Field(min_length=1, max_length=40)

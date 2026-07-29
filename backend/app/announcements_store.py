@@ -46,6 +46,36 @@ def post_announcement(message: str) -> dict:
     return inserted.data[0]
 
 
+def get_announcement(ann_id: str) -> Optional[dict]:
+    res = get_supabase().table("announcements").select("*").eq("id", ann_id).limit(1).execute()
+    return res.data[0] if res.data else None
+
+
+def update_announcement(ann_id: str, message: str) -> Optional[dict]:
+    """Edit the text of any announcement (active or past)."""
+    res = (
+        get_supabase()
+        .table("announcements")
+        .update({"message": message, "updated_at": now_local().isoformat()})
+        .eq("id", ann_id)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+def delete_announcement(ann_id: str) -> None:
+    """Permanently remove a specific announcement."""
+    get_supabase().table("announcements").delete().eq("id", ann_id).execute()
+
+
+def activate_announcement(ann_id: str) -> Optional[dict]:
+    """Make a specific (e.g. older) announcement the live banner again."""
+    sb = get_supabase()
+    sb.table("announcements").update({"active": False}).eq("active", True).execute()
+    res = sb.table("announcements").update({"active": True}).eq("id", ann_id).execute()
+    return res.data[0] if res.data else None
+
+
 def update_active(message: str) -> Optional[dict]:
     """Update the text of the active announcement; create one if none is active."""
     sb = get_supabase()

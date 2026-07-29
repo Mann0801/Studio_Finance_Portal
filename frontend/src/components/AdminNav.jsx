@@ -5,6 +5,7 @@ import {
   UsersIcon,
   ClassIcon,
   PaymentIcon,
+  MegaphoneIcon,
   SettingsIcon,
   MenuIcon,
   CloseIcon,
@@ -15,6 +16,7 @@ const TABS = [
   { to: '/admin/students', label: 'Students', Icon: UsersIcon },
   { to: '/admin/classes', label: 'Classes', Icon: ClassIcon },
   { to: '/admin/payments', label: 'Payments', Icon: PaymentIcon },
+  { to: '/admin/announcements', label: 'Announcements', Icon: MegaphoneIcon },
   { to: '/admin/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
