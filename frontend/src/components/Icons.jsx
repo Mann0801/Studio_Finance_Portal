@@ -131,6 +131,13 @@ export const CloseIcon = (p) => (
   </svg>
 )
 
+export const LogoutIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M15 17v2a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v2" />
+    <path d="M11 12h9m0 0-3-3m3 3-3 3" />
+  </svg>
+)
+
 export const MegaphoneIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M3 11v2a1 1 0 0 0 1 1h2l9 5V5l-9 5H4a1 1 0 0 0-1 1Z" />

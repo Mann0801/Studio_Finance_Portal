@@ -3,7 +3,7 @@ import { useAdmin } from '../../context/AdminContext'
 import { STUDIO_NAME } from '../../lib/brand'
 
 export default function AdminSettings() {
-  const { adminEmail, logout } = useAdmin()
+  const { adminEmail } = useAdmin()
   const [showPwd, setShowPwd] = useState(false)
 
   return (
@@ -43,11 +43,6 @@ export default function AdminSettings() {
           </p>
         </div>
       )}
-
-      {/* Logout */}
-      <button className="btn danger block" style={{ marginTop: 20 }} onClick={logout}>
-        Log out
-      </button>
 
       <div style={{ height: 28 }} />
     </>
