@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
-import { useClasses, classById, scheduleLabel } from '../../lib/classes'
+import { useClasses, classById, scheduleLabel, slotByKey } from '../../lib/classes'
 import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
 import StatusBadge from '../../components/StatusBadge'
@@ -24,15 +24,36 @@ function greeting() {
 
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-/** The soonest scheduled day from today, as "Today" / "Tomorrow" / weekday. */
-function nextClassLabel(scheduleDays) {
+/** "6:30 AM" / "5:00 PM" / "18:00" → minutes since midnight (null if unparseable). */
+function parseTime(s) {
+  if (!s) return null
+  const m = String(s).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
+  if (!m) return null
+  let h = parseInt(m[1], 10)
+  const min = parseInt(m[2], 10)
+  const ap = m[3] && m[3].toUpperCase()
+  if (ap === 'PM' && h !== 12) h += 12
+  if (ap === 'AM' && h === 12) h = 0
+  return h * 60 + min
+}
+
+/** The soonest UPCOMING class from now, as "Today" / "Tomorrow" / weekday.
+ *  Today only counts while its start time is still ahead — once it has passed we
+ *  roll forward to the next scheduled day (so Fri night → "Monday", etc.). */
+function nextClassLabel(scheduleDays, startMinutes) {
   if (!scheduleDays || !scheduleDays.length) return null
-  const todayIdx = (new Date().getDay() + 6) % 7 // JS Sun=0 → Mon=0
-  for (let i = 0; i < 7; i++) {
+  const now = new Date()
+  const todayIdx = (now.getDay() + 6) % 7 // JS Sun=0 → Mon=0
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  for (let i = 0; i < 8; i++) {
     const idx = (todayIdx + i) % 7
-    if (scheduleDays.includes(idx)) {
-      return i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_FULL[idx]
+    if (!scheduleDays.includes(idx)) continue
+    if (i === 0) {
+      // Today is a class day — only "Today" if it hasn't started yet.
+      if (startMinutes == null || nowMinutes < startMinutes) return 'Today'
+      continue // already passed → keep looking for the next day
     }
+    return i === 1 ? 'Tomorrow' : DAY_FULL[idx]
   }
   return null
 }
@@ -83,7 +104,9 @@ export default function Home() {
   const isDeleted = student.batch_deleted
   const isContact = isEnquiry || isDeleted
 
-  const nextDay = isContact ? null : nextClassLabel(cls?.schedule_days)
+  const slot = student.batch_slot ? slotByKey(cls, student.batch_slot) : null
+  const startTime = slot?.start || cls?.start_time || null
+  const nextDay = isContact ? null : nextClassLabel(cls?.schedule_days, parseTime(startTime))
   const classTime =
     student.slot_label ||
     (cls?.start_time && cls?.end_time ? `${cls.start_time} – ${cls.end_time}` : cls?.start_time || '')
