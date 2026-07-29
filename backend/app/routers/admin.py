@@ -225,7 +225,7 @@ def list_batch(batch: str, slot: str | None = None):
             AdminStudentRow(
                 id=s["id"],
                 name=s["name"],
-                email=s["email"],
+                email=s.get("email"),
                 phone=s["phone"],
                 batch=batch,
                 batch_label=class_label(cls),
@@ -372,7 +372,7 @@ def unpaid_students():
             AdminStudentRow(
                 id=s["id"],
                 name=s["name"],
-                email=s["email"],
+                email=s.get("email"),
                 phone=s["phone"],
                 batch=s["batch"],
                 batch_label=class_label(cls),
@@ -394,7 +394,8 @@ def unpaid_students():
 
 @router.get("/activity", response_model=AdminActivity, dependencies=[Depends(require_admin)])
 def activity():
-    """Home feed: the last 5 payments received and last 3 new signups."""
+    """Home feed: recent new signups (shown in a fixed-height scroll widget).
+    recent_payments is still returned for API compatibility."""
     sb = get_supabase()
     cmap = class_map()
     pays = (
@@ -427,7 +428,7 @@ def activity():
         sb.table("students")
         .select("name, batch, join_date, created_at")
         .order("created_at", desc=True)
-        .limit(3)
+        .limit(15)
         .execute()
     ).data
     recent_signups = [

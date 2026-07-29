@@ -1846,6 +1846,24 @@
   gap: 4px;
 }
 
+/* Fixed-height scrollable list (admin activity feeds, payment history) so long
+   lists stay compact instead of pushing the page down. */
+.scroll-list {
+  max-height: 260px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-list.scroll-tall {
+  max-height: 56vh;
+}
+.scroll-list::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 /* Two studio numbers stacked in one "Call" row. */
 .phone-links {
   display: flex;

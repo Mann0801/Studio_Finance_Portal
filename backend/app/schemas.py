@@ -102,7 +102,7 @@ class AdminLoginResponse(BaseModel):
 class AdminStudentRow(BaseModel):
     id: str
     name: str
-    email: str
+    email: Optional[str] = None    # phone-login students have no email
     phone: str
     batch: str
     batch_label: str = ""
