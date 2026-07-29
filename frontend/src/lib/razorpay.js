@@ -2,6 +2,38 @@ import { api } from './api'
 
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * Record a successful checkout on our backend. Razorpay has already captured the
+ * money by the time its handler runs, so the payment is real — this call just
+ * marks the month paid. On mobile UPI the phone switches to the payment app and
+ * back, and iOS often kills the socket, so the first verify() can fail at the
+ * network level. Retry those blips; a real rejection (bad signature, wrong
+ * order) is NOT retried. If the network never recovers we return null and let
+ * the Razorpay webhook (the authoritative backstop) record it server-side.
+ */
+async function verifyCheckout(resp) {
+  const maxAttempts = 4
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await api('/api/payments/verify', {
+        method: 'POST',
+        body: {
+          razorpay_order_id: resp.razorpay_order_id,
+          razorpay_payment_id: resp.razorpay_payment_id,
+          razorpay_signature: resp.razorpay_signature,
+        },
+      })
+    } catch (err) {
+      if (!err.network) throw err // genuine failure — surface it
+      if (attempt === maxAttempts) return null // give up confirming; webhook covers it
+      await sleep(1200 * attempt)
+    }
+  }
+  return null
+}
+
 function loadCheckout() {
   return new Promise((resolve, reject) => {
     if (window.Razorpay) return resolve()
@@ -44,18 +76,14 @@ export async function payForMonth(period) {
       theme: { color: '#3b82f6' },
       handler: async (resp) => {
         try {
-          const result = await api('/api/payments/verify', {
-            method: 'POST',
-            body: {
-              razorpay_order_id: resp.razorpay_order_id,
-              razorpay_payment_id: resp.razorpay_payment_id,
-              razorpay_signature: resp.razorpay_signature,
-            },
-          })
+          const result = await verifyCheckout(resp)
           resolve({
-            period: result.period,
+            period: result?.period || order.period,
             amountPaise: order.amount_paise,
             paymentId: resp.razorpay_payment_id,
+            // false = our verify call couldn't reach the server; the payment
+            // still went through and the webhook will record it shortly.
+            confirmed: Boolean(result),
           })
         } catch (err) {
           reject(err)

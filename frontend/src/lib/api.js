@@ -22,14 +22,23 @@ function errorMessage(data, status) {
  * Bearer credential. Throws an Error with the server's detail message on non-2xx.
  */
 export async function api(path, { method = 'GET', body, auth = true } = {}) {
-  const send = (token) => {
+  const send = async (token) => {
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers.Authorization = `Bearer ${token}`
-    return fetch(`${BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    })
+    try {
+      return await fetch(`${BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      })
+    } catch {
+      // fetch() only rejects on a network-level failure (no response) — e.g. the
+      // free-tier backend cold-starting, or iOS Safari tearing down the socket
+      // when it returns from a UPI app. Tag it so callers can retry vs. give up.
+      const err = new Error('Network error — please check your connection and try again.')
+      err.network = true
+      throw err
+    }
   }
 
   let token = null
