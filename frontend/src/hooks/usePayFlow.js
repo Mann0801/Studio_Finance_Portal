@@ -17,6 +17,17 @@ export function usePayFlow() {
     try {
       const result = await payForMonth(period)
       await reload()
+      // If the client couldn't confirm the payment (mobile network blip after
+      // UPI), the Razorpay webhook records it server-side a moment later — keep
+      // refreshing in the background so Home/Payments flip to Paid on their own.
+      if (!result.confirmed) {
+        ;(async () => {
+          for (let i = 0; i < 4; i++) {
+            await new Promise((r) => setTimeout(r, 2500))
+            await reload()
+          }
+        })()
+      }
       navigate('/payment-success', {
         state: {
           ...result,
