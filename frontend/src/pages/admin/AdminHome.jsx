@@ -88,50 +88,26 @@ export default function AdminHome() {
         <div className="bar"><span style={{ width: `${m.pct}%` }} /></div>
       </div>
 
-      {/* Recent activity */}
-      <div className="section-h" style={{ marginTop: 20, marginBottom: 4 }}>
-        <h2>Recent activity</h2>
-      </div>
-
-      <div className="card flush list">
-        <div className="feed-head">Payments received</div>
-        {!activity ? (
-          <div className="list-item"><Skeleton height={16} width="70%" /></div>
-        ) : activity.recent_payments.length === 0 ? (
-          <div className="list-item"><span className="muted small">No payments yet.</span></div>
-        ) : (
-          activity.recent_payments.map((p, i) => (
-            <div className="list-item" key={`p${i}`}>
-              <span className="li-main">
-                <span className="feed-name">{p.name}</span>
-                <span className="muted small"> · {p.batch_label}</span>
-              </span>
-              <span className="feed-right">
-                <span style={{ color: 'var(--paid)', fontWeight: 700 }}>{rupees(p.amount_paise)}</span>
-                <span className="muted small">{timeLabel(p.paid_at)}</span>
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="card flush list" style={{ marginTop: 12 }}>
+      {/* New signups */}
+      <div className="card flush" style={{ marginTop: 20 }}>
         <div className="feed-head">New signups</div>
-        {!activity ? (
-          <div className="list-item"><Skeleton height={16} width="60%" /></div>
-        ) : activity.recent_signups.length === 0 ? (
-          <div className="list-item"><span className="muted small">No signups yet.</span></div>
-        ) : (
-          activity.recent_signups.map((s, i) => (
-            <div className="list-item" key={`s${i}`}>
-              <span className="li-main">
-                <span className="feed-name">{s.name}</span>
-                <span className="muted small"> · {s.batch_label}</span>
-              </span>
-              <span className="muted small">{timeLabel(s.join_date)}</span>
-            </div>
-          ))
-        )}
+        <div className="list scroll-list">
+          {!activity ? (
+            <div className="list-item"><Skeleton height={16} width="60%" /></div>
+          ) : activity.recent_signups.length === 0 ? (
+            <div className="list-item"><span className="muted small">No signups yet.</span></div>
+          ) : (
+            activity.recent_signups.map((s, i) => (
+              <div className="list-item" key={`s${i}`}>
+                <span className="li-main">
+                  <span className="feed-name">{s.name}</span>
+                  <span className="muted small"> · {s.batch_label}</span>
+                </span>
+                <span className="muted small">{timeLabel(s.join_date)}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div style={{ height: 28 }} />

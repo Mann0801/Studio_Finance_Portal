@@ -152,7 +152,8 @@ export default function AdminPayments() {
               {history && history.length > 0 ? 'No payments match.' : 'No payments received yet.'}
             </div>
           ) : (
-            <div className="card flush list" style={{ marginTop: 12 }}>
+            <div className="card flush" style={{ marginTop: 12 }}>
+              <div className="list scroll-list scroll-tall">
               {visible.map((p) => (
                 <div className="list-item pay-row" key={p.id}>
                   <div className="li-main">
@@ -167,6 +168,7 @@ export default function AdminPayments() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           )}
         </>
