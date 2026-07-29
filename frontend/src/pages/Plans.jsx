@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { STUDIO_NAME } from '../lib/brand'
-import { BATCHES, TRADITIONAL_SLOTS } from '../lib/batches'
+import { useClasses, priceLabel, scheduleLabel, slotsOf, slotTime } from '../lib/classes'
 import { BUSINESS } from '../lib/business'
 import LegalFooter from '../components/LegalFooter'
 
@@ -10,6 +10,7 @@ import LegalFooter from '../components/LegalFooter'
  * services before signing up.
  */
 export default function Plans() {
+  const { classes } = useClasses()
   return (
     <div className="legal-wrap">
       <div className="legal-top">
@@ -30,16 +31,16 @@ export default function Plans() {
       </div>
 
       <div className="plans-grid">
-        {BATCHES.map((b) => (
-          <div className="plan-card" key={b.id}>
-            <div className="plan-name">{b.label}</div>
-            {b.schedule && <div className="plan-sched">{b.schedule}</div>}
-            <div className="plan-price">{b.price}</div>
+        {(classes || []).map((c) => (
+          <div className="plan-card" key={c.id}>
+            <div className="plan-name">{c.name}</div>
+            {scheduleLabel(c) && <div className="plan-sched">{scheduleLabel(c)}</div>}
+            <div className="plan-price">{priceLabel(c)}</div>
 
-            {b.hasSlots && (
+            {slotsOf(c).length > 0 && (
               <ul className="plan-slots">
-                {TRADITIONAL_SLOTS.map((s) => (
-                  <li key={s.id}>{s.time}</li>
+                {slotsOf(c).map((s) => (
+                  <li key={s.key}>{s.name} · {slotTime(s)}</li>
                 ))}
               </ul>
             )}

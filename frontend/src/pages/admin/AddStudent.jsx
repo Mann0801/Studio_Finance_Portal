@@ -2,21 +2,21 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { batchById } from '../../lib/batches'
+import { useClasses, classById, hasSlots } from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
 import { ArrowLeftIcon, CheckIcon } from '../../components/Icons'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function validate(form) {
+function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter their full name'
   if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (form.password && form.password.length < 8) errors.password = 'At least 8 characters'
-  if (!form.batch) errors.batch = 'Please select a batch'
-  else if (batchById(form.batch)?.hasSlots && !form.batch_slot)
-    errors.batch = 'Please choose a timing for Traditional Yoga'
+  if (!form.batch) errors.batch = 'Please select a class'
+  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
+    errors.batch = 'Please choose a timing'
   return errors
 }
 
@@ -24,6 +24,7 @@ function validate(form) {
 export default function AddStudent() {
   const navigate = useNavigate()
   const { reloadStats, guard } = useAdmin()
+  const { classes } = useClasses()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -50,7 +51,7 @@ export default function AddStudent() {
     e.preventDefault()
     setError('')
     setSubmitted(true)
-    const fieldErrors = validate(form)
+    const fieldErrors = validate(form, classes)
     setErrors(fieldErrors)
     if (Object.keys(fieldErrors).length > 0) return
 
@@ -201,6 +202,7 @@ export default function AddStudent() {
         </label>
 
         <BatchPicker
+          classes={classes}
           batch={form.batch}
           slot={form.batch_slot}
           error={errors.batch}

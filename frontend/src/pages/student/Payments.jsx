@@ -35,7 +35,18 @@ export default function Payments() {
       )}
       {error && <p className="error">{error}</p>}
 
-      {data && (
+      {data && (data.student.fee_type === 'enquiry' || data.student.batch_deleted) ? (
+        <div className="card">
+          <span className="card-title">
+            {data.student.batch_deleted ? 'Class no longer available' : 'Arranged with the studio'}
+          </span>
+          <p className="muted" style={{ margin: '8px 0 0', lineHeight: 1.5 }}>
+            {data.student.batch_deleted
+              ? 'Your class was removed. Please contact the studio to be moved to another class.'
+              : 'This class has no online payment. Contact the studio to arrange your membership.'}
+          </p>
+        </div>
+      ) : data ? (
         <>
           <div className="pay-card">
             <div className="between">
@@ -114,7 +125,7 @@ export default function Payments() {
             </div>
           )}
         </>
-      )}
+      ) : null}
     </>
   )
 }

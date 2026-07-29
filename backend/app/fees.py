@@ -17,7 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from .config import get_settings
-from .constants import SESSION, Batch, batch_info
+from .constants import ENQUIRY, MONTHLY, PER_SESSION, SESSION_PACK
 
 
 def _tz() -> ZoneInfo:
@@ -92,18 +92,6 @@ def _count_session_days(
     )
 
 
-def classes_in_month(batch: Batch, period: str) -> int:
-    """Number of scheduled classes for ``batch`` in ``period``. Session batches
-    use their package size / matching weekend days; monthly batches meet Mon–Fri."""
-    info = batch_info(batch)
-    year, month = parse_period(period)
-    if info.billing == SESSION:
-        return info.sessions_per_month or _count_session_days(
-            year, month, info.session_weekdays
-        )
-    return _count_session_days(year, month, (0, 1, 2, 3, 4))
-
-
 @dataclass(frozen=True)
 class DueAmount:
     period: str
@@ -111,55 +99,63 @@ class DueAmount:
     is_prorata: bool
 
 
-def compute_due(batch: Batch, join_date: date, period: str) -> DueAmount:
-    """How much a student in ``batch`` owes for ``period``.
+def _zero(period: str) -> DueAmount:
+    return DueAmount(period=period, amount_paise=0, is_prorata=False)
 
-    Returns 0 for periods before the join month. The join month is pro-rata —
-    by days (monthly batches) or by sessions remaining (session batches). All
-    later months are the full fee for that month.
+
+def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
+    """How much a student in class ``cls`` owes for ``period``.
+
+    ``cls`` is a row from the ``classes`` table (or None for a deleted class).
+    Returns 0 for a deleted/enquiry class or a period before the join month. The
+    join month is pro-rata; later months are the full fee.
+
+      * MONTHLY      — pro-rata by days.
+      * SESSION_PACK — full = pack price; join month = pack/N × remaining class
+                       days (capped at N).
+      * PER_SESSION  — per-session price × scheduled class days in the period.
+      * ENQUIRY      — nothing to pay online.
     """
-    info = batch_info(batch)
-    join_period = period_of(join_date)
+    if not cls:
+        return _zero(period)
+    fee_type = cls.get("fee_type")
+    if fee_type == ENQUIRY:
+        return _zero(period)
 
+    join_period = period_of(join_date)
     if period < join_period:
-        return DueAmount(period=period, amount_paise=0, is_prorata=False)
+        return _zero(period)
 
     year, month = parse_period(period)
     is_join_month = period == join_period
+    fee = cls.get("fee_paise") or 0
+    weekdays = tuple(cls.get("schedule_days") or ())
 
-    if info.billing == SESSION:
-        # total_sessions = the monthly package size (cap) or every matching day.
-        total_sessions = info.sessions_per_month or _count_session_days(
-            year, month, info.session_weekdays
-        )
+    if fee_type == MONTHLY:
         if is_join_month:
-            remaining = _count_session_days(
-                year, month, info.session_weekdays, from_day=join_date.day
+            total_days = days_in_month(period)
+            days_remaining = total_days - join_date.day + 1  # inclusive of join day
+            prorata = Decimal(fee) * Decimal(days_remaining) / Decimal(total_days)
+            return DueAmount(period, _round_to_rupee_paise(prorata), True)
+        return DueAmount(period, fee, False)
+
+    if fee_type == SESSION_PACK:
+        spm = cls.get("sessions_per_month") or 0
+        if is_join_month and spm > 0:
+            remaining = min(
+                _count_session_days(year, month, weekdays, from_day=join_date.day), spm
             )
-            if info.sessions_per_month is not None:
-                remaining = min(remaining, info.sessions_per_month)
-            # Per-session prices are whole rupees, so no rounding is needed.
+            per_session = Decimal(fee) / Decimal(spm)
             return DueAmount(
-                period=period,
-                amount_paise=info.unit_paise * remaining,
-                is_prorata=True,
+                period, _round_to_rupee_paise(per_session * Decimal(remaining)), True
             )
-        return DueAmount(
-            period=period,
-            amount_paise=info.unit_paise * total_sessions,
-            is_prorata=False,
-        )
+        return DueAmount(period, fee, False)
 
-    # Monthly billing.
-    full = info.unit_paise
-    if is_join_month:
-        total_days = days_in_month(period)
-        days_remaining = total_days - join_date.day + 1  # inclusive of join day
-        prorata = Decimal(full) * Decimal(days_remaining) / Decimal(total_days)
-        return DueAmount(
-            period=period,
-            amount_paise=_round_to_rupee_paise(prorata),
-            is_prorata=True,
-        )
+    if fee_type == PER_SESSION:
+        if is_join_month:
+            sessions = _count_session_days(year, month, weekdays, from_day=join_date.day)
+            return DueAmount(period, fee * sessions, True)
+        sessions = _count_session_days(year, month, weekdays)
+        return DueAmount(period, fee * sessions, False)
 
-    return DueAmount(period=period, amount_paise=full, is_prorata=False)
+    return _zero(period)  # unknown fee type

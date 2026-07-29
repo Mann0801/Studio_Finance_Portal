@@ -1,4 +1,5 @@
-"""Admin routes: single hardcoded login, per-batch student lists, and stats."""
+"""Admin routes: single hardcoded login, dynamic class CRUD, per-class student
+lists, and stats."""
 from __future__ import annotations
 
 import secrets
@@ -7,25 +8,28 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import create_admin_token, require_admin, verify_admin_credentials
-from ..constants import (
-    BATCH_LABELS,
-    TRADITIONAL_SLOTS,
-    Batch,
-    batch_info,
-    slot_label,
+from ..classes_store import (
+    class_label,
+    class_map,
+    create_class,
+    get_class,
+    list_classes,
+    slot_by_key,
+    slot_label_of,
+    soft_delete_class,
+    student_count,
+    unique_slug,
+    update_class,
 )
+from ..constants import ENQUIRY, FEE_TYPES, SESSION_PACK
 from ..db import get_supabase
-from ..fees import (
-    compute_due,
-    current_period,
-    now_local,
-    previous_period,
-)
+from ..fees import compute_due, current_period, now_local, previous_period
 from ..payments_store import is_period_paid, mark_paid_cash
 from ..schemas import (
     ActivityPayment,
     ActivitySignup,
     AdminActivity,
+    AdminClassRow,
     AdminCreateStudentRequest,
     AdminCreateStudentResponse,
     AdminLoginRequest,
@@ -36,6 +40,8 @@ from ..schemas import (
     AdminStudentRow,
     AdminUpdateStudentRequest,
     BatchStat,
+    ClassDeleteResponse,
+    ClassWriteRequest,
     SlotStat,
     StudentPaymentRow,
 )
@@ -47,6 +53,7 @@ def _payment_method(row: dict) -> str:
     """Cash payments have no Razorpay payment id; everything else is online."""
     return "Online" if row.get("razorpay_payment_id") else "Cash"
 
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
@@ -54,12 +61,27 @@ def _as_date(value) -> _date:
     return _date.fromisoformat(value) if isinstance(value, str) else value
 
 
-def _resolve_slot(batch: Batch, raw_slot: str | None) -> str | None:
-    """Validate the timing slot: required (and a known key) for batches that have
+def _deleted(cls: dict | None) -> bool:
+    """A student's class is 'deleted' when its row is gone or soft-deleted."""
+    return cls is None or not cls.get("active", True)
+
+
+def _fee_cls(cls: dict | None) -> dict | None:
+    """Class used for fee computation — None (0 due) for a deleted class."""
+    return None if _deleted(cls) else cls
+
+
+def _reminder_label(cls: dict | None, slot_time: str | None) -> str:
+    name = class_label(cls)
+    return f"{name} ({slot_time})" if slot_time else name
+
+
+def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
+    """Validate the timing slot: required (and a known key) for classes that have
     slots, forced to None otherwise."""
     slot = (raw_slot or "").strip() or None
-    if batch_info(batch).has_slots:
-        if slot not in TRADITIONAL_SLOTS:
+    if cls.get("slots"):
+        if not slot_by_key(cls, slot):
             raise HTTPException(status_code=422, detail="Please choose a timing slot")
         return slot
     return None
@@ -95,33 +117,110 @@ def login(body: AdminLoginRequest):
     return AdminLoginResponse(token=create_admin_token())
 
 
+# ── Class management ──────────────────────────────────────────────────────────
+def _prep_slots(slots) -> list[dict]:
+    """Store slots as {key,name,start,end}, keys unique + stable. Frontend keeps
+    existing keys so a student's saved batch_slot never breaks on edit."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for i, s in enumerate(slots):
+        key = (s.key or f"slot{i + 1}").strip()
+        while key in seen:
+            key = f"{key}_{i + 1}"
+        seen.add(key)
+        out.append({"key": key, "name": s.name.strip(), "start": s.start, "end": s.end})
+    return out
+
+
+def _class_payload(body: ClassWriteRequest) -> dict:
+    if body.fee_type not in FEE_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid fee type")
+    if body.fee_type == SESSION_PACK and not body.sessions_per_month:
+        raise HTTPException(status_code=422, detail="Sessions per month is required")
+    slots = _prep_slots(body.slots)
+    return {
+        "name": body.name.strip(),
+        "fee_type": body.fee_type,
+        "fee_paise": 0 if body.fee_type == ENQUIRY else max(body.fee_paise or 0, 0),
+        "sessions_per_month": body.sessions_per_month if body.fee_type == SESSION_PACK else None,
+        "schedule_days": sorted({d for d in body.schedule_days if 0 <= d <= 6}),
+        "slots": slots,
+        "start_time": None if slots else (body.start_time or None),
+        "end_time": None if slots else (body.end_time or None),
+        "description": (body.description or "").strip() or None,
+    }
+
+
+def _class_row(c: dict) -> AdminClassRow:
+    return AdminClassRow(**c, student_count=student_count(c["id"]))
+
+
+@router.get("/classes", response_model=list[AdminClassRow], dependencies=[Depends(require_admin)])
+def list_all_classes():
+    """Every class (active + soft-deleted) with its student count."""
+    return [_class_row(c) for c in list_classes()]
+
+
+@router.post("/classes", response_model=AdminClassRow, dependencies=[Depends(require_admin)])
+def create_new_class(body: ClassWriteRequest):
+    payload = _class_payload(body)
+    existing = list_classes()
+    payload["id"] = unique_slug(body.name)
+    payload["active"] = True
+    payload["sort_order"] = max((c.get("sort_order") or 0) for c in existing) + 1 if existing else 0
+    return _class_row(create_class(payload))
+
+
+@router.patch(
+    "/classes/{class_id}", response_model=AdminClassRow, dependencies=[Depends(require_admin)]
+)
+def edit_class(class_id: str, body: ClassWriteRequest):
+    if not get_class(class_id):
+        raise HTTPException(status_code=404, detail="Class not found")
+    updated = update_class(class_id, _class_payload(body))
+    return _class_row(updated)
+
+
+@router.delete(
+    "/classes/{class_id}", response_model=ClassDeleteResponse, dependencies=[Depends(require_admin)]
+)
+def remove_class(class_id: str):
+    if not get_class(class_id):
+        raise HTTPException(status_code=404, detail="Class not found")
+    count = student_count(class_id)
+    soft_delete_class(class_id)
+    return ClassDeleteResponse(status="deleted", student_count=count)
+
+
+# ── Students by class ─────────────────────────────────────────────────────────
 @router.get(
     "/batches/{batch}",
     response_model=list[AdminStudentRow],
     dependencies=[Depends(require_admin)],
 )
-def list_batch(batch: Batch, slot: str | None = None):
+def list_batch(batch: str, slot: str | None = None):
     sb = get_supabase()
     period = current_period()
+    cls = get_class(batch)
+    deleted = _deleted(cls)
     students = (
-        sb.table("students").select("*").eq("batch", batch.value).order("name").execute()
+        sb.table("students").select("*").eq("batch", batch).order("name").execute()
     ).data
-    # Traditional Yoga is filtered down to a single timing slot when requested.
-    if batch_info(batch).has_slots and slot:
+    # Classes with timing slots can be filtered to a single slot.
+    if cls and cls.get("slots") and slot:
         students = [s for s in students if s.get("batch_slot") == slot]
     paid = _paid_amounts_for_period(period, [s["id"] for s in students])
 
     rows: list[AdminStudentRow] = []
     for s in students:
         join_date = _as_date(s["join_date"])
-        due = compute_due(batch, join_date, period)
+        due = compute_due(_fee_cls(cls), join_date, period)
         is_paid = s["id"] in paid
         amount = paid[s["id"]] if is_paid else due.amount_paise
-        sl = slot_label(s.get("batch_slot"))
+        sl = slot_label_of(cls, s.get("batch_slot"))
         wa = None
         if not is_paid and amount > 0:
-            label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
-            wa = reminder_link(s["phone"], s["name"], label, amount, period)
+            wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), amount, period)
         rows.append(
             AdminStudentRow(
                 id=s["id"],
@@ -129,8 +228,10 @@ def list_batch(batch: Batch, slot: str | None = None):
                 email=s["email"],
                 phone=s["phone"],
                 batch=batch,
+                batch_label=class_label(cls),
                 batch_slot=s.get("batch_slot"),
                 slot_label=sl,
+                batch_deleted=deleted,
                 join_date=join_date,
                 period=period,
                 amount_paise=amount,
@@ -150,47 +251,50 @@ def stats():
     students = sb.table("students").select("id, batch, batch_slot, join_date").execute().data
     paid = _paid_amounts_for_period(period)
     last_month_paid = _paid_amounts_for_period(prev)
+    classes = list_classes()
 
-    def _group_stat(batch: Batch, members: list[dict]):
+    def _group_stat(fee_cls: dict | None, members: list[dict]):
         paid_ids = [s["id"] for s in members if s["id"] in paid]
         revenue = sum(paid[sid] for sid in paid_ids)
-        # Expected = sum of what each enrolled student owes for this period
-        # (0 for anyone who joined after this month).
         expected = sum(
-            compute_due(batch, _as_date(s["join_date"]), period).amount_paise
+            compute_due(fee_cls, _as_date(s["join_date"]), period).amount_paise
             for s in members
         )
         return paid_ids, revenue, expected
 
     per_batch: list[BatchStat] = []
     total_paid = total_students = total_revenue = total_expected = 0
-    for batch in Batch:
-        members = [s for s in students if s["batch"] == batch.value]
-        paid_ids, revenue, expected = _group_stat(batch, members)
+    for cls in classes:
+        members = [s for s in students if s["batch"] == cls["id"]]
+        # Soft-deleted classes only stay visible while they still hold students
+        # (so the admin can reassign them); hide empty removed classes.
+        if not cls.get("active", True) and not members:
+            continue
+        fee_cls = _fee_cls(cls)
+        paid_ids, revenue, expected = _group_stat(fee_cls, members)
 
-        # Per-timing breakdown for batches with slots (Traditional Yoga).
+        # Per-timing breakdown for classes that have slots.
         slots: list[SlotStat] = []
-        if batch_info(batch).has_slots:
-            for slot_key, slot_name in TRADITIONAL_SLOTS.items():
-                smembers = [s for s in members if s.get("batch_slot") == slot_key]
-                s_paid_ids, s_rev, s_exp = _group_stat(batch, smembers)
-                slots.append(
-                    SlotStat(
-                        slot=slot_key,
-                        slot_label=slot_name,
-                        total_students=len(smembers),
-                        paid_count=len(s_paid_ids),
-                        unpaid_count=len(smembers) - len(s_paid_ids),
-                        revenue_paise=s_rev,
-                        expected_paise=s_exp,
-                        collection_rate=_collection_rate(s_rev, s_exp),
-                    )
+        for slot in cls.get("slots") or []:
+            smembers = [s for s in members if s.get("batch_slot") == slot["key"]]
+            s_paid_ids, s_rev, s_exp = _group_stat(fee_cls, smembers)
+            slots.append(
+                SlotStat(
+                    slot=slot["key"],
+                    slot_label=slot_label_of(cls, slot["key"]) or slot.get("name", ""),
+                    total_students=len(smembers),
+                    paid_count=len(s_paid_ids),
+                    unpaid_count=len(smembers) - len(s_paid_ids),
+                    revenue_paise=s_rev,
+                    expected_paise=s_exp,
+                    collection_rate=_collection_rate(s_rev, s_exp),
                 )
+            )
 
         per_batch.append(
             BatchStat(
-                batch=batch,
-                batch_label=BATCH_LABELS[batch],
+                batch=cls["id"],
+                batch_label=class_label(cls),
                 total_students=len(members),
                 paid_count=len(paid_ids),
                 unpaid_count=len(members) - len(paid_ids),
@@ -247,10 +351,11 @@ def _students_by_id(ids: list[str]) -> dict[str, dict]:
     dependencies=[Depends(require_admin)],
 )
 def unpaid_students():
-    """Every student who still owes this month, newest-joined last, each with a
-    prefilled WhatsApp reminder link. Powers the admin "Send reminders" list."""
+    """Every student who still owes this month, each with a prefilled WhatsApp
+    reminder link. Powers the admin "Send reminders" list."""
     sb = get_supabase()
     period = current_period()
+    cmap = class_map()
     students = sb.table("students").select("*").order("name").execute().data
     paid = _paid_amounts_for_period(period, [s["id"] for s in students])
 
@@ -258,28 +363,29 @@ def unpaid_students():
     for s in students:
         if s["id"] in paid:
             continue
-        batch = Batch(s["batch"])
-        due = compute_due(batch, _as_date(s["join_date"]), period)
+        cls = cmap.get(s["batch"])
+        due = compute_due(_fee_cls(cls), _as_date(s["join_date"]), period)
         if due.amount_paise <= 0:
             continue
-        sl = slot_label(s.get("batch_slot"))
-        label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
+        sl = slot_label_of(cls, s.get("batch_slot"))
         rows.append(
             AdminStudentRow(
                 id=s["id"],
                 name=s["name"],
                 email=s["email"],
                 phone=s["phone"],
-                batch=batch,
+                batch=s["batch"],
+                batch_label=class_label(cls),
                 batch_slot=s.get("batch_slot"),
                 slot_label=sl,
+                batch_deleted=_deleted(cls),
                 join_date=_as_date(s["join_date"]),
                 period=period,
                 amount_paise=due.amount_paise,
                 is_prorata=due.is_prorata,
                 status="unpaid",
                 whatsapp_url=reminder_link(
-                    s["phone"], s["name"], label, due.amount_paise, period
+                    s["phone"], s["name"], _reminder_label(cls, sl), due.amount_paise, period
                 ),
             )
         )
@@ -290,6 +396,7 @@ def unpaid_students():
 def activity():
     """Home feed: the last 5 payments received and last 3 new signups."""
     sb = get_supabase()
+    cmap = class_map()
     pays = (
         sb.table("payments")
         .select("student_id, amount_paise, paid_at")
@@ -305,12 +412,12 @@ def activity():
         s = smap.get(p["student_id"])
         if not s:
             continue
-        batch = Batch(s["batch"])
+        cls = cmap.get(s["batch"])
         recent_payments.append(
             ActivityPayment(
                 name=s["name"],
-                batch=batch,
-                batch_label=BATCH_LABELS[batch],
+                batch=s["batch"],
+                batch_label=class_label(cls),
                 amount_paise=p["amount_paise"],
                 paid_at=p.get("paid_at"),
             )
@@ -326,8 +433,8 @@ def activity():
     recent_signups = [
         ActivitySignup(
             name=s["name"],
-            batch=Batch(s["batch"]),
-            batch_label=BATCH_LABELS[Batch(s["batch"])],
+            batch=s["batch"],
+            batch_label=class_label(cmap.get(s["batch"])),
             join_date=_as_date(s["join_date"]),
         )
         for s in signups
@@ -342,8 +449,9 @@ def activity():
     dependencies=[Depends(require_admin)],
 )
 def payment_history(limit: int = 100):
-    """All received payments, newest first (joined to student name + batch)."""
+    """All received payments, newest first (joined to student name + class)."""
     sb = get_supabase()
+    cmap = class_map()
     pays = (
         sb.table("payments")
         .select("id, student_id, amount_paise, period, paid_at, razorpay_payment_id")
@@ -359,14 +467,14 @@ def payment_history(limit: int = 100):
         s = smap.get(p["student_id"])
         if not s:
             continue
-        batch = Batch(s["batch"])
+        cls = cmap.get(s["batch"])
         rows.append(
             AdminPaymentRow(
                 id=p["id"],
                 name=s["name"],
-                batch=batch,
-                batch_label=BATCH_LABELS[batch],
-                slot_label=slot_label(s.get("batch_slot")),
+                batch=s["batch"],
+                batch_label=class_label(cls),
+                slot_label=slot_label_of(cls, s.get("batch_slot")),
                 amount_paise=p["amount_paise"],
                 period=p["period"],
                 paid_at=p.get("paid_at"),
@@ -378,10 +486,11 @@ def payment_history(limit: int = 100):
 
 def _build_student_detail(s: dict) -> AdminStudentDetail:
     sb = get_supabase()
-    batch = Batch(s["batch"])
+    cls = get_class(s["batch"])
+    deleted = _deleted(cls)
     join_date = _as_date(s["join_date"])
     period = current_period()
-    due = compute_due(batch, join_date, period)
+    due = compute_due(_fee_cls(cls), join_date, period)
 
     pays = (
         sb.table("payments")
@@ -406,21 +515,22 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         for p in pays
     ]
 
-    sl = slot_label(s.get("batch_slot"))
+    sl = slot_label_of(cls, s.get("batch_slot"))
     wa = None
     if not this_paid and due.amount_paise > 0:
-        label = f"{BATCH_LABELS[batch]} ({sl})" if sl else BATCH_LABELS[batch]
-        wa = reminder_link(s["phone"], s["name"], label, due.amount_paise, period)
+        wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), due.amount_paise, period)
 
     return AdminStudentDetail(
         id=s["id"],
         name=s["name"],
         email=s.get("email"),
         phone=s["phone"],
-        batch=batch,
-        batch_label=BATCH_LABELS[batch],
+        batch=s["batch"],
+        batch_label=class_label(cls),
+        fee_type=cls.get("fee_type") if cls else None,
         batch_slot=s.get("batch_slot"),
         slot_label=sl,
+        batch_deleted=deleted,
         join_date=join_date,
         days_member=max((now_local().date() - join_date).days, 0),
         period=period,
@@ -440,6 +550,14 @@ def _load_student_or_404(student_id: str) -> dict:
     if not res.data:
         raise HTTPException(status_code=404, detail="Student not found")
     return res.data[0]
+
+
+def _require_class(batch: str) -> dict:
+    """Resolve a class the admin is assigning a student to — must exist + active."""
+    cls = get_class(batch)
+    if not cls or not cls.get("active", True):
+        raise HTTPException(status_code=422, detail="Please choose a valid class")
+    return cls
 
 
 @router.get(
@@ -468,7 +586,8 @@ def create_student(body: AdminCreateStudentRequest):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
-    slot = _resolve_slot(body.batch, body.batch_slot)
+    cls = _require_class(body.batch)
+    slot = _resolve_slot(cls, body.batch_slot)
 
     generated = not (body.password and body.password.strip())
     password = body.password.strip() if not generated else secrets.token_urlsafe(9)
@@ -493,7 +612,7 @@ def create_student(body: AdminCreateStudentRequest):
         "name": body.name.strip(),
         "email": email,
         "phone": phone,
-        "batch": body.batch.value,
+        "batch": cls["id"],
         "batch_slot": slot,
         "join_date": join_date.isoformat(),
     }
@@ -520,7 +639,8 @@ def create_student(body: AdminCreateStudentRequest):
     dependencies=[Depends(require_admin)],
 )
 def update_student(student_id: str, body: AdminUpdateStudentRequest):
-    """Edit a member's name, phone and batch/timing. Email is not editable here."""
+    """Edit a member's name, phone and class/timing. Email is not editable here.
+    Also used to reassign students out of a deleted class."""
     sb = get_supabase()
     _load_student_or_404(student_id)
 
@@ -529,11 +649,12 @@ def update_student(student_id: str, body: AdminUpdateStudentRequest):
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
 
-    slot = _resolve_slot(body.batch, body.batch_slot)
+    cls = _require_class(body.batch)
+    slot = _resolve_slot(cls, body.batch_slot)
     updates = {
         "name": body.name.strip(),
         "phone": phone,
-        "batch": body.batch.value,
+        "batch": cls["id"],
         "batch_slot": slot,
     }
     updated = sb.table("students").update(updates).eq("id", student_id).execute()
@@ -550,8 +671,9 @@ def mark_student_paid(student_id: str):
     s = _load_student_or_404(student_id)
     period = current_period()
     if not is_period_paid(student_id, period):
-        due = compute_due(Batch(s["batch"]), _as_date(s["join_date"]), period)
-        mark_paid_cash(student_id, period, due.amount_paise, due.is_prorata)
+        due = compute_due(_fee_cls(get_class(s["batch"])), _as_date(s["join_date"]), period)
+        if due.amount_paise > 0:
+            mark_paid_cash(student_id, period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 
 

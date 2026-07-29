@@ -2,28 +2,29 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { signUpWithPassword, setLastEmail } from '../lib/auth'
-import { batchById } from '../lib/batches'
+import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function validate(form) {
+function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   if (!form.password) errors.password = 'Set a password'
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
-  if (!form.batch) errors.batch = 'Please select a batch'
-  else if (batchById(form.batch)?.hasSlots && !form.batch_slot)
-    errors.batch = 'Please choose a timing for Traditional Yoga'
+  if (!form.batch) errors.batch = 'Please select a class'
+  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
+    errors.batch = 'Please choose a timing'
   return errors
 }
 
 export default function Signup() {
   const navigate = useNavigate()
+  const { classes } = useClasses()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -47,7 +48,7 @@ export default function Signup() {
     e.preventDefault()
     setError('')
     setSubmitted(true)
-    const fieldErrors = validate(form)
+    const fieldErrors = validate(form, classes)
     setErrors(fieldErrors)
     if (Object.keys(fieldErrors).length > 0) return
 
@@ -65,9 +66,11 @@ export default function Signup() {
           batch_slot: form.batch_slot,
         },
       })
-      // 3) Already signed in — straight to the first payment.
+      // 3) Already signed in. Enquiry classes have no online payment — go straight
+      //    to the dashboard (which shows a contact card); others pay first.
       setLastEmail(form.email.trim().toLowerCase())
-      navigate('/first-payment', { replace: true })
+      const enquiry = classById(classes, form.batch)?.fee_type === 'enquiry'
+      navigate(enquiry ? '/' : '/first-payment', { replace: true })
     } catch (err) {
       setError(err.message || 'Could not create your account')
     } finally {
@@ -135,6 +138,7 @@ export default function Signup() {
         </label>
 
         <BatchPicker
+          classes={classes}
           batch={form.batch}
           slot={form.batch_slot}
           error={errors.batch}

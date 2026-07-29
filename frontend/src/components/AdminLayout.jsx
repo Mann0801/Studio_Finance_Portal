@@ -7,11 +7,11 @@ import { AdminProvider } from '../context/AdminContext'
 export default function AdminLayout() {
   return (
     <AdminProvider>
-      <div className="app-shell with-nav">
+      <div className="app-shell with-menu">
+        <AdminNav />
         <div className="page">
           <Outlet />
         </div>
-        <AdminNav />
       </div>
     </AdminProvider>
   )

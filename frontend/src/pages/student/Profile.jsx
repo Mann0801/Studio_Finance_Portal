@@ -2,23 +2,24 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useDashboard } from '../../context/DashboardContext'
 import { api } from '../../lib/api'
-import { batchById } from '../../lib/batches'
+import { useClasses, classById, hasSlots } from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
 import { CardSkeleton } from '../../components/Skeleton'
 
-function validate(form) {
+function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
-  if (!form.batch) errors.batch = 'Please select a batch'
-  else if (batchById(form.batch)?.hasSlots && !form.batch_slot)
-    errors.batch = 'Please choose a timing for Traditional Yoga'
+  if (!form.batch) errors.batch = 'Please select a class'
+  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
+    errors.batch = 'Please choose a timing'
   return errors
 }
 
 export default function Profile() {
   const { signOut } = useAuth()
   const { data, loading, error, reload } = useDashboard()
+  const { classes } = useClasses()
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
@@ -56,7 +57,7 @@ export default function Profile() {
     e.preventDefault()
     setSaveError('')
     setSubmitted(true)
-    const fieldErrors = validate(form)
+    const fieldErrors = validate(form, classes)
     setErrors(fieldErrors)
     if (Object.keys(fieldErrors).length > 0) return
 
@@ -175,6 +176,7 @@ export default function Profile() {
           </label>
 
           <BatchPicker
+            classes={classes}
             batch={form.batch}
             slot={form.batch_slot}
             error={errors.batch}
@@ -185,7 +187,7 @@ export default function Profile() {
           />
 
           <p className="muted small" style={{ margin: '2px 0' }}>
-            Changing your batch updates this month’s fee on your next visit to Home.
+            Changing your class updates this month’s fee on your next visit to Home.
           </p>
 
           {saveError && <p className="error">{saveError}</p>}

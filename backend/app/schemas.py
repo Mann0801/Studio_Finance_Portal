@@ -6,8 +6,6 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .constants import Batch
-
 
 class SignupRequest(BaseModel):
     # The account (email + password) is created on the frontend via Supabase Auth;
@@ -15,7 +13,7 @@ class SignupRequest(BaseModel):
     # chosen batch. Email is read server-side from the verified token.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: Batch
+    batch: str
     batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
 
 
@@ -25,7 +23,7 @@ class UpdateProfileRequest(BaseModel):
     # the chosen batch + timing slot.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: Batch
+    batch: str
     batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
 
 
@@ -34,10 +32,12 @@ class StudentOut(BaseModel):
     name: str
     email: Optional[str] = None
     phone: str
-    batch: Batch
+    batch: str
     batch_label: str
+    fee_type: Optional[str] = None       # class fee model ('enquiry' → contact card)
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
+    batch_deleted: bool = False          # true if the class was removed
     join_date: date
 
 
@@ -104,9 +104,11 @@ class AdminStudentRow(BaseModel):
     name: str
     email: str
     phone: str
-    batch: Batch
+    batch: str
+    batch_label: str = ""
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
+    batch_deleted: bool = False
     join_date: date
     period: str
     amount_paise: int
@@ -127,7 +129,7 @@ class SlotStat(BaseModel):
 
 
 class BatchStat(BaseModel):
-    batch: Batch
+    batch: str
     batch_label: str
     total_students: int
     paid_count: int
@@ -154,7 +156,7 @@ class AdminStats(BaseModel):
 # ── Admin: activity feed + payment history ──
 class ActivityPayment(BaseModel):
     name: str
-    batch: Batch
+    batch: str
     batch_label: str
     amount_paise: int
     paid_at: Optional[datetime] = None
@@ -162,7 +164,7 @@ class ActivityPayment(BaseModel):
 
 class ActivitySignup(BaseModel):
     name: str
-    batch: Batch
+    batch: str
     batch_label: str
     join_date: date
 
@@ -175,7 +177,7 @@ class AdminActivity(BaseModel):
 class AdminPaymentRow(BaseModel):
     id: str
     name: str
-    batch: Batch
+    batch: str
     batch_label: str
     slot_label: Optional[str] = None
     amount_paise: int
@@ -197,10 +199,12 @@ class AdminStudentDetail(BaseModel):
     name: str
     email: Optional[str] = None
     phone: str
-    batch: Batch
+    batch: str
     batch_label: str
+    fee_type: Optional[str] = None
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
+    batch_deleted: bool = False
     join_date: date
     days_member: int
     # This month
@@ -222,7 +226,7 @@ class AdminCreateStudentRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(min_length=3, max_length=254)
     phone: str = Field(min_length=6, max_length=20)
-    batch: Batch
+    batch: str
     batch_slot: Optional[str] = None
     join_date: Optional[date] = None  # defaults to today
     password: Optional[str] = Field(default=None, max_length=72)
@@ -232,7 +236,7 @@ class AdminUpdateStudentRequest(BaseModel):
     # Admin fixes a member's details. Email (the login identity) is not editable.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: Batch
+    batch: str
     batch_slot: Optional[str] = None
 
 
@@ -251,3 +255,48 @@ class AnnouncementOut(BaseModel):
     id: str
     message: str
     created_at: datetime
+
+
+# ── Classes (dynamic catalogue) ──
+class ClassSlot(BaseModel):
+    key: str = Field(min_length=1, max_length=40)
+    name: str = Field(min_length=1, max_length=60)
+    start: Optional[str] = None
+    end: Optional[str] = None
+
+
+class ClassOut(BaseModel):
+    """Public class shape (signup / Plans page)."""
+    id: str
+    name: str
+    fee_type: str
+    fee_paise: int
+    sessions_per_month: Optional[int] = None
+    schedule_days: list[int] = []
+    slots: list[ClassSlot] = []
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    description: Optional[str] = None
+
+
+class AdminClassRow(ClassOut):
+    active: bool = True
+    student_count: int = 0
+
+
+class ClassWriteRequest(BaseModel):
+    """Create/update body for a class."""
+    name: str = Field(min_length=1, max_length=120)
+    fee_type: str
+    fee_paise: int = Field(default=0, ge=0)
+    sessions_per_month: Optional[int] = Field(default=None, ge=1, le=60)
+    schedule_days: list[int] = []
+    slots: list[ClassSlot] = []
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
+class ClassDeleteResponse(BaseModel):
+    status: str
+    student_count: int
