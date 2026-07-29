@@ -32,13 +32,6 @@ app.add_middleware(
 )
 
 
-# TEMP: triggers a crash on purpose so we can confirm Sentry captures it. Remove
-# after verifying it shows up in the Sentry dashboard.
-@app.get("/api/debug/sentry-check", include_in_schema=False)
-def _sentry_check():
-    raise RuntimeError("Sentry test error — safe to ignore")
-
-
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     """Report any unhandled crash to Sentry and return a clean JSON 500 (which
