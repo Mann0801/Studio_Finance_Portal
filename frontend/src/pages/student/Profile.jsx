@@ -3,8 +3,17 @@ import { useAuth } from '../../context/AuthContext'
 import { useDashboard } from '../../context/DashboardContext'
 import { api } from '../../lib/api'
 import { changePassword } from '../../lib/auth'
-import { useClasses, classById, hasSlots } from '../../lib/classes'
+import {
+  useClasses,
+  classById,
+  hasSlots,
+  scheduleLabel,
+  priceLabel,
+  slotByKey,
+  slotTime,
+} from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
+import { ChevronDownIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
 function validate(form, classes) {
@@ -33,6 +42,7 @@ export default function Profile() {
   const [submitted, setSubmitted] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [classOpen, setClassOpen] = useState(false) // is the class picker expanded
 
   const startEdit = () => {
     const s = data.student
@@ -48,12 +58,14 @@ export default function Profile() {
     setErrors({})
     setSubmitted(false)
     setSaveError('')
+    setClassOpen(false)
     setEditing(true)
   }
 
   const cancelEdit = () => {
     setEditing(false)
     setForm(null)
+    setClassOpen(false)
   }
 
   const set = (k) => (e) => {
@@ -68,6 +80,8 @@ export default function Profile() {
     : form.confirmPassword === form.newPassword && form.newPassword
       ? 'match'
       : 'mismatch'
+
+  const selectedCls = form ? classById(classes, form.batch) : null
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -196,23 +210,8 @@ export default function Profile() {
             {errors.phone && <span className="field-error">{errors.phone}</span>}
           </label>
 
-          <BatchPicker
-            classes={classes}
-            batch={form.batch}
-            slot={form.batch_slot}
-            error={errors.batch}
-            onSelect={(batch, slot) => {
-              setForm((f) => ({ ...f, batch, batch_slot: slot }))
-              if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
-            }}
-          />
-
-          <p className="muted small" style={{ margin: '2px 0' }}>
-            Changing your class updates this month’s fee on your next visit to Home.
-          </p>
-
           {/* Change password (optional) */}
-          <div className="section-h" style={{ marginTop: 8, marginBottom: 0 }}>
+          <div className="section-h" style={{ marginTop: 4, marginBottom: 0 }}>
             <h2 style={{ fontSize: 15 }}>Change password</h2>
           </div>
           <label>
@@ -250,6 +249,54 @@ export default function Profile() {
               ) : null}
             </label>
           )}
+
+          {/* Class — collapsed summary that expands into the detailed picker */}
+          <div>
+            {classOpen ? (
+              <BatchPicker
+                classes={classes}
+                batch={form.batch}
+                slot={form.batch_slot}
+                error={errors.batch}
+                onSelect={(batch, slot) => {
+                  setForm((f) => ({ ...f, batch, batch_slot: slot }))
+                  if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
+                  const cls = classById(classes, batch)
+                  if (!hasSlots(cls) || slot) setClassOpen(false) // collapse once fully chosen
+                }}
+              />
+            ) : (
+              <>
+                <div className="legend" style={{ marginBottom: 8 }}>Class</div>
+                <button
+                  type="button"
+                  className={`class-select-btn ${errors.batch ? 'invalid' : ''}`}
+                  onClick={() => setClassOpen(true)}
+                >
+                  <span className="cs-main">
+                    <span className="cs-name">{selectedCls ? selectedCls.name : 'Select a class'}</span>
+                    {selectedCls && (
+                      <span className="cs-sub">
+                        {[
+                          scheduleLabel(selectedCls),
+                          form.batch_slot ? slotTime(slotByKey(selectedCls, form.batch_slot)) : '',
+                          priceLabel(selectedCls),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDownIcon className="cs-chev" width={20} height={20} />
+                </button>
+                {errors.batch && <span className="field-error">{errors.batch}</span>}
+              </>
+            )}
+          </div>
+
+          <p className="muted small" style={{ margin: '2px 0' }}>
+            Changing your class updates this month’s fee on your next visit to Home.
+          </p>
 
           {saveError && <p className="error">{saveError}</p>}
           <button type="submit" className="btn primary lg block" disabled={busy}>

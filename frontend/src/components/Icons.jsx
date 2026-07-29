@@ -63,6 +63,12 @@ export const ChevronRightIcon = (p) => (
   </svg>
 )
 
+export const ChevronDownIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M5 9l7 7 7-7" />
+  </svg>
+)
+
 export const SearchIcon = (p) => (
   <svg {...base} {...p}>
     <circle cx="11" cy="11" r="7" />
