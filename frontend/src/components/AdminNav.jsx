@@ -57,7 +57,13 @@ export default function AdminNav() {
                 {label}
               </NavLink>
             ))}
-            <button className="menu-item danger" onClick={() => setConfirm(true)}>
+            <button
+              className="menu-item danger"
+              onClick={() => {
+                setOpen(false)
+                setConfirm(true)
+              }}
+            >
               <LogoutIcon width={22} height={22} />
               Log out
             </button>
