@@ -18,6 +18,7 @@ from ..classes_store import (
     slot_label_of,
     soft_delete_class,
     student_count,
+    student_counts,
     unique_slug,
     update_class,
 )
@@ -151,14 +152,16 @@ def _class_payload(body: ClassWriteRequest) -> dict:
     }
 
 
-def _class_row(c: dict) -> AdminClassRow:
-    return AdminClassRow(**c, student_count=student_count(c["id"]))
+def _class_row(c: dict, count: int) -> AdminClassRow:
+    return AdminClassRow(**c, student_count=count)
 
 
 @router.get("/classes", response_model=list[AdminClassRow], dependencies=[Depends(require_admin)])
 def list_all_classes():
-    """Every class (active + soft-deleted) with its student count."""
-    return [_class_row(c) for c in list_classes()]
+    """Every class (active + soft-deleted) with its student count. Counts come
+    from one query (student_counts) rather than a per-class round-trip."""
+    counts = student_counts()
+    return [_class_row(c, counts.get(c["id"], 0)) for c in list_classes()]
 
 
 @router.post("/classes", response_model=AdminClassRow, dependencies=[Depends(require_admin)])
@@ -168,7 +171,7 @@ def create_new_class(body: ClassWriteRequest):
     payload["id"] = unique_slug(body.name)
     payload["active"] = True
     payload["sort_order"] = max((c.get("sort_order") or 0) for c in existing) + 1 if existing else 0
-    return _class_row(create_class(payload))
+    return _class_row(create_class(payload), 0)  # brand-new class has no students
 
 
 @router.patch(
@@ -178,7 +181,7 @@ def edit_class(class_id: str, body: ClassWriteRequest):
     if not get_class(class_id):
         raise HTTPException(status_code=404, detail="Class not found")
     updated = update_class(class_id, _class_payload(body))
-    return _class_row(updated)
+    return _class_row(updated, student_count(class_id))
 
 
 @router.delete(

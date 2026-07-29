@@ -45,6 +45,18 @@ def student_count(class_id: str) -> int:
     return res.count or 0
 
 
+def student_counts() -> dict[str, int]:
+    """Students-per-class for ALL classes in a single query (avoids an N+1 of
+    one count round-trip per class when rendering the admin Classes list)."""
+    rows = get_supabase().table("students").select("batch").execute().data
+    counts: dict[str, int] = {}
+    for r in rows:
+        b = r.get("batch")
+        if b:
+            counts[b] = counts.get(b, 0) + 1
+    return counts
+
+
 def _slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
     return slug or "class"
