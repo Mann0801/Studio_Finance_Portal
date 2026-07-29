@@ -54,7 +54,7 @@ export default function Privacy() {
 
       <h2>Contact</h2>
       <p>
-        For any privacy questions or requests, see our <Link to="/contact">Contact page</Link> or
+        For any privacy questions or requests, see our <Link to="/contact-us">Contact page</Link> or
         email <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>.
       </p>
     </LegalPage>

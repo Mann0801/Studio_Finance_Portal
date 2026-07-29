@@ -54,7 +54,7 @@ export default function Plans() {
       </div>
 
       <p className="muted" style={{ textAlign: 'center', fontSize: 13, marginTop: 16 }}>
-        Questions about a class? <Link to="/contact">Contact us</Link> — we're at {BUSINESS.address}.
+        Questions about a class? <Link to="/contact-us">Contact us</Link> — we're at {BUSINESS.address}.
       </p>
 
       <LegalFooter />

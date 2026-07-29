@@ -94,6 +94,12 @@ export const SettingsIcon = (p) => (
   </svg>
 )
 
+export const PhoneIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M6.5 3.5h3l1.5 4-2 1.4a11 11 0 0 0 5 5l1.4-2 4 1.5v3c0 .8-.7 1.5-1.5 1.4A15.2 15.2 0 0 1 5.1 5C5 4.2 5.7 3.5 6.5 3.5Z" />
+  </svg>
+)
+
 export const MenuIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M4 7h16" />

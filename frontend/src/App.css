@@ -1753,6 +1753,102 @@
   font-size: 12px;
   word-break: break-all;
 }
+
+/* "Your class" card on Home. */
+.class-home .ch-name {
+  font-weight: 800;
+  font-size: 17px;
+  margin-top: 6px;
+}
+.class-home .ch-sched {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin-top: 2px;
+}
+.class-home .ch-desc {
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* "Next class" card on Home. */
+.next-class .nc-when {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--accent-bright);
+  margin-top: 6px;
+}
+
+/* Announcements page. */
+.announce-item .ann-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.announce-item .ann-ic {
+  color: var(--accent-bright);
+  flex-shrink: 0;
+}
+.announce-item .ann-latest {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.announce-item .ann-date {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.announce-item .ann-msg {
+  margin: 8px 0 0;
+  line-height: 1.5;
+  font-size: 14.5px;
+}
+
+/* Downloadable / printable receipt (Payments history). */
+.receipt-doc {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--card);
+}
+.receipt-row.total {
+  border-top: 1px dashed var(--border);
+  border-bottom: none;
+  margin-top: 4px;
+  padding-top: 12px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #receipt-doc,
+  #receipt-doc * {
+    visibility: visible !important;
+  }
+  #receipt-doc {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    background: #fff !important;
+    color: #111 !important;
+  }
+  #receipt-doc .muted {
+    color: #555 !important;
+  }
+  .sheet-backdrop {
+    background: none !important;
+  }
+}
 .receipt-paid {
   color: var(--paid);
   font-weight: 700;

@@ -127,7 +127,7 @@ export default function Profile() {
     <>
       <div className="topbar">
         <div className="greeting">
-          <h1>Profile</h1>
+          <h1>Settings</h1>
         </div>
       </div>
 

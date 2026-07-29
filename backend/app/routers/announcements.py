@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from ..announcements_store import (
     clear_active,
     get_active,
+    list_announcements,
     post_announcement,
     update_active,
 )
@@ -30,6 +31,12 @@ def _out(row: Optional[dict]) -> Optional[AnnouncementOut]:
 def current_announcement(_student=Depends(get_current_student)):
     """The active banner for the logged-in student (or null if none)."""
     return _out(get_active())
+
+
+@router.get("/announcements", response_model=list[AnnouncementOut])
+def all_announcements(_student=Depends(get_current_student)):
+    """All announcements (current + past), newest first."""
+    return [_out(r) for r in list_announcements()]
 
 
 @router.get(
