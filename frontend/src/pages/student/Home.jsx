@@ -14,6 +14,13 @@ function periodLabel(period) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
 }
 
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export default function Home() {
   const { data, loading, error } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
@@ -66,7 +73,7 @@ export default function Home() {
       <div className="topbar">
         <div className="greeting">
           <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />
-          <h1>Hi, {student.name.split(' ')[0]}</h1>
+          <h1>{greeting()}, {student.name.split(' ')[0]}</h1>
           <div className="hello" style={{ marginTop: 4 }}>
             {isDeleted ? 'Class removed' : `${student.batch_label} class`}
           </div>
