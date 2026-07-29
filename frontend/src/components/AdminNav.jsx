@@ -33,7 +33,8 @@ export default function AdminNav() {
   return (
     <>
       <button className="menu-btn" aria-label="Menu" onClick={() => setOpen(true)}>
-        <MenuIcon width={24} height={24} />
+        <MenuIcon width={22} height={22} />
+        <span className="menu-btn-label">Menu</span>
       </button>
 
       {open && (
