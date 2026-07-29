@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
+import { useClasses, classById, scheduleLabel } from '../../lib/classes'
 import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
 import StatusBadge from '../../components/StatusBadge'
@@ -21,9 +22,25 @@ function greeting() {
   return 'Good evening'
 }
 
+const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+/** The soonest scheduled day from today, as "Today" / "Tomorrow" / weekday. */
+function nextClassLabel(scheduleDays) {
+  if (!scheduleDays || !scheduleDays.length) return null
+  const todayIdx = (new Date().getDay() + 6) % 7 // JS Sun=0 → Mon=0
+  for (let i = 0; i < 7; i++) {
+    const idx = (todayIdx + i) % 7
+    if (scheduleDays.includes(idx)) {
+      return i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_FULL[idx]
+    }
+  }
+  return null
+}
+
 export default function Home() {
   const { data, loading, error } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
+  const { classes } = useClasses()
   const { state } = useLocation()
   const [welcome, setWelcome] = useState(Boolean(state?.welcome))
 
@@ -59,13 +76,22 @@ export default function Home() {
   if (error) return <>{welcomeOverlay}<p className="error" style={{ marginTop: 24 }}>{error}</p></>
   if (!data) return welcomeOverlay
 
-  const { student, current, history, outstanding = [] } = data
+  const { student, current, history = [], outstanding = [] } = data
+  const cls = classById(classes, student.batch)
   const paid = current.status === 'paid'
   const isEnquiry = student.fee_type === 'enquiry'
   const isDeleted = student.batch_deleted
   const isContact = isEnquiry || isDeleted
-  const outstandingPeriods = new Set(outstanding.map((p) => p.period))
-  const recent = history.filter((p) => !outstandingPeriods.has(p.period)).slice(0, 3)
+
+  const nextDay = isContact ? null : nextClassLabel(cls?.schedule_days)
+  const classTime =
+    student.slot_label ||
+    (cls?.start_time && cls?.end_time ? `${cls.start_time} – ${cls.end_time}` : cls?.start_time || '')
+  const totalPaid = history.reduce((s, p) => (p.status === 'paid' ? s + p.amount_paise : s), 0)
+  const memberSince = new Date(student.join_date).toLocaleDateString('en-IN', {
+    month: 'short',
+    year: 'numeric',
+  })
 
   return (
     <>
@@ -78,7 +104,6 @@ export default function Home() {
             {isDeleted ? 'Class removed' : `${student.batch_label} class`}
           </div>
         </div>
-        <div className="avatar">{student.name.charAt(0).toUpperCase()}</div>
       </div>
 
       {/* Hero card */}
@@ -141,31 +166,41 @@ export default function Home() {
         </Link>
       )}
 
-      {/* Recent payments */}
-      <div className="section-h" style={{ marginTop: 22 }}>
-        <h2>Recent payments</h2>
-        <Link to="/payments" className="small">See all</Link>
-      </div>
-      {recent.length === 0 ? (
-        <div className="card empty">No payments yet.</div>
-      ) : (
-        <div className="card flush list">
-          {recent.map((p) => (
-            <div className="list-item" key={p.period}>
-              <div>
-                <div className="li-main">{periodLabel(p.period)}</div>
-                <div className="li-sub">
-                  {p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-IN') : 'Pending'}
-                </div>
-              </div>
-              <div className="row" style={{ gap: 12 }}>
-                <span className="li-amt">{rupees(p.amount_paise)}</span>
-                <StatusBadge status={p.status} />
-              </div>
-            </div>
-          ))}
+      {/* Next class */}
+      {nextDay && (
+        <div className="card next-class" style={{ marginTop: 16 }}>
+          <span className="card-title">Next class</span>
+          <div className="nc-when">{nextDay}{classTime ? ` · ${classTime}` : ''}</div>
         </div>
       )}
+
+      {/* Your class */}
+      {cls && (
+        <div className="card class-home" style={{ marginTop: 16 }}>
+          <span className="card-title">Your class</span>
+          <div className="ch-name">{cls.name}</div>
+          {(scheduleLabel(cls) || student.slot_label) && (
+            <div className="ch-sched">
+              {[scheduleLabel(cls), student.slot_label].filter(Boolean).join(' · ')}
+            </div>
+          )}
+          {cls.description && <p className="ch-desc">{cls.description}</p>}
+        </div>
+      )}
+
+      {/* Membership summary */}
+      <div className="stat-grid" style={{ marginTop: 16 }}>
+        <div className="stat">
+          <div className="num" style={{ fontSize: 19 }}>{memberSince}</div>
+          <div className="label">Member since</div>
+        </div>
+        <div className="stat">
+          <div className="num" style={{ fontSize: 19 }}>{rupees(totalPaid)}</div>
+          <div className="label">Total paid</div>
+        </div>
+      </div>
+
+      <div style={{ height: 20 }} />
     </>
   )
 }

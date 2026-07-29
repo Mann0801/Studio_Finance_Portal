@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import BottomNav from './BottomNav'
+import StudentNav from './StudentNav'
 import AnnouncementBanner from './AnnouncementBanner'
 import { DashboardProvider, useDashboard } from '../context/DashboardContext'
 
@@ -9,12 +9,12 @@ function Shell() {
   const { needsProfile } = useDashboard()
   if (needsProfile) return <Navigate to="/profile-setup" replace />
   return (
-    <div className="app-shell with-nav">
+    <div className="app-shell with-menu">
+      <StudentNav />
       <div className="page">
         <AnnouncementBanner />
         <Outlet />
       </div>
-      <BottomNav />
     </div>
   )
 }

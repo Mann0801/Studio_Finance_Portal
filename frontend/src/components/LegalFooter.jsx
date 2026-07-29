@@ -5,7 +5,7 @@ const LINKS = [
   { to: '/terms', label: 'Terms' },
   { to: '/privacy', label: 'Privacy' },
   { to: '/refund', label: 'Refunds' },
-  { to: '/contact', label: 'Contact' },
+  { to: '/contact-us', label: 'Contact' },
 ]
 
 /** Compact policy links shown at the bottom of public pages. */

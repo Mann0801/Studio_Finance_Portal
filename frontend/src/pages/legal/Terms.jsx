@@ -59,7 +59,7 @@ export default function Terms() {
 
       <h2>Contact</h2>
       <p>
-        Questions about these terms? See our <Link to="/contact">Contact page</Link> or email{' '}
+        Questions about these terms? See our <Link to="/contact-us">Contact page</Link> or email{' '}
         <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a>.
       </p>
     </LegalPage>

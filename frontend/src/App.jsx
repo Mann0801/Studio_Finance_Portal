@@ -11,6 +11,8 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
 import Profile from './pages/student/Profile'
+import StudioContact from './pages/student/StudioContact'
+import Announcements from './pages/student/Announcements'
 import AdminLayout from './components/AdminLayout'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminHome from './pages/admin/AdminHome'
@@ -50,7 +52,7 @@ export default function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/refund" element={<RefundPolicy />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="/contact-us" element={<Contact />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             element={
@@ -77,6 +79,8 @@ export default function App() {
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/payments" element={<Payments />} />
+              <Route path="/announcements" element={<Announcements />} />
+              <Route path="/contact" element={<StudioContact />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
           </Route>

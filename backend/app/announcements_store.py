@@ -25,6 +25,19 @@ def get_active() -> Optional[dict]:
     return res.data[0] if res.data else None
 
 
+def list_announcements(limit: int = 50) -> list[dict]:
+    """All announcements (current + past), newest first — powers the student
+    Announcements page."""
+    return (
+        get_supabase()
+        .table("announcements")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    ).data
+
+
 def post_announcement(message: str) -> dict:
     """Deactivate any existing active announcement, then insert a new active one."""
     sb = get_supabase()
