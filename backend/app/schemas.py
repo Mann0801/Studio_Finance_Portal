@@ -213,11 +213,19 @@ class AdminStudentDetail(BaseModel):
     is_prorata: bool
     status: str                # 'paid' | 'unpaid'
     # Lifetime
+    # Unpaid months before the current one (join month up to last month), each
+    # with its server-computed amount — lets the admin record cash for old dues.
+    outstanding: list[CurrentDue] = []
     total_paid_paise: int
     last_payment_paise: Optional[int] = None
     last_payment_at: Optional[datetime] = None
     payments: list[StudentPaymentRow]
     whatsapp_url: Optional[str] = None
+
+
+class MarkPaidRequest(BaseModel):
+    # Which month to record as cash-paid; defaults to the current calendar month.
+    period: Optional[str] = None
 
 
 class AdminCreateStudentRequest(BaseModel):
