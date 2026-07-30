@@ -1,8 +1,5 @@
 export default function StatusBadge({ status, big = false }) {
-  const paid = status === 'paid'
-  return (
-    <span className={`badge ${paid ? 'paid' : 'unpaid'}${big ? ' big' : ''}`}>
-      {paid ? 'Paid' : 'Unpaid'}
-    </span>
-  )
+  const cls = status === 'paid' ? 'paid' : status === 'overdue' ? 'overdue' : 'unpaid'
+  const label = status === 'paid' ? 'Paid' : status === 'overdue' ? 'Overdue' : 'Unpaid'
+  return <span className={`badge ${cls}${big ? ' big' : ''}`}>{label}</span>
 }
