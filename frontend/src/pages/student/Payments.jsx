@@ -3,6 +3,7 @@ import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
+import DueCard from '../../components/DueCard'
 import { DownloadIcon } from '../../components/Icons'
 import { CardSkeleton, ListSkeleton } from '../../components/Skeleton'
 
@@ -20,6 +21,8 @@ export default function Payments() {
   // rows in History (they'd be the same month listed twice).
   const outstandingPeriods = new Set((data?.outstanding ?? []).map((p) => p.period))
   const historyRows = (data?.history ?? []).filter((p) => !outstandingPeriods.has(p.period))
+  // Oldest overdue month first (top priority); `outstanding` is newest→oldest.
+  const overdue = [...(data?.outstanding ?? [])].reverse()
 
   return (
     <>
@@ -51,7 +54,19 @@ export default function Payments() {
         </div>
       ) : data ? (
         <>
-          <div className="pay-card">
+          {/* Overdue earlier months first (top priority), then the current month —
+              each as a full pay card with its own big Pay button. */}
+          {overdue.map((m, i) => (
+            <DueCard
+              key={m.period}
+              month={m}
+              paying={paying}
+              onPay={pay}
+              style={i > 0 ? { marginTop: 12 } : undefined}
+            />
+          ))}
+
+          <div className="pay-card" style={overdue.length ? { marginTop: 12 } : undefined}>
             <div className="between">
               <span className="card-title">
                 {data.current.status === 'paid' ? 'Paid this month' : 'Due this month'}
@@ -75,33 +90,6 @@ export default function Payments() {
             )}
             {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
           </div>
-
-          {data.outstanding?.length > 0 && (
-            <>
-              <div className="section-h" style={{ marginTop: 22 }}>
-                <h2>Earlier months due</h2>
-              </div>
-              <div className="card flush list">
-                {data.outstanding.map((p) => (
-                  <div className="list-item" key={p.period}>
-                    <div>
-                      <div className="li-main">{periodLabel(p.period)}</div>
-                      <div className="li-sub">
-                        {p.is_prorata ? 'Pro-rated · ' : ''}Unpaid
-                      </div>
-                    </div>
-                    <button
-                      className="btn primary sm"
-                      onClick={() => pay(p.period)}
-                      disabled={paying}
-                    >
-                      {paying ? '…' : `Pay ${rupees(p.amount_paise)}`}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
 
           <div className="section-h" style={{ marginTop: 22 }}>
             <h2>History</h2>

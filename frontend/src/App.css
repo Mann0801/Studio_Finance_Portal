@@ -456,6 +456,10 @@ button.menu-item {
   color: var(--unpaid);
   background: var(--unpaid-bg);
 }
+.badge.overdue {
+  color: #fff;
+  background: var(--unpaid);
+}
 .badge.big {
   font-size: 15px;
   padding: 8px 16px;
