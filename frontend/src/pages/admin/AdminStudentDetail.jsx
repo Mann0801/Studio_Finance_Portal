@@ -82,10 +82,13 @@ export default function AdminStudentDetail() {
     }
   }
 
-  async function markPaid() {
+  async function markPaid(period) {
     setBusy(true)
     try {
-      const updated = await adminApi(`/api/admin/students/${id}/mark-paid`, { method: 'POST' })
+      const updated = await adminApi(`/api/admin/students/${id}/mark-paid`, {
+        method: 'POST',
+        body: period ? { period } : {},
+      })
       setData(updated)
       reloadStats()
     } catch (e) {
@@ -233,11 +236,38 @@ export default function AdminStudentDetail() {
               <StatusBadge status={data.status} />
             </div>
             {!paid && data.amount_paise > 0 && (
-              <button className="btn primary block" style={{ marginTop: 12 }} onClick={markPaid} disabled={busy}>
+              <button className="btn primary block" style={{ marginTop: 12 }} onClick={() => markPaid()} disabled={busy}>
                 {busy ? 'Marking…' : 'Mark this month paid'}
               </button>
             )}
           </div>
+
+          {data.outstanding?.length > 0 && (
+            <>
+              <div className="section-h" style={{ marginTop: 20, marginBottom: 8 }}>
+                <h2>Earlier months due</h2>
+              </div>
+              <div className="card flush list">
+                {data.outstanding.map((p) => (
+                  <div className="list-item" key={p.period}>
+                    <div>
+                      <div className="li-main">{periodLabel(p.period)}</div>
+                      <div className="muted small">
+                        {p.is_prorata ? 'Pro-rated · ' : ''}{rupees(p.amount_paise)} unpaid
+                      </div>
+                    </div>
+                    <button
+                      className="btn primary sm"
+                      onClick={() => markPaid(p.period)}
+                      disabled={busy}
+                    >
+                      {busy ? '…' : 'Mark paid'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="card flush list" style={{ marginTop: 12 }}>
             <div className="list-item">
@@ -290,7 +320,7 @@ export default function AdminStudentDetail() {
               </a>
             )}
             {!paid && data.amount_paise > 0 && (
-              <button className="btn primary block" onClick={markPaid} disabled={busy}>
+              <button className="btn primary block" onClick={() => markPaid()} disabled={busy}>
                 {busy ? 'Marking…' : 'Mark as Paid'}
               </button>
             )}

@@ -24,7 +24,7 @@ from ..classes_store import (
 )
 from ..constants import ENQUIRY, FEE_TYPES, SESSION_PACK
 from ..db import get_supabase
-from ..fees import compute_due, current_period, now_local, previous_period
+from ..fees import compute_due, current_period, now_local, period_of, previous_period
 from ..payments_store import is_period_paid, mark_paid_cash
 from ..schemas import (
     ActivityPayment,
@@ -43,6 +43,8 @@ from ..schemas import (
     BatchStat,
     ClassDeleteResponse,
     ClassWriteRequest,
+    CurrentDue,
+    MarkPaidRequest,
     SlotStat,
     StudentPaymentRow,
 )
@@ -508,6 +510,26 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
     last = max(paid_rows, key=lambda p: p.get("paid_at") or "", default=None)
     this_paid = next((p for p in paid_rows if p["period"] == period), None)
 
+    # Earlier months (join month .. last month) still owed — so the admin can
+    # record cash against an old unpaid month, not just the current one.
+    paid_periods = {p["period"] for p in paid_rows}
+    join_period = period_of(join_date)
+    outstanding: list[CurrentDue] = []
+    p = previous_period(period)
+    while p >= join_period:
+        if p not in paid_periods:
+            past_due = compute_due(_fee_cls(cls), join_date, p)
+            if past_due.amount_paise > 0:
+                outstanding.append(
+                    CurrentDue(
+                        period=p,
+                        amount_paise=past_due.amount_paise,
+                        is_prorata=past_due.is_prorata,
+                        status="unpaid",
+                    )
+                )
+        p = previous_period(p)
+
     history = [
         StudentPaymentRow(
             period=p["period"],
@@ -541,6 +563,7 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         amount_paise=this_paid["amount_paise"] if this_paid else due.amount_paise,
         is_prorata=due.is_prorata,
         status="paid" if this_paid else "unpaid",
+        outstanding=outstanding,
         total_paid_paise=total_paid,
         last_payment_paise=last["amount_paise"] if last else None,
         last_payment_at=last.get("paid_at") if last else None,
@@ -674,12 +697,18 @@ def update_student(student_id: str, body: AdminUpdateStudentRequest):
     response_model=AdminStudentDetail,
     dependencies=[Depends(require_admin)],
 )
-def mark_student_paid(student_id: str):
-    """Manually mark this month paid (e.g. the student paid cash). Idempotent."""
+def mark_student_paid(student_id: str, body: MarkPaidRequest | None = None):
+    """Manually mark a month paid (e.g. the student paid cash). Defaults to the
+    current month; pass a period to clear an earlier unpaid month. Idempotent."""
     s = _load_student_or_404(student_id)
-    period = current_period()
+    join_date = _as_date(s["join_date"])
+    period = (body.period if body else None) or current_period()
+    if period < period_of(join_date):
+        raise HTTPException(status_code=400, detail="No fee was due before they joined")
+    if period > current_period():
+        raise HTTPException(status_code=400, detail="That month hasn't started yet")
     if not is_period_paid(student_id, period):
-        due = compute_due(_fee_cls(get_class(s["batch"])), _as_date(s["join_date"]), period)
+        due = compute_due(_fee_cls(get_class(s["batch"])), join_date, period)
         if due.amount_paise > 0:
             mark_paid_cash(student_id, period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
