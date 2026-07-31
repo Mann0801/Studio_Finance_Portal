@@ -8,7 +8,7 @@ import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
 import BatchPicker from '../../components/BatchPicker'
-import { WhatsAppIcon, ArrowLeftIcon, EditIcon, CloseIcon } from '../../components/Icons'
+import { WhatsAppIcon, ArrowLeftIcon, EditIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
@@ -32,9 +32,6 @@ export default function AdminStudentDetail() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
   const [formError, setFormError] = useState('')
-  // Cash-record dialog: { period, remaining, label } for the month being paid.
-  const [payTarget, setPayTarget] = useState(null)
-  const [custom, setCustom] = useState('')
 
   const load = useCallback(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -91,35 +88,8 @@ export default function AdminStudentDetail() {
     }
   }
 
-  const openPay = (period, remaining, label) => {
-    setError('')
-    setCustom('')
-    setPayTarget({ period, remaining, label })
-  }
-  const closePay = () => {
-    setPayTarget(null)
-    setCustom('')
-  }
-
-  // amountPaise: null = record the full remaining balance; a number = partial cash.
-  async function recordCash(period, amountPaise) {
-    setBusy(true)
-    try {
-      const body = { period }
-      if (amountPaise != null) body.amount_paise = amountPaise
-      const updated = await adminApi(`/api/admin/students/${id}/mark-paid`, {
-        method: 'POST',
-        body,
-      })
-      setData(updated)
-      reloadStats()
-      closePay()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusy(false)
-    }
-  }
+  // Open the full-page cash recorder for a month.
+  const goRecord = (period) => navigate(`/admin/students/${id}/record-cash/${period}`)
 
   async function remove() {
     setBusy(true)
@@ -287,7 +257,7 @@ export default function AdminStudentDetail() {
               <button
                 className="btn primary block"
                 style={{ marginTop: 12 }}
-                onClick={() => openPay(data.period, data.amount_paise, periodLabel(data.period))}
+                onClick={() => goRecord(data.period)}
                 disabled={busy}
               >
                 Record cash payment
@@ -313,7 +283,7 @@ export default function AdminStudentDetail() {
                     </div>
                     <button
                       className="btn primary sm"
-                      onClick={() => openPay(p.period, p.amount_paise, periodLabel(p.period))}
+                      onClick={() => goRecord(p.period)}
                       disabled={busy}
                     >
                       Record
@@ -379,7 +349,7 @@ export default function AdminStudentDetail() {
             {!paid && data.amount_paise > 0 && (
               <button
                 className="btn primary block"
-                onClick={() => openPay(data.period, data.amount_paise, periodLabel(data.period))}
+                onClick={() => goRecord(data.period)}
                 disabled={busy}
               >
                 Record cash payment
@@ -410,63 +380,6 @@ export default function AdminStudentDetail() {
 
           <div style={{ height: 28 }} />
         </>
-      )}
-
-      {payTarget && (
-        <div className="sheet-backdrop" onClick={closePay}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-head">
-              <span className="menu-title">Record cash · {payTarget.label}</span>
-              <button className="icon-btn" aria-label="Close" onClick={closePay}>
-                <CloseIcon width={18} height={18} />
-              </button>
-            </div>
-            <p className="muted small" style={{ margin: '0 0 12px' }}>
-              Balance owed: <strong>{rupees(payTarget.remaining)}</strong>
-            </p>
-            <button
-              className="btn primary lg block"
-              onClick={() => recordCash(payTarget.period, null)}
-              disabled={busy}
-            >
-              {busy ? 'Saving…' : `Record full ${rupees(payTarget.remaining)} paid`}
-            </button>
-
-            <div className="pay-or">or record a part payment</div>
-
-            <div className="form">
-              <label>
-                Amount received (₹)
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  placeholder={`up to ${payTarget.remaining / 100}`}
-                  min="1"
-                  max={payTarget.remaining / 100}
-                />
-              </label>
-            </div>
-
-            {(() => {
-              const paise = Math.round(Number(custom) * 100)
-              const valid = custom !== '' && paise >= 1 && paise <= payTarget.remaining
-              return (
-                <button
-                  className="btn ghost block"
-                  style={{ marginTop: 10 }}
-                  disabled={busy || !valid}
-                  onClick={() => recordCash(payTarget.period, paise)}
-                >
-                  {valid && paise < payTarget.remaining
-                    ? `Save ${rupees(paise)} — leaves ${rupees(payTarget.remaining - paise)}`
-                    : 'Save part payment'}
-                </button>
-              )
-            })()}
-          </div>
-        </div>
       )}
     </>
   )
