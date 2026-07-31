@@ -53,11 +53,8 @@ export default function WhatsAppGroup() {
             rel="noopener noreferrer"
             onClick={join}
           >
-            {student.whatsapp_joined ? 'Open Group' : 'Join Group'}
+            Join Group
           </a>
-          {student.whatsapp_joined && (
-            <p className="wa-joined-note">✓ You’ve joined — tap above to open the group anytime.</p>
-          )}
         </div>
       )}
     </>
