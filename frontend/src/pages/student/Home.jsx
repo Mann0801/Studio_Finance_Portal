@@ -132,12 +132,11 @@ export default function Home() {
     month: 'short',
     year: 'numeric',
   })
-  // Whole days since the studio joining date (local, min 0 on the join day).
+  // Days since the studio joining date, counted inclusively so the join day is
+  // day 1 (local time).
   const [jy, jm, jd] = student.join_date.split('-').map(Number)
-  const daysMember = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(jy, jm - 1, jd).getTime()) / 86400000),
-  )
+  const daysMember =
+    Math.max(0, Math.floor((Date.now() - new Date(jy, jm - 1, jd).getTime()) / 86400000)) + 1
 
   return (
     <>
@@ -221,10 +220,8 @@ export default function Home() {
           <div className="label">Member since</div>
         </div>
         <div className="stat">
-          <div className="num" style={{ fontSize: 16 }}>
-            {daysMember} {daysMember === 1 ? 'day' : 'days'}
-          </div>
-          <div className="label">Member for</div>
+          <div className="num" style={{ fontSize: 16 }}>{daysMember}</div>
+          <div className="label">{daysMember === 1 ? 'Day as member' : 'Days as member'}</div>
         </div>
         <div className="stat">
           <div className="num" style={{ fontSize: 16 }}>{rupees(totalPaid)}</div>
