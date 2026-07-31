@@ -83,14 +83,14 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     slot = _resolve_slot(cls, body.batch_slot)
 
     # Validate the student-picked studio joining date: not in the future, and no
-    # more than 30 days back (the frontend enforces the same window; this guards
+    # more than ~2 years back (the frontend enforces the same window; this guards
     # direct API calls). Slightly lenient on the lower bound so a date the picker
     # allowed is never rejected here.
     today = now_local().date()
     if body.join_date > today:
         raise HTTPException(status_code=422, detail="Join date can't be in the future")
-    if body.join_date < today - timedelta(days=31):
-        raise HTTPException(status_code=422, detail="Join date can't be more than 30 days ago")
+    if body.join_date < today - timedelta(days=732):
+        raise HTTPException(status_code=422, detail="Join date can't be more than 2 years ago")
 
     row = {
         "id": student["id"],
