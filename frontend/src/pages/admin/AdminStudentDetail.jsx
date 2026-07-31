@@ -214,9 +214,15 @@ export default function AdminStudentDetail() {
               </a>
             )}
             <div className="list-item">
-              <span className="muted">Member since</span>
+              <span className="muted">Joined Studio</span>
               <span className="li-main" style={{ fontSize: 14 }}>{fmtDate(data.join_date)}</span>
             </div>
+            {data.signed_up_at && (
+              <div className="list-item">
+                <span className="muted">App Signup Date</span>
+                <span className="li-main" style={{ fontSize: 14 }}>{fmtDate(data.signed_up_at)}</span>
+              </div>
+            )}
             <div className="list-item">
               <span className="muted">Days as member</span>
               <span className="li-main" style={{ fontSize: 14 }}>{data.days_member} days</span>

@@ -136,7 +136,10 @@ def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
             total_days = days_in_month(period)
             days_remaining = total_days - join_date.day + 1  # inclusive of join day
             prorata = Decimal(fee) * Decimal(days_remaining) / Decimal(total_days)
-            return DueAmount(period, _round_to_rupee_paise(prorata), True)
+            amount = _round_to_rupee_paise(prorata)
+            # Joining on the 1st (or a day that rounds up to the whole fee) is a
+            # full month, not a pro-rated one — don't mislabel it.
+            return DueAmount(period, amount, amount < fee)
         return DueAmount(period, fee, False)
 
     if fee_type == SESSION_PACK:

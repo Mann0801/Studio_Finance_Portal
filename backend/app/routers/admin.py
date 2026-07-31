@@ -558,6 +558,7 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         slot_label=sl,
         batch_deleted=deleted,
         join_date=join_date,
+        signed_up_at=s.get("created_at"),
         days_member=max((now_local().date() - join_date).days, 0),
         period=period,
         amount_paise=this_paid["amount_paise"] if this_paid else due.amount_paise,
