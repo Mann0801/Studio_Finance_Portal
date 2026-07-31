@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { loginWithPhone, getLastPhone, setLastPhone } from '../lib/auth'
+import { loginWithPhone, getLastPhone, setLastPhone, toTenDigits } from '../lib/auth'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import LegalFooter from '../components/LegalFooter'
 
@@ -46,16 +46,18 @@ export default function Login() {
       <form onSubmit={onSubmit} className="form">
         <label>
           Phone number
-          <input
-            type="tel"
-            inputMode="numeric"
-            value={form.phone}
-            onChange={(e) => set('phone')({ target: { value: e.target.value.replace(/\D/g, '') } })}
-            maxLength={10}
-            placeholder="10-digit mobile number"
-            autoComplete="tel"
-            required
-          />
+          <div className="phone-field">
+            <span className="phone-cc">+91</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => set('phone')({ target: { value: toTenDigits(e.target.value) } })}
+              placeholder="10-digit mobile number"
+              autoComplete="tel"
+              required
+            />
+          </div>
         </label>
         <label>
           Password
