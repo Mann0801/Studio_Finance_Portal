@@ -34,15 +34,36 @@ async function verifyCheckout(resp) {
   return null
 }
 
-function loadCheckout() {
+function injectCheckout() {
   return new Promise((resolve, reject) => {
-    if (window.Razorpay) return resolve()
     const script = document.createElement('script')
     script.src = CHECKOUT_SRC
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load Razorpay checkout'))
+    script.onerror = () => {
+      script.remove() // drop the dead tag so the retry can inject a fresh one
+      reject(new Error('Failed to load Razorpay checkout'))
+    }
     document.body.appendChild(script)
   })
+}
+
+// The checkout script is loaded from Razorpay's CDN — a third external host that
+// iOS Safari can fail to reach on a stale connection, just like our backend and
+// Supabase. Retry the load a few times before giving up so a transient blip
+// doesn't kill the pay flow.
+async function loadCheckout() {
+  if (window.Razorpay) return
+  let lastErr
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(600 * attempt)
+    try {
+      await injectCheckout()
+      return
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr
 }
 
 /**
