@@ -2194,3 +2194,59 @@ button.menu-item {
 .consent-note a {
   color: var(--accent-bright);
 }
+
+/* ── Post-signup "Join our WhatsApp Group" full-screen page ─────────────────── */
+.wa-join {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  overflow-y: auto;
+  background: linear-gradient(165deg, #25d366 0%, #128c7e 55%, #075e54 100%);
+  color: #fff;
+}
+.wa-join-inner {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.wa-icon {
+  width: 108px;
+  height: 108px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #fff;
+  color: #25d366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+}
+.wa-join h1 {
+  margin: 26px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.wa-join p {
+  margin: 14px 0 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+}
+.btn.wa-btn {
+  margin-top: 34px;
+  background: #fff;
+  color: #075e54;
+  font-weight: 800;
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+.btn.wa-btn:active {
+  transform: translateY(1px);
+  background: #f0fff7;
+}

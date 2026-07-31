@@ -6,6 +6,7 @@ import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, joinDateError } from '../lib/joinDate'
+import { whatsappGroupLink } from '../lib/whatsapp'
 
 function validate(form, classes) {
   const errors = {}
@@ -65,7 +66,11 @@ export default function ProfileSetup() {
         },
       })
       setLastPhone(form.phone.replace(/\D/g, ''))
-      navigate('/', { replace: true, state: { welcome: true } })
+      if (whatsappGroupLink(form.batch)) {
+        navigate('/welcome-whatsapp', { replace: true, state: { batch: form.batch } })
+      } else {
+        navigate('/', { replace: true, state: { welcome: true } })
+      }
     } catch (err) {
       setError(err.message || 'Could not complete setup')
     } finally {
