@@ -7,7 +7,6 @@ import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, joinDateError } from '../lib/joinDate'
-import { whatsappGroupLink } from '../lib/whatsapp'
 
 const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'batch', 'join_date']
 
@@ -89,15 +88,10 @@ export default function Signup() {
           join_date: form.join_date,
         },
       })
-      // 3) Show the WhatsApp group join screen once (classes with a group), then
-      //    home. Classes with no group (e.g. Kids Yoga) go straight to the
-      //    dashboard with the welcome splash.
+      // 3) Straight to the dashboard with a quick welcome. The home screen shows
+      //    the WhatsApp group prompt there (for classes that have a group).
       setLastPhone(form.phone.replace(/\D/g, ''))
-      if (whatsappGroupLink(form.batch)) {
-        navigate('/welcome-whatsapp', { replace: true, state: { batch: form.batch } })
-      } else {
-        navigate('/', { replace: true, state: { welcome: true } })
-      }
+      navigate('/', { replace: true, state: { welcome: true } })
     } catch (err) {
       setError(err.message || 'Could not create your account')
     } finally {
