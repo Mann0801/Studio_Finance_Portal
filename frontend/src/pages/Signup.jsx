@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { signUpWithPhone, setLastPhone } from '../lib/auth'
+import { signUpWithPhone, setLastPhone, toTenDigits } from '../lib/auth'
 import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
@@ -116,16 +116,18 @@ export default function Signup() {
 
         <label id="f-phone">
           Phone number
-          <input
-            type="tel"
-            inputMode="numeric"
-            value={form.phone}
-            onChange={(e) => set('phone')(e.target.value.replace(/\D/g, ''))}
-            maxLength={10}
-            className={errors.phone ? 'invalid' : ''}
-            placeholder="10-digit mobile number"
-            autoComplete="tel"
-          />
+          <div className={`phone-field ${errors.phone ? 'invalid' : ''}`}>
+            <span className="phone-cc">+91</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => set('phone')(toTenDigits(e.target.value))}
+              className={errors.phone ? 'invalid' : ''}
+              placeholder="10-digit mobile number"
+              autoComplete="tel"
+            />
+          </div>
           {errors.phone && <span className="field-error">{errors.phone}</span>}
         </label>
 

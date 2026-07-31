@@ -12,6 +12,14 @@ export const setLastPhone = (p) => localStorage.setItem(LAST_PHONE_KEY, p)
 const PHONE_DOMAIN = 'phone.iampossiblefit.com'
 export const phoneToEmail = (phone) => `${phone.replace(/\D/g, '').slice(-10)}@${PHONE_DOMAIN}`
 
+/** Reduce any phone input to the 10-digit national number. Autofill often injects
+ *  the country code ("+91 98765 43210"), so we strip non-digits and keep the LAST
+ *  10 — dropping a leading 91/0 — instead of truncating the front. */
+export const toTenDigits = (raw) => {
+  const digits = String(raw).replace(/\D/g, '')
+  return digits.length > 10 ? digits.slice(-10) : digits
+}
+
 /**
  * Create the account with phone + password. With "Confirm email" off in Supabase
  * this returns a live session immediately — no email is sent. Throws a friendly

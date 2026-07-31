@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { setLastPhone } from '../lib/auth'
+import { setLastPhone, toTenDigits } from '../lib/auth'
 import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
@@ -91,16 +91,18 @@ export default function ProfileSetup() {
 
         <label>
           Phone
-          <input
-            type="tel"
-            inputMode="numeric"
-            value={form.phone}
-            onChange={(e) => set('phone')(e.target.value.replace(/\D/g, ''))}
-            maxLength={10}
-            className={errors.phone ? 'invalid' : ''}
-            placeholder="10-digit mobile number"
-            autoComplete="tel"
-          />
+          <div className={`phone-field ${errors.phone ? 'invalid' : ''}`}>
+            <span className="phone-cc">+91</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => set('phone')(toTenDigits(e.target.value))}
+              className={errors.phone ? 'invalid' : ''}
+              placeholder="10-digit mobile number"
+              autoComplete="tel"
+            />
+          </div>
           {errors.phone && <span className="field-error">{errors.phone}</span>}
         </label>
 
