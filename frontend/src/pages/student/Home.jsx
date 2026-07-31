@@ -135,9 +135,6 @@ export default function Home() {
   return (
     <>
       {welcomeOverlay}
-      {showWhatsApp && (
-        <WhatsAppBanner batch={student.batch} onJoined={() => setWaJustJoined(true)} />
-      )}
       <div className="topbar">
         <div className="greeting">
           <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />
@@ -221,6 +218,11 @@ export default function Home() {
           <div className="label">Total paid</div>
         </div>
       </div>
+
+      {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
+      {showWhatsApp && (
+        <WhatsAppBanner batch={student.batch} onJoined={() => setWaJustJoined(true)} />
+      )}
 
       <div style={{ height: 20 }} />
     </>
