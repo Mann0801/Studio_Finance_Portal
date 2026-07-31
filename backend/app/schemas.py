@@ -249,6 +249,10 @@ class AdminUpdateStudentRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     batch: str
     batch_slot: Optional[str] = None
+    # Studio joining date. Editing it re-computes pro-rata for every unpaid month
+    # live (already-paid months keep their recorded amount). Admin can set any
+    # past date; only the future is rejected in the route.
+    join_date: Optional[date] = None
 
 
 class AdminCreateStudentResponse(BaseModel):

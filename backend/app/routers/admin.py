@@ -689,6 +689,13 @@ def update_student(student_id: str, body: AdminUpdateStudentRequest):
         "batch": cls["id"],
         "batch_slot": slot,
     }
+    # Admin may correct the studio joining date to any past date (unlike student
+    # signup, which is capped to 30 days). Only a future date is nonsensical for
+    # pro-rata. Changing it re-computes every unpaid month automatically.
+    if body.join_date is not None:
+        if body.join_date > now_local().date():
+            raise HTTPException(status_code=422, detail="Join date can't be in the future")
+        updates["join_date"] = body.join_date.isoformat()
     updated = sb.table("students").update(updates).eq("id", student_id).execute()
     return _build_student_detail(updated.data[0])
 
