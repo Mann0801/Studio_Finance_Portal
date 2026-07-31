@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { toTenDigits } from '../../lib/auth'
+import { MAX_JOIN_DATE } from '../../lib/joinDate'
 import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
@@ -50,6 +51,7 @@ export default function AdminStudentDetail() {
       phone: (data.phone || '').replace(/\D/g, '').slice(-10),
       batch: data.batch,
       batch_slot: data.batch_slot ?? null,
+      join_date: data.join_date, // 'YYYY-MM-DD' from the API
     })
     setEditing(true)
   }
@@ -61,6 +63,8 @@ export default function AdminStudentDetail() {
     if (form.phone.replace(/\D/g, '').length !== 10) return setFormError('Phone must be 10 digits')
     if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
       return setFormError('Please choose a timing')
+    if (!form.join_date) return setFormError('Please set a joining date')
+    if (form.join_date > MAX_JOIN_DATE) return setFormError("Joining date can't be in the future")
 
     setBusy(true)
     try {
@@ -71,6 +75,7 @@ export default function AdminStudentDetail() {
           phone: form.phone.replace(/\D/g, ''),
           batch: form.batch,
           batch_slot: form.batch_slot,
+          join_date: form.join_date,
         },
       })
       setData(updated)
@@ -152,6 +157,18 @@ export default function AdminStudentDetail() {
             slot={form.batch_slot}
             onSelect={(batch, slot) => setForm((f) => ({ ...f, batch, batch_slot: slot }))}
           />
+          <label>
+            Joined Studio
+            <input
+              type="date"
+              value={form.join_date || ''}
+              onChange={(e) => setForm((f) => ({ ...f, join_date: e.target.value }))}
+              max={MAX_JOIN_DATE}
+            />
+            <span className="field-hint">
+              Changing this re-calculates pro-rata for all unpaid months. Paid months stay as recorded.
+            </span>
+          </label>
           {formError && <p className="error">{formError}</p>}
           <div className="stack" style={{ gap: 10 }}>
             <button type="submit" className="btn primary lg block" disabled={busy}>
