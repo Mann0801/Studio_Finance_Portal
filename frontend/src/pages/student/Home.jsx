@@ -128,9 +128,16 @@ export default function Home() {
     (cls?.start_time && cls?.end_time ? `${cls.start_time} – ${cls.end_time}` : cls?.start_time || '')
   const totalPaid = history.reduce((s, p) => (p.status === 'paid' ? s + p.amount_paise : s), 0)
   const memberSince = new Date(student.join_date).toLocaleDateString('en-IN', {
+    day: 'numeric',
     month: 'short',
     year: 'numeric',
   })
+  // Whole days since the studio joining date (local, min 0 on the join day).
+  const [jy, jm, jd] = student.join_date.split('-').map(Number)
+  const daysMember = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(jy, jm - 1, jd).getTime()) / 86400000),
+  )
 
   return (
     <>
@@ -208,13 +215,19 @@ export default function Home() {
       )}
 
       {/* Membership summary */}
-      <div className="stat-grid" style={{ marginTop: 16 }}>
+      <div className="stat-grid stat-grid-3" style={{ marginTop: 16 }}>
         <div className="stat">
-          <div className="num" style={{ fontSize: 19 }}>{memberSince}</div>
+          <div className="num" style={{ fontSize: 14.5 }}>{memberSince}</div>
           <div className="label">Member since</div>
         </div>
         <div className="stat">
-          <div className="num" style={{ fontSize: 19 }}>{rupees(totalPaid)}</div>
+          <div className="num" style={{ fontSize: 16 }}>
+            {daysMember} {daysMember === 1 ? 'day' : 'days'}
+          </div>
+          <div className="label">Member for</div>
+        </div>
+        <div className="stat">
+          <div className="num" style={{ fontSize: 16 }}>{rupees(totalPaid)}</div>
           <div className="label">Total paid</div>
         </div>
       </div>
