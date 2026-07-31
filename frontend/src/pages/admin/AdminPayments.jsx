@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
-import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
+import { SearchIcon, DownloadIcon, WhatsAppIcon, CashIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
 import { toCsv, downloadCsv } from '../../lib/csv'
 
@@ -159,11 +159,15 @@ export default function AdminPayments() {
                   <div className="li-main">
                     <div className="feed-name">{p.name}</div>
                     <div className="muted small">
-                      {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} · {p.method}
+                      {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} ·{' '}
+                      {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                      {p.method}{p.is_partial ? ' · partial' : ''}
                     </div>
                   </div>
                   <div className="feed-right">
-                    <span style={{ color: 'var(--paid)', fontWeight: 700 }}>{rupees(p.amount_paise)}</span>
+                    <span style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700 }}>
+                      {rupees(p.amount_paise)}
+                    </span>
                     <span className="muted small">{dateLabel(p.paid_at) || periodLabel(p.period)}</span>
                   </div>
                 </div>

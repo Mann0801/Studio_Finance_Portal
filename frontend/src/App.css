@@ -467,6 +467,12 @@ button.menu-item {
   font-weight: 600;
   color: var(--paid);
 }
+/* Small cash icon shown inline next to a cash payment's method label. */
+.cash-ico {
+  vertical-align: -2px;
+  margin-right: 3px;
+  opacity: 0.85;
+}
 /* Divider in the admin "record cash" sheet, between full and part-payment. */
 .pay-or {
   text-align: center;
