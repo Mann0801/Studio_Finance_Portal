@@ -7,6 +7,7 @@ import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ProfileSetup from './pages/ProfileSetup'
+import WhatsAppJoin from './pages/WhatsAppJoin'
 import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
@@ -78,6 +79,7 @@ export default function App() {
           {/* Protected student area */}
           <Route element={<ProtectedShell />}>
             <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/welcome-whatsapp" element={<WhatsAppJoin />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />
