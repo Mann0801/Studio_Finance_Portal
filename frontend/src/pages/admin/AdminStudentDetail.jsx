@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
+import { toTenDigits } from '../../lib/auth'
 import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
@@ -135,13 +136,15 @@ export default function AdminStudentDetail() {
           </label>
           <label>
             Phone
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, '') }))}
-              maxLength={10}
-            />
+            <div className="phone-field">
+              <span className="phone-cc">+91</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: toTenDigits(e.target.value) }))}
+              />
+            </div>
           </label>
           <BatchPicker
             classes={classes}
