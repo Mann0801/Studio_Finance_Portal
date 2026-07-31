@@ -14,7 +14,28 @@ if (!isSupabaseConfigured) {
   )
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Auth/signup calls go straight to Supabase (not through our backend), so they
+// need the same protection: iOS Safari reuses a keep-alive socket the server has
+// already closed and, unlike Chrome, won't retry — surfacing "Load failed". A
+// fetch rejection means no request reached the server, so retrying a fresh
+// connection is safe. supabase-js lets us swap in the fetch it uses everywhere.
+const retryFetch = async (input, init) => {
+  let lastErr
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(600 * attempt) // 0ms, 600ms, 1200ms
+    try {
+      return await fetch(input, init)
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr
+}
+
 export const supabase = createClient(
   url || 'https://placeholder.supabase.co',
   anonKey || 'placeholder-anon-key',
+  { global: { fetch: retryFetch } },
 )
