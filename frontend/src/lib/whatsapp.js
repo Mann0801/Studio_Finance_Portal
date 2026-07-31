@@ -1,3 +1,5 @@
+import { api } from './api'
+
 // WhatsApp group invite links per class. Keyed by class id (batch slug). A
 // student is shown the "Join our WhatsApp Group" screen once, right after signup,
 // with the link for their class. Traditional Yoga shares one group across all
@@ -19,13 +21,13 @@ export function whatsappGroupLink(batch) {
 }
 
 // We can't detect an actual WhatsApp join (WhatsApp gives no callback), so
-// "joined" means the student has tapped Join Group at least once. We remember it
-// per student so the blocking home-screen prompt keeps reappearing until they do,
-// then never again. Keyed by student id so a shared device tracks each member.
-const joinedKey = (studentId) => `waJoined:${studentId}`
-
-export const hasJoinedWhatsapp = (studentId) =>
-  localStorage.getItem(joinedKey(studentId)) === '1'
-
-export const markJoinedWhatsapp = (studentId) =>
-  localStorage.setItem(joinedKey(studentId), '1')
+// "joined" means the student tapped Join Group at least once. It's persisted on
+// their row (students.whatsapp_joined) so the reminder clears for good across all
+// devices. Best-effort: a failure here just means the reminder shows again later.
+export async function markWhatsappJoined() {
+  try {
+    await api('/api/me/whatsapp-joined', { method: 'POST' })
+  } catch {
+    /* non-fatal — they still got the link; the reminder will simply persist */
+  }
+}

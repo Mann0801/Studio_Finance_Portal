@@ -57,6 +57,7 @@ def _student_out(row: dict, cls: dict | None = None) -> StudentOut:
         slot_label=slot_label_of(cls, slot),
         batch_deleted=cls is None or not cls.get("active", True),
         join_date=row["join_date"],
+        whatsapp_joined=bool(row.get("whatsapp_joined", False)),
     )
 
 
@@ -146,6 +147,24 @@ def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_st
     }
     updated = sb.table("students").update(updates).eq("id", student["id"]).execute()
     return _student_out(updated.data[0], cls)
+
+
+@router.post("/me/whatsapp-joined", response_model=StudentOut)
+def mark_whatsapp_joined(student=Depends(get_current_student)):
+    """Record that the student has joined their class's WhatsApp group (they tapped
+    the Join button). Idempotent — safe to call again. Clears the reminder for good
+    across devices since it lives on their row, not in localStorage."""
+    sb = get_supabase()
+    res = sb.table("students").select("*").eq("id", student["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+    updated = (
+        sb.table("students")
+        .update({"whatsapp_joined": True})
+        .eq("id", student["id"])
+        .execute()
+    )
+    return _student_out(updated.data[0])
 
 
 @router.get("/me/dashboard", response_model=DashboardOut)

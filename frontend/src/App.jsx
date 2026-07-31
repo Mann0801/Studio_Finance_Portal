@@ -12,6 +12,7 @@ import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
 import Profile from './pages/student/Profile'
 import StudioContact from './pages/student/StudioContact'
+import WhatsAppGroup from './pages/student/WhatsAppGroup'
 import Announcements from './pages/student/Announcements'
 import Receipt from './pages/student/Receipt'
 import AdminLayout from './components/AdminLayout'
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="/payments" element={<Payments />} />
               <Route path="/receipt/:period" element={<Receipt />} />
               <Route path="/announcements" element={<Announcements />} />
+              <Route path="/whatsapp-group" element={<WhatsAppGroup />} />
               <Route path="/contact" element={<StudioContact />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
