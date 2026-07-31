@@ -12,6 +12,7 @@ from ..config import get_settings
 from ..db import get_supabase
 from ..fees import compute_due, current_period, period_of
 from ..payments_store import (
+    amount_paid_for,
     get_payment_by_order,
     is_period_paid,
     mark_paid,
@@ -53,8 +54,15 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
     if due.amount_paise <= 0:
         raise HTTPException(status_code=400, detail="Nothing due for this period")
 
+    # Charge only what's still owed: the full fee minus any partial cash the admin
+    # already recorded for this month.
+    already_paid = amount_paid_for(student["id"], period)
+    remaining = due.amount_paise - already_paid
+    if remaining <= 0:
+        raise HTTPException(status_code=409, detail="This month is already paid")
+
     order = razorpay_service.create_order(
-        amount_paise=due.amount_paise,
+        amount_paise=remaining,
         receipt=f"{student['id'][:8]}-{period}",
         notes={"student_id": student["id"], "period": period},
     )
@@ -64,12 +72,13 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
         amount_paise=due.amount_paise,
         is_prorata=due.is_prorata,
         order_id=order["id"],
+        paid_paise=already_paid,
     )
 
     return OrderResponse(
         key_id=settings.razorpay_key_id,
         order_id=order["id"],
-        amount_paise=due.amount_paise,
+        amount_paise=remaining,
         period=period,
         studio_name=settings.studio_name,
         prefill_name=row["name"],

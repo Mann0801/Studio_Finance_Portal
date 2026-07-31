@@ -18,9 +18,12 @@ export default function DueCard({ month, isCurrent = false, paying, onPay, style
       </div>
       <div className="amount">{rupees(month.amount_paise)}</div>
       <div className="period">
-        {isCurrent ? 'Due this month' : 'Overdue'}
+        {month.paid_paise > 0 ? 'Balance due' : isCurrent ? 'Due this month' : 'Overdue'}
         {month.is_prorata ? ' · pro-rated' : ''}
       </div>
+      {month.paid_paise > 0 && (
+        <div className="part-paid">{rupees(month.paid_paise)} already paid in cash</div>
+      )}
       <button
         className="btn primary lg block"
         style={{ marginTop: 18 }}
