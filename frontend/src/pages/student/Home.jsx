@@ -7,10 +7,10 @@ import { useClasses, classById, scheduleLabel, slotByKey } from '../../lib/class
 import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
 import DueCard from '../../components/DueCard'
-import WhatsAppJoinModal from '../../components/WhatsAppJoinModal'
+import WhatsAppBanner from '../../components/WhatsAppBanner'
 import { CheckIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
-import { whatsappGroupLink, hasJoinedWhatsapp } from '../../lib/whatsapp'
+import { whatsappGroupLink } from '../../lib/whatsapp'
 
 function periodLabel(period) {
   const [y, m] = period.split('-').map(Number)
@@ -106,13 +106,13 @@ export default function Home() {
   const isDeleted = student.batch_deleted
   const isContact = isEnquiry || isDeleted
 
-  // Blocking WhatsApp prompt: shown until the student joins their class's group
-  // (persisted per student), then gone. Contact/enquiry classes are exempt.
+  // Floating WhatsApp reminder: shown until the student joins their class's group
+  // (persisted server-side), then gone. Contact/enquiry classes are exempt.
   const showWhatsApp =
     !isContact &&
     !waJustJoined &&
-    Boolean(whatsappGroupLink(student.batch)) &&
-    !hasJoinedWhatsapp(student.id)
+    !student.whatsapp_joined &&
+    Boolean(whatsappGroupLink(student.batch))
 
   // One pay card per unpaid month — oldest (overdue) first so it's the top
   // priority, current month last. `outstanding` arrives newest→oldest.
@@ -136,11 +136,7 @@ export default function Home() {
     <>
       {welcomeOverlay}
       {showWhatsApp && (
-        <WhatsAppJoinModal
-          studentId={student.id}
-          batch={student.batch}
-          onDone={() => setWaJustJoined(true)}
-        />
+        <WhatsAppBanner batch={student.batch} onJoined={() => setWaJustJoined(true)} />
       )}
       <div className="topbar">
         <div className="greeting">

@@ -42,6 +42,7 @@ class StudentOut(BaseModel):
     slot_label: Optional[str] = None
     batch_deleted: bool = False          # true if the class was removed
     join_date: date
+    whatsapp_joined: bool = False        # tapped "Join Group" at least once
 
 
 class PaymentOut(BaseModel):
