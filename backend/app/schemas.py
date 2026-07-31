@@ -47,10 +47,12 @@ class StudentOut(BaseModel):
 
 class PaymentOut(BaseModel):
     period: str
-    amount_paise: int
+    amount_paise: int          # full fee for the month
     is_prorata: bool
     status: str
     paid_at: Optional[datetime] = None
+    paid_paise: int = 0        # amount actually received (partial or full)
+    method: str = "Online"     # 'Cash' | 'Online'
 
 
 class CurrentDue(BaseModel):
@@ -193,10 +195,11 @@ class AdminPaymentRow(BaseModel):
 
 class StudentPaymentRow(BaseModel):
     period: str
-    amount_paise: int
+    amount_paise: int          # full fee for the month
     paid_at: Optional[datetime] = None
     method: str = "Online"
     status: str  # 'created' | 'paid' | 'failed'
+    paid_paise: int = 0        # amount actually received (partial or full)
 
 
 class AdminStudentDetail(BaseModel):

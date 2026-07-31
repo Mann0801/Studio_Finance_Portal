@@ -574,6 +574,7 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
                 )
         p = previous_period(p)
 
+    # Show every month money was received — fully paid or partial cash.
     history = [
         StudentPaymentRow(
             period=p["period"],
@@ -581,8 +582,10 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
             paid_at=p.get("paid_at"),
             method=_payment_method(p),
             status=p["status"],
+            paid_paise=(p.get("paid_paise") or 0),
         )
         for p in pays
+        if p["status"] == "paid" or (p.get("paid_paise") or 0) > 0
     ]
 
     this_sofar = paid_so_far.get(period, 0)

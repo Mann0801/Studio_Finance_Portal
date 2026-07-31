@@ -123,7 +123,8 @@ export default function Home() {
   const classTime =
     student.slot_label ||
     (cls?.start_time && cls?.end_time ? `${cls.start_time} – ${cls.end_time}` : cls?.start_time || '')
-  const totalPaid = history.reduce((s, p) => (p.status === 'paid' ? s + p.amount_paise : s), 0)
+  // Includes partial cash — history carries the amount actually received per month.
+  const totalPaid = history.reduce((s, p) => s + (p.paid_paise || 0), 0)
   const memberSince = new Date(student.join_date).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',

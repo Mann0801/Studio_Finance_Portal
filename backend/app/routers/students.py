@@ -227,6 +227,8 @@ def dashboard(student=Depends(get_current_student)):
                 )
         p = previous_period(p)
 
+    # History = every month money was actually received (fully paid OR partial
+    # cash). Abandoned/pending orders with nothing paid are left out.
     history = [
         PaymentOut(
             period=p["period"],
@@ -234,8 +236,11 @@ def dashboard(student=Depends(get_current_student)):
             is_prorata=p["is_prorata"],
             status=p["status"],
             paid_at=p.get("paid_at"),
+            paid_paise=(p.get("paid_paise") or 0),
+            method="Cash" if not p.get("razorpay_payment_id") else "Online",
         )
         for p in payments
+        if p["status"] == "paid" or (p.get("paid_paise") or 0) > 0
     ]
 
     return DashboardOut(
