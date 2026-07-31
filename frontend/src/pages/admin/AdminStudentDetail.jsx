@@ -350,14 +350,16 @@ export default function AdminStudentDetail() {
                   <div className="li-main">
                     <div>{periodLabel(p.period)}</div>
                     <div className="muted small">
-                      {p.status === 'paid' ? `${p.method} · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : p.status}
+                      {p.method}
+                      {p.paid_at ? ` · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : ''}
+                      {p.status !== 'paid' ? ' · partial' : ''}
                     </div>
                   </div>
                   <span
                     className="li-main"
-                    style={{ color: p.status === 'paid' ? 'var(--paid)' : 'var(--muted)' }}
+                    style={{ color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)' }}
                   >
-                    {rupees(p.amount_paise)}
+                    {rupees(p.paid_paise)}
                   </span>
                 </div>
               ))}

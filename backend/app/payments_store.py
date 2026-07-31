@@ -76,7 +76,9 @@ def record_cash_payment(
             "status": "paid" if fully else "created",
             "razorpay_order_id": f"cash-{student_id[:8]}-{period}",
             "razorpay_payment_id": None,
-            "paid_at": now_local().isoformat() if fully else None,
+            # Stamp the time cash was last received (even for a partial) so it
+            # shows dated in the payment history.
+            "paid_at": now_local().isoformat(),
         },
         on_conflict="student_id,period",
     ).execute()

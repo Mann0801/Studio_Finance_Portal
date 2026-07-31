@@ -17,10 +17,9 @@ export default function Payments() {
   const { pay, paying, error: payError } = usePayFlow()
   const navigate = useNavigate()
 
-  // Months surfaced above as payable dues shouldn't also appear as "Pending"
-  // rows in History (they'd be the same month listed twice).
-  const outstandingPeriods = new Set((data?.outstanding ?? []).map((p) => p.period))
-  const historyRows = (data?.history ?? []).filter((p) => !outstandingPeriods.has(p.period))
+  // History shows every month money was received — including partial cash on a
+  // month still being cleared (it also appears above as a balance to pay).
+  const historyRows = data?.history ?? []
   // Oldest overdue month first (top priority); `outstanding` is newest→oldest.
   const overdue = [...(data?.outstanding ?? [])].reverse()
 
@@ -107,11 +106,13 @@ export default function Payments() {
                     <div className="li-main">{periodLabel(p.period)}</div>
                     <div className="li-sub">
                       {p.is_prorata ? 'Pro-rated · ' : ''}
-                      {p.paid_at ? `Paid ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : 'Pending'}
+                      {p.method}
+                      {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
+                      {p.status !== 'paid' ? ' · partial' : ''}
                     </div>
                   </div>
                   <div className="s-right" style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <span className="li-amt">{rupees(p.amount_paise)}</span>
+                    <span className="li-amt">{rupees(p.paid_paise)}</span>
                     {p.status === 'paid' ? (
                       <button
                         type="button"
@@ -121,7 +122,7 @@ export default function Payments() {
                         <DownloadIcon width={14} height={14} /> Receipt
                       </button>
                     ) : (
-                      <StatusBadge status={p.status} />
+                      <span className="badge unpaid">Partial</span>
                     )}
                   </div>
                 </div>
