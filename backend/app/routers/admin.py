@@ -401,7 +401,9 @@ def unpaid_students():
     period = current_period()
     cmap = class_map()
     students = sb.table("students").select("*").order("name").execute().data
-    paid = _paid_amounts_for_period(period, [s["id"] for s in students])
+    ids = [s["id"] for s in students]
+    paid = _paid_amounts_for_period(period, ids)
+    received = _received_amounts_for_period(period, ids)
 
     rows: list[AdminStudentRow] = []
     for s in students:
@@ -409,7 +411,9 @@ def unpaid_students():
             continue
         cls = cmap.get(s["batch"])
         due = compute_due(_fee_cls(cls), _as_date(s["join_date"]), period)
-        if due.amount_paise <= 0:
+        # Remind for what's still owed after any partial cash already recorded.
+        remaining = due.amount_paise - received.get(s["id"], 0)
+        if remaining <= 0:
             continue
         sl = slot_label_of(cls, s.get("batch_slot"))
         rows.append(
@@ -425,11 +429,11 @@ def unpaid_students():
                 batch_deleted=_deleted(cls),
                 join_date=_as_date(s["join_date"]),
                 period=period,
-                amount_paise=due.amount_paise,
+                amount_paise=remaining,
                 is_prorata=due.is_prorata,
                 status="unpaid",
                 whatsapp_url=reminder_link(
-                    s["phone"], s["name"], _reminder_label(cls, sl), due.amount_paise, period
+                    s["phone"], s["name"], _reminder_label(cls, sl), remaining, period
                 ),
             )
         )
@@ -494,13 +498,15 @@ def activity():
     dependencies=[Depends(require_admin)],
 )
 def payment_history(limit: int = 100):
-    """All received payments, newest first (joined to student name + class)."""
+    """All received payments, newest first (joined to student name + class).
+    Includes partial cash (any row with money received), showing the amount
+    actually collected."""
     sb = get_supabase()
     cmap = class_map()
     pays = (
         sb.table("payments")
-        .select("id, student_id, amount_paise, period, paid_at, razorpay_payment_id")
-        .eq("status", "paid")
+        .select("id, student_id, amount_paise, paid_paise, status, period, paid_at, razorpay_payment_id")
+        .gt("paid_paise", 0)  # anything with money in — full or partial
         .order("paid_at", desc=True)
         .limit(limit)
         .execute()
@@ -520,10 +526,11 @@ def payment_history(limit: int = 100):
                 batch=s["batch"],
                 batch_label=class_label(cls),
                 slot_label=slot_label_of(cls, s.get("batch_slot")),
-                amount_paise=p["amount_paise"],
+                amount_paise=p.get("paid_paise") or 0,  # amount actually collected
                 period=p["period"],
                 paid_at=p.get("paid_at"),
                 method=_payment_method(p),
+                is_partial=p["status"] != "paid",
             )
         )
     return rows

@@ -187,10 +187,11 @@ class AdminPaymentRow(BaseModel):
     batch: str
     batch_label: str
     slot_label: Optional[str] = None
-    amount_paise: int
+    amount_paise: int          # amount actually received (partial or full)
     period: str
     paid_at: Optional[datetime] = None
-    method: str = "Online"  # the gateway instrument isn't stored; generic label
+    method: str = "Online"  # 'Cash' | 'Online'
+    is_partial: bool = False   # a partial cash payment on a not-yet-cleared month
 
 
 class StudentPaymentRow(BaseModel):

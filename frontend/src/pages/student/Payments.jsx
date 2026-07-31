@@ -4,7 +4,7 @@ import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
 import DueCard from '../../components/DueCard'
-import { DownloadIcon } from '../../components/Icons'
+import { DownloadIcon, CashIcon } from '../../components/Icons'
 import { CardSkeleton, ListSkeleton } from '../../components/Skeleton'
 
 function periodLabel(period) {
@@ -106,6 +106,7 @@ export default function Payments() {
                     <div className="li-main">{periodLabel(p.period)}</div>
                     <div className="li-sub">
                       {p.is_prorata ? 'Pro-rated · ' : ''}
+                      {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
                       {p.method}
                       {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
                       {p.status !== 'paid' ? ' · partial' : ''}

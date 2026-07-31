@@ -8,7 +8,7 @@ import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
 import BatchPicker from '../../components/BatchPicker'
-import { WhatsAppIcon, ArrowLeftIcon, EditIcon } from '../../components/Icons'
+import { WhatsAppIcon, ArrowLeftIcon, EditIcon, CashIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
@@ -320,6 +320,7 @@ export default function AdminStudentDetail() {
                   <div className="li-main">
                     <div>{periodLabel(p.period)}</div>
                     <div className="muted small">
+                      {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
                       {p.method}
                       {p.paid_at ? ` · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : ''}
                       {p.status !== 'paid' ? ' · partial' : ''}
