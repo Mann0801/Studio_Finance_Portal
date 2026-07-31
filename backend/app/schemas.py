@@ -55,9 +55,10 @@ class PaymentOut(BaseModel):
 
 class CurrentDue(BaseModel):
     period: str
-    amount_paise: int
+    amount_paise: int          # remaining balance owed (full fee minus any partial)
     is_prorata: bool
     status: str  # 'paid' | 'unpaid'
+    paid_paise: int = 0        # amount already paid toward this month (partial cash)
 
 
 class DashboardOut(BaseModel):
@@ -214,9 +215,10 @@ class AdminStudentDetail(BaseModel):
     days_member: int
     # This month
     period: str
-    amount_paise: int          # paid amount if paid, else the due amount
+    amount_paise: int          # paid amount if paid, else the remaining balance
     is_prorata: bool
     status: str                # 'paid' | 'unpaid'
+    paid_paise: int = 0        # amount already paid toward this month (partial cash)
     # Lifetime
     # Unpaid months before the current one (join month up to last month), each
     # with its server-computed amount — lets the admin record cash for old dues.
@@ -231,6 +233,9 @@ class AdminStudentDetail(BaseModel):
 class MarkPaidRequest(BaseModel):
     # Which month to record as cash-paid; defaults to the current calendar month.
     period: Optional[str] = None
+    # Cash amount received (paise). None = the full remaining balance. A smaller
+    # amount is recorded as a partial payment; the month stays unpaid until cleared.
+    amount_paise: Optional[int] = Field(default=None, ge=1)
 
 
 class AdminCreateStudentRequest(BaseModel):

@@ -78,6 +78,9 @@ export default function Payments() {
               {periodLabel(data.current.period)}
               {data.current.is_prorata ? ' · pro-rated' : ''}
             </div>
+            {data.current.status !== 'paid' && data.current.paid_paise > 0 && (
+              <div className="part-paid">{rupees(data.current.paid_paise)} already paid in cash</div>
+            )}
             {data.current.status !== 'paid' && data.current.amount_paise > 0 && (
               <button
                 className="btn primary lg block"

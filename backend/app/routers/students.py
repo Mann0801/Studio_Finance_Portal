@@ -193,28 +193,36 @@ def dashboard(student=Depends(get_current_student)):
     ).data
 
     paid_periods = {p["period"] for p in payments if p["status"] == "paid"}
+    # Partial cash recorded per month (paid but not yet fully settled).
+    paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in payments}
+    this_paid = paid_so_far.get(period, 0)
     current = CurrentDue(
         period=period,
-        amount_paise=due.amount_paise,
+        # Once fully paid we show the fee; while owing we show the remaining balance.
+        amount_paise=due.amount_paise if period in paid_periods else max(due.amount_paise - this_paid, 0),
         is_prorata=due.is_prorata,
         status="paid" if period in paid_periods else "unpaid",
+        paid_paise=this_paid,
     )
 
     # Earlier months (join month .. last month) the student still owes. Enquiry /
-    # deleted classes compute 0, so this stays empty for them.
+    # deleted classes compute 0, so this stays empty for them. Partial cash reduces
+    # the shown balance but keeps the month owing until fully cleared.
     join_period = period_of(join_date)
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
         if p not in paid_periods:
             past_due = compute_due(fee_cls, join_date, p)
-            if past_due.amount_paise > 0:
+            remaining = past_due.amount_paise - paid_so_far.get(p, 0)
+            if remaining > 0:
                 outstanding.append(
                     CurrentDue(
                         period=p,
-                        amount_paise=past_due.amount_paise,
+                        amount_paise=remaining,
                         is_prorata=past_due.is_prorata,
                         status="unpaid",
+                        paid_paise=paid_so_far.get(p, 0),
                     )
                 )
         p = previous_period(p)

@@ -460,6 +460,20 @@ button.menu-item {
   color: #fff;
   background: var(--unpaid);
 }
+/* "₹X already paid in cash" note under a partially-paid month's balance. */
+.part-paid {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--paid);
+}
+/* Divider in the admin "record cash" sheet, between full and part-payment. */
+.pay-or {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 16px 0 12px;
+}
 .badge.big {
   font-size: 15px;
   padding: 8px 16px;

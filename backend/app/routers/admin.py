@@ -25,7 +25,7 @@ from ..classes_store import (
 from ..constants import ENQUIRY, FEE_TYPES, SESSION_PACK
 from ..db import get_supabase
 from ..fees import compute_due, current_period, now_local, period_of, previous_period
-from ..payments_store import is_period_paid, mark_paid_cash
+from ..payments_store import amount_paid_for, is_period_paid, record_cash_payment
 from ..schemas import (
     ActivityPayment,
     ActivitySignup,
@@ -92,7 +92,8 @@ def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
 
 
 def _paid_amounts_for_period(period: str, student_ids: list[str] | None = None) -> dict[str, int]:
-    """Map student_id -> paid amount_paise for `period` (only 'paid' rows)."""
+    """Map student_id -> paid amount_paise for `period` (only fully 'paid' rows).
+    Used to decide who counts as Paid this month."""
     q = (
         get_supabase()
         .table("payments")
@@ -105,6 +106,22 @@ def _paid_amounts_for_period(period: str, student_ids: list[str] | None = None) 
             return {}
         q = q.in_("student_id", student_ids)
     return {r["student_id"]: r["amount_paise"] for r in q.execute().data}
+
+
+def _received_amounts_for_period(period: str, student_ids: list[str] | None = None) -> dict[str, int]:
+    """Map student_id -> total paise received for `period`, INCLUDING partial cash
+    on months not yet fully paid. Used for revenue (real money in hand)."""
+    q = (
+        get_supabase()
+        .table("payments")
+        .select("student_id, paid_paise")
+        .eq("period", period)
+    )
+    if student_ids is not None:
+        if not student_ids:
+            return {}
+        q = q.in_("student_id", student_ids)
+    return {r["student_id"]: (r.get("paid_paise") or 0) for r in q.execute().data}
 
 
 def _collection_rate(actual: int, expected: int) -> float:
@@ -230,14 +247,17 @@ def list_batch(batch: str, slot: str | None = None):
     # Classes with timing slots can be filtered to a single slot.
     if cls and cls.get("slots") and slot:
         students = [s for s in students if s.get("batch_slot") == slot]
-    paid = _paid_amounts_for_period(period, [s["id"] for s in students])
+    ids = [s["id"] for s in students]
+    paid = _paid_amounts_for_period(period, ids)
+    received = _received_amounts_for_period(period, ids)
 
     rows: list[AdminStudentRow] = []
     for s in students:
         join_date = _as_date(s["join_date"])
         due = compute_due(_fee_cls(cls), join_date, period)
         is_paid = s["id"] in paid
-        amount = paid[s["id"]] if is_paid else due.amount_paise
+        # For an unpaid student, show what's still owed (fee minus any partial cash).
+        amount = paid[s["id"]] if is_paid else max(due.amount_paise - received.get(s["id"], 0), 0)
         sl = slot_label_of(cls, s.get("batch_slot"))
         wa = None
         if not is_paid and amount > 0:
@@ -270,13 +290,16 @@ def stats():
     period = current_period()
     prev = previous_period(period)
     students = sb.table("students").select("id, batch, batch_slot, join_date").execute().data
-    paid = _paid_amounts_for_period(period)
-    last_month_paid = _paid_amounts_for_period(prev)
+    paid = _paid_amounts_for_period(period)              # fully-paid → Paid count
+    received = _received_amounts_for_period(period)      # incl. partial cash → revenue
+    last_month_received = _received_amounts_for_period(prev)
     classes = list_classes()
 
     def _group_stat(fee_cls: dict | None, members: list[dict]):
         paid_ids = [s["id"] for s in members if s["id"] in paid]
-        revenue = sum(paid[sid] for sid in paid_ids)
+        # Revenue counts real money received, including partial cash on months not
+        # yet fully paid.
+        revenue = sum(received.get(s["id"], 0) for s in members)
         expected = sum(
             compute_due(fee_cls, _as_date(s["join_date"]), period).amount_paise
             for s in members
@@ -330,7 +353,7 @@ def stats():
         total_revenue += revenue
         total_expected += expected
 
-    last_month_revenue = sum(last_month_paid.values())
+    last_month_revenue = sum(last_month_received.values())
     if last_month_revenue > 0:
         revenue_change_pct = round(
             (total_revenue - last_month_revenue) / last_month_revenue * 100, 1
@@ -516,18 +539,21 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
 
     pays = (
         sb.table("payments")
-        .select("period, amount_paise, paid_at, status, razorpay_payment_id")
+        .select("period, amount_paise, paid_paise, paid_at, status, razorpay_payment_id")
         .eq("student_id", s["id"])
         .order("period", desc=True)
         .execute()
     ).data
     paid_rows = [p for p in pays if p["status"] == "paid"]
-    total_paid = sum(p["amount_paise"] for p in paid_rows)
+    # Total received includes partial cash on months not yet fully paid.
+    total_paid = sum((p.get("paid_paise") or 0) for p in pays)
     last = max(paid_rows, key=lambda p: p.get("paid_at") or "", default=None)
     this_paid = next((p for p in paid_rows if p["period"] == period), None)
+    paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in pays}
 
     # Earlier months (join month .. last month) still owed — so the admin can
-    # record cash against an old unpaid month, not just the current one.
+    # record cash against an old unpaid month, not just the current one. Partial
+    # cash reduces the balance shown but keeps the month owing until cleared.
     paid_periods = {p["period"] for p in paid_rows}
     join_period = period_of(join_date)
     outstanding: list[CurrentDue] = []
@@ -535,13 +561,15 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
     while p >= join_period:
         if p not in paid_periods:
             past_due = compute_due(_fee_cls(cls), join_date, p)
-            if past_due.amount_paise > 0:
+            remaining = past_due.amount_paise - paid_so_far.get(p, 0)
+            if remaining > 0:
                 outstanding.append(
                     CurrentDue(
                         period=p,
-                        amount_paise=past_due.amount_paise,
+                        amount_paise=remaining,
                         is_prorata=past_due.is_prorata,
                         status="unpaid",
+                        paid_paise=paid_so_far.get(p, 0),
                     )
                 )
         p = previous_period(p)
@@ -557,10 +585,12 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         for p in pays
     ]
 
+    this_sofar = paid_so_far.get(period, 0)
+    this_remaining = max(due.amount_paise - this_sofar, 0)
     sl = slot_label_of(cls, s.get("batch_slot"))
     wa = None
-    if not this_paid and due.amount_paise > 0:
-        wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), due.amount_paise, period)
+    if not this_paid and this_remaining > 0:
+        wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), this_remaining, period)
 
     return AdminStudentDetail(
         id=s["id"],
@@ -577,9 +607,10 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
         signed_up_at=s.get("created_at"),
         days_member=max((now_local().date() - join_date).days, 0),
         period=period,
-        amount_paise=this_paid["amount_paise"] if this_paid else due.amount_paise,
+        amount_paise=this_paid["amount_paise"] if this_paid else this_remaining,
         is_prorata=due.is_prorata,
         status="paid" if this_paid else "unpaid",
+        paid_paise=this_sofar,
         outstanding=outstanding,
         total_paid_paise=total_paid,
         last_payment_paise=last["amount_paise"] if last else None,
@@ -722,8 +753,10 @@ def update_student(student_id: str, body: AdminUpdateStudentRequest):
     dependencies=[Depends(require_admin)],
 )
 def mark_student_paid(student_id: str, body: MarkPaidRequest | None = None):
-    """Manually mark a month paid (e.g. the student paid cash). Defaults to the
-    current month; pass a period to clear an earlier unpaid month. Idempotent."""
+    """Record a cash payment for a month. Defaults to the current month and the
+    full remaining balance; pass a period for an earlier month and/or amount_paise
+    for a partial payment. A partial keeps the month unpaid until it's cleared.
+    Idempotent for the full-payment case."""
     s = _load_student_or_404(student_id)
     join_date = _as_date(s["join_date"])
     period = (body.period if body else None) or current_period()
@@ -731,10 +764,16 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest | None = None):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
     if period > current_period():
         raise HTTPException(status_code=400, detail="That month hasn't started yet")
+
     if not is_period_paid(student_id, period):
         due = compute_due(_fee_cls(get_class(s["batch"])), join_date, period)
-        if due.amount_paise > 0:
-            mark_paid_cash(student_id, period, due.amount_paise, due.is_prorata)
+        remaining = due.amount_paise - amount_paid_for(student_id, period)
+        if remaining > 0:
+            # None → clear the whole remaining balance; a number → partial cash,
+            # clamped so it can never exceed what's owed.
+            requested = body.amount_paise if (body and body.amount_paise is not None) else remaining
+            amount = max(1, min(requested, remaining))
+            record_cash_payment(student_id, period, amount, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 
 
