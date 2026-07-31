@@ -45,6 +45,7 @@ from ..schemas import (
     ClassWriteRequest,
     CurrentDue,
     MarkPaidRequest,
+    WhatsAppLinkRequest,
     SlotStat,
     StudentPaymentRow,
 )
@@ -183,6 +184,21 @@ def edit_class(class_id: str, body: ClassWriteRequest):
     if not get_class(class_id):
         raise HTTPException(status_code=404, detail="Class not found")
     updated = update_class(class_id, _class_payload(body))
+    return _class_row(updated, student_count(class_id))
+
+
+@router.patch(
+    "/classes/{class_id}/whatsapp",
+    response_model=AdminClassRow,
+    dependencies=[Depends(require_admin)],
+)
+def set_class_whatsapp(class_id: str, body: WhatsAppLinkRequest):
+    """Set or switch a class's WhatsApp group link. Reflects for students on their
+    next dashboard load (they read the link off the class)."""
+    if not get_class(class_id):
+        raise HTTPException(status_code=404, detail="Class not found")
+    url = (body.whatsapp_group_url or "").strip() or None
+    updated = update_class(class_id, {"whatsapp_group_url": url})
     return _class_row(updated, student_count(class_id))
 
 
