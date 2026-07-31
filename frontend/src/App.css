@@ -2195,27 +2195,42 @@ button.menu-item {
   color: var(--accent-bright);
 }
 
-/* ── Post-signup "Join our WhatsApp Group" full-screen page ─────────────────── */
-.wa-join {
+/* ── Blocking "Join our WhatsApp Group" prompt on the home screen ───────────── */
+.wa-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px;
+  padding: 22px;
   overflow-y: auto;
-  background: linear-gradient(165deg, #25d366 0%, #128c7e 55%, #075e54 100%);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
 }
-.wa-join-inner {
+.wa-modal {
   width: 100%;
   max-width: 400px;
+  padding: 30px 24px 26px;
   text-align: center;
+  border-radius: 24px;
+  color: #fff;
+  background: linear-gradient(165deg, #25d366 0%, #128c7e 55%, #075e54 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: wa-pop 0.24s ease both;
+}
+@keyframes wa-pop {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 .wa-icon {
-  width: 108px;
-  height: 108px;
+  width: 92px;
+  height: 92px;
   margin: 0 auto;
   border-radius: 50%;
   background: #fff;
@@ -2223,23 +2238,23 @@ button.menu-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
-.wa-join h1 {
-  margin: 26px 0 0;
-  font-size: 26px;
+.wa-modal h2 {
+  margin: 20px 0 0;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #fff;
 }
-.wa-join p {
-  margin: 14px 0 0;
-  font-size: 15.5px;
-  line-height: 1.6;
+.wa-modal p {
+  margin: 12px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
   color: rgba(255, 255, 255, 0.92);
 }
 .btn.wa-btn {
-  margin-top: 34px;
+  margin-top: 26px;
   background: #fff;
   color: #075e54;
   font-weight: 800;
@@ -2250,9 +2265,9 @@ button.menu-item {
   transform: translateY(1px);
   background: #f0fff7;
 }
-.wa-note {
-  margin-top: 16px !important;
-  font-size: 13px !important;
-  line-height: 1.55 !important;
-  color: rgba(255, 255, 255, 0.82) !important;
+.wa-modal .wa-note {
+  margin-top: 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
 }

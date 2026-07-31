@@ -17,3 +17,15 @@ const GROUP_LINKS = {
 export function whatsappGroupLink(batch) {
   return GROUP_LINKS[batch] || null
 }
+
+// We can't detect an actual WhatsApp join (WhatsApp gives no callback), so
+// "joined" means the student has tapped Join Group at least once. We remember it
+// per student so the blocking home-screen prompt keeps reappearing until they do,
+// then never again. Keyed by student id so a shared device tracks each member.
+const joinedKey = (studentId) => `waJoined:${studentId}`
+
+export const hasJoinedWhatsapp = (studentId) =>
+  localStorage.getItem(joinedKey(studentId)) === '1'
+
+export const markJoinedWhatsapp = (studentId) =>
+  localStorage.setItem(joinedKey(studentId), '1')
