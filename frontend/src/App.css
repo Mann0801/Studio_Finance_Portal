@@ -2196,34 +2196,29 @@ button.menu-item {
 }
 
 /* ── "Join our WhatsApp Group": floating home banner + menu page ────────────── */
-/* Floating, non-blocking reminder near the bottom of the home screen. */
+/* Non-blocking reminder that sits in the content flow (bottom of Home), so it
+   never covers the stat cards above it. */
 .wa-banner {
-  position: fixed;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  z-index: 55;
-  width: calc(100% - 32px);
-  max-width: 448px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 13px;
+  margin-top: 16px;
+  padding: 12px 14px;
   border-radius: 16px;
   text-decoration: none;
   color: #fff;
   background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  transform: translateX(-50%);
-  animation: wa-slide-up 0.3s ease both;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.26);
+  animation: wa-fade 0.3s ease both;
 }
-@keyframes wa-slide-up {
+@keyframes wa-fade {
   from {
-    transform: translate(-50%, 20px);
     opacity: 0;
+    transform: translateY(6px);
   }
   to {
-    transform: translate(-50%, 0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 .wa-banner-icon {
