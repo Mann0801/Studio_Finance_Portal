@@ -38,6 +38,10 @@ export default function WhatsAppJoin() {
         >
           Join Group
         </a>
+        <p className="wa-note">
+          Please join the group before continuing — class schedules, payment reminders and
+          announcements are shared there. You’ll be taken to your dashboard right after.
+        </p>
       </div>
     </div>
   )

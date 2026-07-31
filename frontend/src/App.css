@@ -2250,3 +2250,9 @@ button.menu-item {
   transform: translateY(1px);
   background: #f0fff7;
 }
+.wa-note {
+  margin-top: 16px !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+}
