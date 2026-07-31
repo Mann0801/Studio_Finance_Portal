@@ -1,7 +1,6 @@
 // Shared bounds + validation for the "When did you first join the studio?" field
 // used on signup. The studio joining date drives fee pro-rata, so it must be a
-// real recent date: today at the latest, and no more than 30 days ago (students
-// register within a couple of days of joining, so 30 days is a generous window).
+// real past date: today at the latest, and no more than 2 years ago.
 
 // Local YYYY-MM-DD (not UTC, so it stays correct near midnight in IST).
 function localDateStr(d) {
@@ -14,7 +13,7 @@ function localDateStr(d) {
 export const MAX_JOIN_DATE = localDateStr(new Date())
 export const MIN_JOIN_DATE = (() => {
   const d = new Date()
-  d.setDate(d.getDate() - 30)
+  d.setFullYear(d.getFullYear() - 2)
   return localDateStr(d)
 })()
 
@@ -22,6 +21,6 @@ export const MIN_JOIN_DATE = (() => {
 export function joinDateError(value) {
   if (!value) return 'Please select when you joined'
   if (value > MAX_JOIN_DATE) return 'That date is in the future'
-  if (value < MIN_JOIN_DATE) return 'For dates over 30 days ago, please contact the studio'
+  if (value < MIN_JOIN_DATE) return 'For dates over 2 years ago, please contact the studio'
   return ''
 }
