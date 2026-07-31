@@ -1,5 +1,6 @@
 import { useDashboard } from '../../context/DashboardContext'
 import { whatsappGroupLink, markWhatsappJoined } from '../../lib/whatsapp'
+import { useClasses, classById } from '../../lib/classes'
 import { WhatsAppIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 import { BUSINESS } from '../../lib/business'
@@ -8,8 +9,9 @@ import { BUSINESS } from '../../lib/business'
 // the invite link, so they can join (or re-open it) whenever they like.
 export default function WhatsAppGroup() {
   const { data, loading, reload } = useDashboard()
+  const { classes } = useClasses()
   const student = data?.student
-  const link = student ? whatsappGroupLink(student.batch) : null
+  const link = student ? whatsappGroupLink(classById(classes, student.batch)) : null
 
   const join = () => {
     markWhatsappJoined()

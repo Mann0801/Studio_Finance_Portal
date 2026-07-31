@@ -2312,3 +2312,39 @@ button.menu-item {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9) !important;
 }
+
+/* Admin → WhatsApp Groups: one card per class, edit its group link inline. */
+.wa-admin-card {
+  margin-bottom: 12px;
+}
+.wa-admin-link {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--accent-bright);
+  word-break: break-all;
+  line-height: 1.45;
+}
+.wa-admin-edit {
+  margin-top: 12px;
+}
+.wa-admin-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.wa-admin-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.wa-admin-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}

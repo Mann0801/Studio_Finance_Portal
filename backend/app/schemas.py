@@ -297,11 +297,17 @@ class ClassOut(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     description: Optional[str] = None
+    whatsapp_group_url: Optional[str] = None   # class WhatsApp group invite
 
 
 class AdminClassRow(ClassOut):
     active: bool = True
     student_count: int = 0
+
+
+class WhatsAppLinkRequest(BaseModel):
+    # Admin sets/switches a class's WhatsApp group invite. Empty/blank clears it.
+    whatsapp_group_url: Optional[str] = Field(default=None, max_length=300)
 
 
 class ClassWriteRequest(BaseModel):

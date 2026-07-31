@@ -1,11 +1,10 @@
-import { whatsappGroupLink, markWhatsappJoined } from '../lib/whatsapp'
+import { markWhatsappJoined } from '../lib/whatsapp'
 import { WhatsAppIcon } from './Icons'
 
 // Non-blocking floating reminder near the bottom of the home screen. Tapping it
 // opens the class's WhatsApp group and records the join (so it clears for good).
-// Renders nothing for classes without a group.
-export default function WhatsAppBanner({ batch, onJoined }) {
-  const link = whatsappGroupLink(batch)
+// Renders nothing when there's no link.
+export default function WhatsAppBanner({ link, onJoined }) {
   if (!link) return null
 
   const join = () => {

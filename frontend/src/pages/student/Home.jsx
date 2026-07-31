@@ -108,11 +108,8 @@ export default function Home() {
 
   // Floating WhatsApp reminder: shown until the student joins their class's group
   // (persisted server-side), then gone. Contact/enquiry classes are exempt.
-  const showWhatsApp =
-    !isContact &&
-    !waJustJoined &&
-    !student.whatsapp_joined &&
-    Boolean(whatsappGroupLink(student.batch))
+  const waLink = whatsappGroupLink(cls)
+  const showWhatsApp = !isContact && !waJustJoined && !student.whatsapp_joined && Boolean(waLink)
 
   // One pay card per unpaid month — oldest (overdue) first so it's the top
   // priority, current month last. `outstanding` arrives newest→oldest.
@@ -231,7 +228,7 @@ export default function Home() {
 
       {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
       {showWhatsApp && (
-        <WhatsAppBanner batch={student.batch} onJoined={() => setWaJustJoined(true)} />
+        <WhatsAppBanner link={waLink} onJoined={() => setWaJustJoined(true)} />
       )}
 
       <div style={{ height: 20 }} />
