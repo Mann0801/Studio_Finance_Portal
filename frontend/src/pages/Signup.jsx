@@ -6,8 +6,9 @@ import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
+import { MIN_JOIN_DATE, MAX_JOIN_DATE, joinDateError } from '../lib/joinDate'
 
-const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'batch']
+const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'batch', 'join_date']
 
 function scrollToFirstError(errs) {
   const first = FIELD_ORDER.find((k) => errs[k])
@@ -26,6 +27,8 @@ function validate(form, classes) {
   if (!form.batch) errors.batch = 'Please select a class'
   else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
     errors.batch = 'Please choose a timing'
+  const jd = joinDateError(form.join_date)
+  if (jd) errors.join_date = jd
   return errors
 }
 
@@ -39,6 +42,7 @@ export default function Signup() {
     confirm: '',
     batch: '',
     batch_slot: null,
+    join_date: '',
   })
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
@@ -81,6 +85,7 @@ export default function Signup() {
           phone: form.phone.replace(/\D/g, ''),
           batch: form.batch,
           batch_slot: form.batch_slot,
+          join_date: form.join_date,
         },
       })
       // 3) Straight to the dashboard with a quick welcome — they can pay from there.
@@ -168,6 +173,22 @@ export default function Signup() {
             }}
           />
         </div>
+
+        <label id="f-join_date">
+          When did you first join the studio?
+          <input
+            type="date"
+            value={form.join_date}
+            onChange={set('join_date')}
+            min={MIN_JOIN_DATE}
+            max={MAX_JOIN_DATE}
+            className={errors.join_date ? 'invalid' : ''}
+          />
+          <span className="field-hint">
+            This is the date you started attending classes, not the date you are signing up.
+          </span>
+          {errors.join_date && <span className="field-error">{errors.join_date}</span>}
+        </label>
 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn primary lg block" disabled={busy}>

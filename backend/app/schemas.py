@@ -15,6 +15,9 @@ class SignupRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
     batch: str
     batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
+    # The date the student actually started attending the studio (student-picked),
+    # NOT the app signup date. Drives pro-rata; range-validated in the router.
+    join_date: date
 
 
 class UpdateProfileRequest(BaseModel):
@@ -205,7 +208,8 @@ class AdminStudentDetail(BaseModel):
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
     batch_deleted: bool = False
-    join_date: date
+    join_date: date              # studio joining date (student-picked) — "Joined Studio"
+    signed_up_at: Optional[datetime] = None  # app account creation — "App Signup Date"
     days_member: int
     # This month
     period: str

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date as _date
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -80,6 +81,16 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     cls = _require_class(body.batch)
     slot = _resolve_slot(cls, body.batch_slot)
 
+    # Validate the student-picked studio joining date: not in the future, and no
+    # more than ~2 years back (the frontend enforces the same window; this guards
+    # direct API calls). Slightly lenient on the lower bound so a date the picker
+    # allowed is never rejected here.
+    today = now_local().date()
+    if body.join_date > today:
+        raise HTTPException(status_code=422, detail="Join date can't be in the future")
+    if body.join_date < today - timedelta(days=732):
+        raise HTTPException(status_code=422, detail="Join date can't be more than 2 years ago")
+
     row = {
         "id": student["id"],
         "name": body.name.strip(),
@@ -89,7 +100,9 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
         "phone": phone,
         "batch": cls["id"],
         "batch_slot": slot,
-        "join_date": now_local().date().isoformat(),
+        # The studio joining date the student picked (drives pro-rata). The app
+        # signup date is tracked separately by the row's created_at default.
+        "join_date": body.join_date.isoformat(),
     }
     inserted = sb.table("students").insert(row).execute()
     return _student_out(inserted.data[0], cls)

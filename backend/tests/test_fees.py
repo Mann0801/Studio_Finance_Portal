@@ -77,10 +77,12 @@ def test_kids_yoga_full_month():
     assert due.is_prorata is False
 
 
-def test_join_on_first_is_full_month_but_flagged_prorata():
+def test_join_on_first_is_full_month_not_prorata():
+    # Joining on the 1st is a full month — charged the whole fee and NOT flagged
+    # as pro-rated (the "· pro-rated" label would be misleading).
     due = compute_due(SENIOR, date(2026, 6, 1), "2026-06")
     assert due.amount_paise == 2000_00
-    assert due.is_prorata is True
+    assert due.is_prorata is False
 
 
 def test_join_on_last_day_is_one_day():
