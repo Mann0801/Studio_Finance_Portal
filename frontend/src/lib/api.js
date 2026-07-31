@@ -21,24 +21,34 @@ function errorMessage(data, status) {
  * Call the backend API, attaching the current Supabase access token as a
  * Bearer credential. Throws an Error with the server's detail message on non-2xx.
  */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 export async function api(path, { method = 'GET', body, auth = true } = {}) {
   const send = async (token) => {
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers.Authorization = `Bearer ${token}`
-    try {
-      return await fetch(`${BASE}${path}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      })
-    } catch {
-      // fetch() only rejects on a network-level failure (no response) — e.g. the
-      // free-tier backend cold-starting, or iOS Safari tearing down the socket
-      // when it returns from a UPI app. Tag it so callers can retry vs. give up.
-      const err = new Error('Network error — please check your connection and try again.')
-      err.network = true
-      throw err
+    // fetch() rejects only on a network-level failure (no response ever arrived) —
+    // e.g. the free-tier backend cold-starting, or iOS Safari reusing a keep-alive
+    // socket that Render already closed (its infamous "Load failed"). Since no
+    // request reached the server, a retry on a fresh connection is safe and almost
+    // always succeeds. Safari, unlike Chrome, won't do this for us, so we do it here.
+    let lastErr
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await sleep(600 * attempt) // 0ms, 600ms, 1200ms
+      try {
+        return await fetch(`${BASE}${path}`, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        })
+      } catch (e) {
+        lastErr = e
+      }
     }
+    const err = new Error('Network error — please check your connection and try again.')
+    err.network = true
+    err.cause = lastErr
+    throw err
   }
 
   let token = null

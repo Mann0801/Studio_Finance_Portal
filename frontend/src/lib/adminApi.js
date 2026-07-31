@@ -11,6 +11,8 @@ export const setAdminEmail = (e) => localStorage.setItem(EMAIL_KEY, e)
 export const clearAdminEmail = () => localStorage.removeItem(EMAIL_KEY)
 
 /** Call the backend admin API with the stored admin JWT. */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 export async function adminApi(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (auth) {
@@ -19,11 +21,29 @@ export async function adminApi(path, { method = 'GET', body, auth = true } = {})
     headers.Authorization = `Bearer ${token}`
   }
 
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  // Retry network-level failures on a fresh connection — the free-tier backend
+  // cold-starting, or iOS Safari reusing a keep-alive socket Render already closed
+  // ("Load failed"). No request reached the server, so a retry is safe.
+  let res, lastErr
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(600 * attempt)
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      })
+      lastErr = null
+      break
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  if (lastErr) {
+    const err = new Error('Network error — please check your connection and try again.')
+    err.network = true
+    throw err
+  }
 
   const text = await res.text()
   let data = null
