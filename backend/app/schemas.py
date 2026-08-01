@@ -298,6 +298,12 @@ class AdminCreateStudentResponse(BaseModel):
     temp_password: Optional[str] = None
 
 
+class AdminResetPasswordResponse(BaseModel):
+    # A freshly generated password for the admin to share; the student's old one
+    # stops working immediately.
+    temp_password: str
+
+
 # ── Announcements ──
 class AnnouncementIn(BaseModel):
     message: str = Field(min_length=1, max_length=500)

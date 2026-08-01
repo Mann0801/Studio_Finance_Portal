@@ -45,6 +45,7 @@ from ..schemas import (
     AdminMonthRow,
     AdminMonthView,
     AdminPaymentRow,
+    AdminResetPasswordResponse,
     AdminStats,
     AdminStudentDetail,
     AdminStudentRow,
@@ -936,6 +937,24 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest | None = None):
             amount = max(1, min(requested, remaining))
             record_cash_payment(student_id, period, amount, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
+
+
+@router.post(
+    "/students/{student_id}/reset-password",
+    response_model=AdminResetPasswordResponse,
+    dependencies=[Depends(require_admin)],
+)
+def reset_student_password(student_id: str):
+    """Set a fresh temporary password on the student's auth account and return it
+    for the admin to share (e.g. over WhatsApp). Their previous password stops
+    working immediately; the student can change it later from their profile."""
+    _load_student_or_404(student_id)
+    new_password = secrets.token_urlsafe(9)
+    try:
+        get_supabase().auth.admin.update_user_by_id(student_id, {"password": new_password})
+    except Exception:  # noqa: BLE001 — surface a friendly failure
+        raise HTTPException(status_code=400, detail="Could not reset the password")
+    return AdminResetPasswordResponse(temp_password=new_password)
 
 
 @router.delete("/students/{student_id}", dependencies=[Depends(require_admin)])
