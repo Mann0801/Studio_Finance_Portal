@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
@@ -13,6 +13,43 @@ import {
   ChevronRightIcon,
 } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
+
+/** A tappable student row (used for search results + the class roster). */
+function StudentCard({ s, onOpen, sub }) {
+  return (
+    <div
+      className="student-card tappable"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(s.id)}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(s.id)}
+    >
+      <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
+      <div className="s-info">
+        <div className="s-name">{s.name}</div>
+        <div className="s-sub">{sub}</div>
+      </div>
+      <div className="s-right">
+        {s.batch_deleted ? (
+          <span className="badge deleted">Batch Deleted</span>
+        ) : (
+          <StatusBadge status={s.status} />
+        )}
+        {s.whatsapp_url && (
+          <a
+            className="wa-btn"
+            href={s.whatsapp_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <WhatsAppIcon width={16} height={16} /> Message
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -77,6 +114,22 @@ export default function AdminStudents() {
   const [students, setStudents] = useState(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  // Universal search across every class (Level 1).
+  const [allStudents, setAllStudents] = useState(null)
+  const [globalSearch, setGlobalSearch] = useState('')
+
+  useEffect(() => {
+    adminApi('/api/admin/students').then(setAllStudents).catch(guard)
+  }, [guard])
+
+  const globalResults = useMemo(() => {
+    const q = globalSearch.trim().toLowerCase()
+    if (!q) return null
+    if (!allStudents) return []
+    return allStudents
+      .filter((s) => s.name.toLowerCase().includes(q) || (s.phone || '').includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [globalSearch, allStudents])
 
   const slotName = (batchId, key) =>
     clsMap.get(batchId)?.slots?.find((s) => s.key === key)?.name
@@ -150,7 +203,35 @@ export default function AdminStudents() {
           <PlusIcon width={18} height={18} /> Add student
         </button>
 
-        {!stats ? (
+        {/* Universal search — spans every class */}
+        <div className="search" style={{ marginBottom: 14 }}>
+          <SearchIcon width={18} height={18} />
+          <input
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            placeholder="Search students in all classes"
+            autoCapitalize="none"
+          />
+        </div>
+
+        {globalResults !== null ? (
+          allStudents === null ? (
+            <ListSkeleton rows={4} />
+          ) : globalResults.length === 0 ? (
+            <div className="card empty">No students match “{globalSearch.trim()}”.</div>
+          ) : (
+            <div className="stack" style={{ gap: 10 }}>
+              {globalResults.map((s) => (
+                <StudentCard
+                  key={s.id}
+                  s={s}
+                  onOpen={(id) => navigate(`/admin/students/${id}`)}
+                  sub={`${s.batch_label}${s.slot_label ? ` · ${s.slot_label}` : ''}`}
+                />
+              ))}
+            </div>
+          )
+        ) : !stats ? (
           <ListSkeleton rows={5} />
         ) : perBatch.length === 0 ? (
           <div className="card empty">No classes yet — add one from the Classes tab.</div>
@@ -282,38 +363,12 @@ export default function AdminStudents() {
       ) : (
         <div className="stack" style={{ gap: 10, marginTop: 12 }}>
           {visible.map((s) => (
-            <div
-              className="student-card tappable"
+            <StudentCard
               key={s.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(`/admin/students/${s.id}`)}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
-            >
-              <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
-              <div className="s-info">
-                <div className="s-name">{s.name}</div>
-                <div className="s-sub">{s.phone}</div>
-              </div>
-              <div className="s-right">
-                {s.batch_deleted ? (
-                  <span className="badge deleted">Batch Deleted</span>
-                ) : (
-                  <StatusBadge status={s.status} />
-                )}
-                {s.whatsapp_url && (
-                  <a
-                    className="wa-btn"
-                    href={s.whatsapp_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <WhatsAppIcon width={16} height={16} /> Message
-                  </a>
-                )}
-              </div>
-            </div>
+              s={s}
+              onOpen={(id) => navigate(`/admin/students/${id}`)}
+              sub={s.phone}
+            />
           ))}
         </div>
       )}
