@@ -24,7 +24,14 @@ from ..classes_store import (
 )
 from ..constants import ENQUIRY, FEE_TYPES, SESSION_PACK
 from ..db import get_supabase
-from ..fees import compute_due, current_period, now_local, period_of, previous_period
+from ..fees import (
+    compute_due,
+    current_period,
+    now_local,
+    parse_period,
+    period_of,
+    previous_period,
+)
 from ..payments_store import amount_paid_for, is_period_paid, record_cash_payment
 from ..schemas import (
     ActivityPayment,
@@ -35,6 +42,8 @@ from ..schemas import (
     AdminCreateStudentResponse,
     AdminLoginRequest,
     AdminLoginResponse,
+    AdminMonthRow,
+    AdminMonthView,
     AdminPaymentRow,
     AdminStats,
     AdminStudentDetail,
@@ -129,6 +138,20 @@ def _collection_rate(actual: int, expected: int) -> float:
     if expected <= 0:
         return 0.0
     return round(actual / expected * 100, 1)
+
+
+def _valid_period(period: str | None) -> str:
+    """Validate an optional YYYY-MM query param; default to the current month.
+    A future month is rejected (nothing has been billed yet)."""
+    if not period:
+        return current_period()
+    try:
+        parse_period(period)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid month")
+    if period > current_period():
+        raise HTTPException(status_code=400, detail="That month hasn't started yet")
+    return period
 
 
 @router.post("/login", response_model=AdminLoginResponse)
@@ -236,9 +259,12 @@ def remove_class(class_id: str):
     response_model=list[AdminStudentRow],
     dependencies=[Depends(require_admin)],
 )
-def list_batch(batch: str, slot: str | None = None):
+def list_batch(batch: str, slot: str | None = None, period: str | None = None):
+    """Students in a class (optionally one timing slot) with their paid/unpaid
+    status for a month. Defaults to the current month; an earlier month shows who
+    had paid then (members who hadn't joined yet are left out)."""
     sb = get_supabase()
-    period = current_period()
+    period = _valid_period(period)
     cls = get_class(batch)
     deleted = _deleted(cls)
     students = (
@@ -247,6 +273,8 @@ def list_batch(batch: str, slot: str | None = None):
     # Classes with timing slots can be filtered to a single slot.
     if cls and cls.get("slots") and slot:
         students = [s for s in students if s.get("batch_slot") == slot]
+    # Only members who had joined by the selected month owed a fee then.
+    students = [s for s in students if period >= period_of(_as_date(s["join_date"]))]
     ids = [s["id"] for s in students]
     paid = _paid_amounts_for_period(period, ids)
     received = _received_amounts_for_period(period, ids)
@@ -534,6 +562,84 @@ def payment_history(limit: int = 100):
             )
         )
     return rows
+
+
+@router.get(
+    "/month/{period}",
+    response_model=AdminMonthView,
+    dependencies=[Depends(require_admin)],
+)
+def month_view(period: str):
+    """Every student's payment status for a single calendar month, across all
+    classes — the month-wise roster so the admin can see who's paid and who still
+    owes without opening each student. The UI defaults to the current month and
+    steps back to earlier months, which show their historical state."""
+    period = _valid_period(period)
+    cur = current_period()
+    sb = get_supabase()
+    cmap = class_map()
+    students = sb.table("students").select("*").order("name").execute().data
+    pays = (
+        sb.table("payments")
+        .select("student_id, amount_paise, paid_paise, status, paid_at, razorpay_payment_id")
+        .eq("period", period)
+        .execute()
+    ).data
+    pmap = {p["student_id"]: p for p in pays}
+
+    rows: list[AdminMonthRow] = []
+    collected = expected = paid_count = unpaid_count = 0
+    for s in students:
+        join_date = _as_date(s["join_date"])
+        # Nothing was owed before they joined the studio.
+        if period < period_of(join_date):
+            continue
+        cls = cmap.get(s["batch"])
+        due = compute_due(_fee_cls(cls), join_date, period)
+        pay = pmap.get(s["id"])
+        paid_paise = (pay.get("paid_paise") or 0) if pay else 0
+        # Skip months with no fee and no money in (enquiry / deleted class).
+        if due.amount_paise <= 0 and paid_paise <= 0:
+            continue
+        is_paid = bool(pay and pay["status"] == "paid")
+        status = "paid" if is_paid else ("partial" if paid_paise > 0 else "unpaid")
+        remaining = max(due.amount_paise - paid_paise, 0)
+        sl = slot_label_of(cls, s.get("batch_slot"))
+        wa = None
+        if not is_paid and remaining > 0:
+            wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), remaining, period)
+        rows.append(
+            AdminMonthRow(
+                id=s["id"],
+                name=s["name"],
+                batch=s["batch"],
+                batch_label=class_label(cls),
+                slot_label=sl,
+                due_paise=due.amount_paise,
+                paid_paise=paid_paise,
+                status=status,
+                method=_payment_method(pay) if (pay and paid_paise > 0) else None,
+                paid_at=pay.get("paid_at") if pay else None,
+                is_prorata=due.is_prorata,
+                whatsapp_url=wa,
+            )
+        )
+        collected += paid_paise
+        expected += due.amount_paise
+        if is_paid:
+            paid_count += 1
+        else:
+            unpaid_count += 1
+
+    return AdminMonthView(
+        period=period,
+        is_current=(period == cur),
+        collected_paise=collected,
+        expected_paise=expected,
+        paid_count=paid_count,
+        unpaid_count=unpaid_count,
+        rows=rows,
+    )
 
 
 def _build_student_detail(s: dict) -> AdminStudentDetail:

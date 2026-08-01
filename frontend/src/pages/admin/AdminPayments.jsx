@@ -5,6 +5,7 @@ import { rupees } from '../../lib/batches'
 import { SearchIcon, DownloadIcon, WhatsAppIcon, CashIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
 import { toCsv, downloadCsv } from '../../lib/csv'
+import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
 
 function pct(n) {
   const sign = n > 0 ? '+' : ''
@@ -16,11 +17,6 @@ function dateLabel(iso) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
-function periodLabel(period) {
-  const [y, m] = period.split('-').map(Number)
-  return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
-}
-
 const TABS = [
   { id: 'collected', label: 'Collected' },
   { id: 'pending', label: 'Pending' },
@@ -29,42 +25,81 @@ const TABS = [
 
 export default function AdminPayments() {
   const { stats, guard } = useAdmin()
-  const [history, setHistory] = useState(null)
-  const [unpaid, setUnpaid] = useState(null)
+  const CUR = currentPeriod()
+  const [period, setPeriod] = useState(CUR)
+  const [month, setMonth] = useState(null)
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('collected')
 
+  // Reload the whole roster whenever the selected month changes.
   useEffect(() => {
-    adminApi('/api/admin/payments').then(setHistory).catch(guard)
-    adminApi('/api/admin/unpaid').then(setUnpaid).catch(guard)
-  }, [guard])
+    adminApi(`/api/admin/month/${period}`).then(setMonth).catch(guard)
+  }, [period, guard])
 
-  const visible = useMemo(() => {
-    if (!history) return null
+  // While the fetch is in flight `month` still holds the previous month's data,
+  // so treat a period mismatch as loading rather than clearing state in the effect.
+  const loading = !month || month.period !== period
+  const rows = useMemo(() => (loading ? [] : month.rows), [loading, month])
+
+  // Collected: anyone with money in this month (full or partial cash).
+  const collected = useMemo(() => rows.filter((r) => r.paid_paise > 0), [rows])
+  // Pending: not fully paid — a partial payer shows in both lists (paid some, owes some).
+  const pending = useMemo(() => rows.filter((r) => r.status !== 'paid'), [rows])
+
+  const visibleCollected = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return q ? history.filter((p) => p.name.toLowerCase().includes(q)) : history
-  }, [history, search])
+    return q ? collected.filter((p) => p.name.toLowerCase().includes(q)) : collected
+  }, [collected, search])
 
   const pendingTotal = useMemo(
-    () => (unpaid ? unpaid.reduce((sum, s) => sum + s.amount_paise, 0) : 0),
-    [unpaid],
+    () => pending.reduce((sum, s) => sum + Math.max(s.due_paise - s.paid_paise, 0), 0),
+    [pending],
   )
-  const pendingCount = unpaid?.length ?? 0
+  const pendingCount = pending.length
+
+  // By batch: collapse the roster into per-class collection, with slot breakdown.
+  const byBatch = useMemo(() => {
+    const map = new Map()
+    for (const r of rows) {
+      let g = map.get(r.batch)
+      if (!g) {
+        g = { batch: r.batch, batch_label: r.batch_label, total: 0, paid: 0, collected: 0, expected: 0, slots: new Map() }
+        map.set(r.batch, g)
+      }
+      g.total += 1
+      if (r.status === 'paid') g.paid += 1
+      g.collected += r.paid_paise
+      g.expected += r.due_paise
+      if (r.slot_label) {
+        let sg = g.slots.get(r.slot_label)
+        if (!sg) { sg = { label: r.slot_label, total: 0, paid: 0, collected: 0, expected: 0 }; g.slots.set(r.slot_label, sg) }
+        sg.total += 1
+        if (r.status === 'paid') sg.paid += 1
+        sg.collected += r.paid_paise
+        sg.expected += r.due_paise
+      }
+    }
+    const rate = (c, e) => (e > 0 ? Math.round((c / e) * 1000) / 10 : 0)
+    return [...map.values()].map((g) => ({
+      ...g,
+      rate: rate(g.collected, g.expected),
+      slots: [...g.slots.values()].map((s) => ({ ...s })),
+    }))
+  }, [rows])
 
   const exportCsv = () => {
-    if (!history || history.length === 0) return
+    if (collected.length === 0) return
     const headers = ['Name', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Paid on']
-    const rows = history.map((p) => [
+    const csvRows = collected.map((p) => [
       p.name,
       p.batch_label,
       p.slot_label || '',
-      periodLabel(p.period),
-      (p.amount_paise / 100).toFixed(2),
-      p.method,
+      periodLabel(period),
+      (p.paid_paise / 100).toFixed(2),
+      p.method || '',
       p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-IN') : '',
     ])
-    const stamp = new Date().toISOString().slice(0, 10)
-    downloadCsv(`payments-${stamp}.csv`, toCsv(headers, rows))
+    downloadCsv(`payments-${period}.csv`, toCsv(headers, csvRows))
   }
 
   return (
@@ -75,29 +110,49 @@ export default function AdminPayments() {
         </div>
       </div>
 
-      {/* Revenue hero — collected this month + trend + what's still pending */}
-      {!stats ? (
-        <div className="card">
+      {/* Month navigator — steps through past months; can't go past the current one */}
+      <div className="month-nav">
+        <button type="button" aria-label="Previous month" onClick={() => setPeriod(shiftPeriod(period, -1))}>
+          ‹
+        </button>
+        <div className="month-nav-label">
+          {periodLabel(period)}
+          {period === CUR ? <span className="today-tag">This month</span> : null}
+        </div>
+        <button
+          type="button"
+          aria-label="Next month"
+          onClick={() => setPeriod(shiftPeriod(period, 1))}
+          disabled={period >= CUR}
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Revenue hero — collected in the selected month + what's still pending */}
+      {loading ? (
+        <div className="card" style={{ marginTop: 12 }}>
           <Skeleton height={14} width="40%" />
           <Skeleton height={34} width="55%" style={{ marginTop: 10 }} />
           <Skeleton height={13} width="70%" style={{ marginTop: 10 }} />
         </div>
       ) : (
-        <div className="card pay-hero">
-          <div className="muted small">Collected this month</div>
+        <div className="card pay-hero" style={{ marginTop: 12 }}>
+          <div className="muted small">{month.is_current ? 'Collected this month' : `Collected in ${periodLabel(period)}`}</div>
           <div className="amount" style={{ fontSize: 34, marginTop: 2 }}>
-            {rupees(stats.revenue_paise)}
+            {rupees(month.collected_paise)}
           </div>
           <div className="pay-hero-sub">
-            <span
-              className="pay-chip"
-              style={{ color: stats.revenue_change_pct >= 0 ? 'var(--paid)' : 'var(--unpaid)' }}
-            >
-              {pct(stats.revenue_change_pct)} vs last month
-            </span>
-            <span className="pay-chip">
-              of {rupees(stats.expected_paise)} expected
-            </span>
+            {month.is_current && stats && (
+              <span
+                className="pay-chip"
+                style={{ color: stats.revenue_change_pct >= 0 ? 'var(--paid)' : 'var(--unpaid)' }}
+              >
+                {pct(stats.revenue_change_pct)} vs last month
+              </span>
+            )}
+            <span className="pay-chip">of {rupees(month.expected_paise)} expected</span>
+            <span className="pay-chip">{month.paid_count} paid</span>
           </div>
           {pendingCount > 0 && (
             <div className="pay-hero-pending">
@@ -124,12 +179,12 @@ export default function AdminPayments() {
         ))}
       </div>
 
-      {/* ── Collected: searchable payment history ── */}
+      {/* ── Collected: searchable list of who paid this month ── */}
       {tab === 'collected' && (
         <>
           <div className="section-h" style={{ marginTop: 16, marginBottom: 8 }}>
-            <h2>Payment history</h2>
-            {history && history.length > 0 && (
+            <h2>Collected · {periodLabel(period)}</h2>
+            {collected.length > 0 && (
               <button type="button" className="link-btn" onClick={exportCsv}>
                 <DownloadIcon width={15} height={15} /> Export CSV
               </button>
@@ -145,63 +200,64 @@ export default function AdminPayments() {
             />
           </div>
 
-          {visible === null ? (
+          {loading ? (
             <ListSkeleton rows={5} />
-          ) : visible.length === 0 ? (
+          ) : visibleCollected.length === 0 ? (
             <div className="card empty">
-              {history && history.length > 0 ? 'No payments match.' : 'No payments received yet.'}
+              {collected.length > 0 ? 'No payments match.' : 'No payments received this month yet.'}
             </div>
           ) : (
             <div className="card flush" style={{ marginTop: 12 }}>
               <div className="list scroll-list scroll-tall">
-              {visible.map((p) => (
-                <div className="list-item pay-row" key={p.id}>
-                  <div className="li-main">
-                    <div className="feed-name">{p.name}</div>
-                    <div className="muted small">
-                      {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} ·{' '}
-                      {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
-                      {p.method}{p.is_partial ? ' · partial' : ''}
+                {visibleCollected.map((p) => (
+                  <div className="list-item pay-row" key={p.id}>
+                    <div className="li-main">
+                      <div className="feed-name">{p.name}</div>
+                      <div className="muted small">
+                        {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} ·{' '}
+                        {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                        {p.method}{p.status === 'partial' ? ' · partial' : ''}
+                      </div>
+                    </div>
+                    <div className="feed-right">
+                      <span style={{ color: p.status === 'partial' ? 'var(--warn)' : 'var(--paid)', fontWeight: 700 }}>
+                        {rupees(p.paid_paise)}
+                      </span>
+                      <span className="muted small">{dateLabel(p.paid_at) || periodLabel(period)}</span>
                     </div>
                   </div>
-                  <div className="feed-right">
-                    <span style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700 }}>
-                      {rupees(p.amount_paise)}
-                    </span>
-                    <span className="muted small">{dateLabel(p.paid_at) || periodLabel(p.period)}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* ── Pending: unpaid students + WhatsApp reminders ── */}
+      {/* ── Pending: who still owes this month + WhatsApp reminders ── */}
       {tab === 'pending' && (
         <>
           <div className="section-h" style={{ marginTop: 16, marginBottom: 4 }}>
-            <h2>Awaiting payment</h2>
+            <h2>Awaiting payment · {periodLabel(period)}</h2>
             {pendingCount > 0 && <span className="muted small">{rupees(pendingTotal)} total</span>}
           </div>
-          {unpaid === null ? (
+          {loading ? (
             <ListSkeleton rows={3} />
-          ) : unpaid.length === 0 ? (
-            <div className="card empty">Everyone's paid this month 🎉</div>
+          ) : pending.length === 0 ? (
+            <div className="card empty">Everyone's paid for this month 🎉</div>
           ) : (
             <>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
                 Tap Remind to open WhatsApp with a prefilled message.
               </p>
               <div className="card flush list">
-                {unpaid.map((s) => (
+                {pending.map((s) => (
                   <div className="list-item pay-row" key={s.id}>
                     <div className="li-main">
                       <div className="feed-name">{s.name}</div>
                       <div className="muted small">
-                        {rupees(s.amount_paise)} due · {s.batch_label}
+                        {rupees(Math.max(s.due_paise - s.paid_paise, 0))} due · {s.batch_label}
                         {s.slot_label ? ` · ${s.slot_label}` : ''}
+                        {s.status === 'partial' ? ' · part-paid' : ''}
                       </div>
                     </div>
                     {s.whatsapp_url && (
@@ -217,31 +273,33 @@ export default function AdminPayments() {
         </>
       )}
 
-      {/* ── By batch: revenue + collection breakdown ── */}
+      {/* ── By batch: collection breakdown for the selected month ── */}
       {tab === 'batch' && (
         <div style={{ marginTop: 16 }}>
-          {!stats ? (
+          {loading ? (
             <ListSkeleton rows={4} />
+          ) : byBatch.length === 0 ? (
+            <div className="card empty">No students due this month.</div>
           ) : (
             <div className="stack" style={{ gap: 10 }}>
-              {stats.per_batch.map((b) => (
+              {byBatch.map((b) => (
                 <div className="card" key={b.batch}>
                   <div className="between">
                     <strong>{b.batch_label}</strong>
-                    <span className="muted small">{b.paid_count}/{b.total_students} paid · {b.collection_rate}%</span>
+                    <span className="muted small">{b.paid}/{b.total} paid · {b.rate}%</span>
                   </div>
                   <div className="between" style={{ marginTop: 4 }}>
-                    <span className="muted small">{rupees(b.revenue_paise)} of {rupees(b.expected_paise)}</span>
+                    <span className="muted small">{rupees(b.collected)} of {rupees(b.expected)}</span>
                   </div>
-                  <div className="bar"><span style={{ width: `${Math.min(b.collection_rate, 100)}%` }} /></div>
+                  <div className="bar"><span style={{ width: `${Math.min(b.rate, 100)}%` }} /></div>
 
-                  {b.slots?.length > 0 && (
+                  {b.slots.length > 0 && (
                     <div className="slot-breakdown">
                       {b.slots.map((s) => (
-                        <div key={s.slot} className="between slot-row">
-                          <span className="muted small">{s.slot_label || s.slot}</span>
+                        <div key={s.label} className="between slot-row">
+                          <span className="muted small">{s.label}</span>
                           <span className="muted small">
-                            {rupees(s.revenue_paise)} / {rupees(s.expected_paise)} · {s.paid_count}/{s.total_students}
+                            {rupees(s.collected)} / {rupees(s.expected)} · {s.paid}/{s.total}
                           </span>
                         </div>
                       ))}

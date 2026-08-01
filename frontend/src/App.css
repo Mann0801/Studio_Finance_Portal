@@ -1384,6 +1384,59 @@ button.menu-item {
   margin-top: 4px;
 }
 
+/* Students Level 1: 2-up class overview grid. */
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.class-tile {
+  display: flex;
+  flex-direction: column;
+  min-height: 128px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  animation: card-in 0.28s ease both;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+.class-tile:active {
+  transform: scale(0.985);
+  border-color: var(--accent);
+}
+.class-tile .ct-name {
+  font-weight: 800;
+  font-size: 15.5px;
+  line-height: 1.25;
+}
+.class-tile .ct-sched {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.class-tile .ct-spacer {
+  flex: 1;
+  min-height: 12px;
+}
+.class-tile .ct-count {
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+}
+.class-tile .ct-count small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
 /* "Deleted" tag beside a removed class name (Students Level 1). */
 .mini-badge {
   display: inline-block;
@@ -1557,6 +1610,46 @@ button.menu-item {
 .slot-edit .slot-name-in {
   flex: 1;
   font-weight: 700;
+}
+
+/* ── Admin: month navigator ── */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+.month-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.month-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.month-nav-label {
+  flex: 1;
+  text-align: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+.month-nav-label .today-tag {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 1px;
 }
 
 /* ── Admin: payments revenue hero ── */

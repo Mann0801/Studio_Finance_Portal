@@ -194,6 +194,33 @@ class AdminPaymentRow(BaseModel):
     is_partial: bool = False   # a partial cash payment on a not-yet-cleared month
 
 
+class AdminMonthRow(BaseModel):
+    """One student's status for a single month (the month-wise admin roster)."""
+    id: str
+    name: str
+    batch: str
+    batch_label: str = ""
+    slot_label: Optional[str] = None
+    due_paise: int             # fee owed for this month
+    paid_paise: int = 0        # amount received toward it (partial or full)
+    status: str                # 'paid' | 'partial' | 'unpaid'
+    method: Optional[str] = None   # 'Cash' | 'Online' | None (nothing received yet)
+    paid_at: Optional[datetime] = None
+    is_prorata: bool = False
+    whatsapp_url: Optional[str] = None  # reminder link, present only while a balance is owed
+
+
+class AdminMonthView(BaseModel):
+    """Everyone's payment status for one calendar month, across all classes."""
+    period: str
+    is_current: bool
+    collected_paise: int       # total received this month
+    expected_paise: int        # total due this month
+    paid_count: int
+    unpaid_count: int          # not fully paid (includes partial)
+    rows: list[AdminMonthRow]
+
+
 class StudentPaymentRow(BaseModel):
     period: str
     amount_paise: int          # full fee for the month
