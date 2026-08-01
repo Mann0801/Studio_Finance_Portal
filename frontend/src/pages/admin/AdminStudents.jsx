@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { useClasses, scheduleLabel } from '../../lib/classes'
+import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
 import StatusBadge from '../../components/StatusBadge'
 import {
   WhatsAppIcon,
@@ -21,15 +22,30 @@ const FILTERS = [
 
 const pct = (paid, total) => (total ? Math.round((paid / total) * 100) : 0)
 
-/** A batch/slot summary card (Level 1 + the timing screen). */
-function OverviewCard({ title, badge, subtitle, stat, onClick }) {
+/** A class tile for the 2-up overview grid — name, schedule and student count. */
+function ClassTile({ title, badge, subtitle, count, onClick }) {
+  return (
+    <button className="class-tile" onClick={onClick}>
+      <div className="ct-name">{title}{badge}</div>
+      {subtitle && <div className="ct-sched">{subtitle}</div>}
+      <div className="ct-spacer" />
+      <div className="ct-count">
+        {count}
+        <small>student{count === 1 ? '' : 's'}</small>
+      </div>
+    </button>
+  )
+}
+
+/** A slot summary card (timing picker for classes with slots). */
+function SlotCard({ title, subtitle, stat, onClick }) {
   const total = stat?.total_students ?? 0
   const paid = stat?.paid_count ?? 0
   const unpaid = stat?.unpaid_count ?? 0
   return (
     <button className="batch-card" onClick={onClick}>
       <div className="bc-main">
-        <div className="bc-name">{title}{badge}</div>
+        <div className="bc-name">{title}</div>
         {subtitle && <div className="bc-sched">{subtitle}</div>}
         <div className="bc-stats">
           <span className="bc-total">{total} student{total === 1 ? '' : 's'}</span>
@@ -52,10 +68,12 @@ export default function AdminStudents() {
   const { classes } = useClasses()
   const clsMap = useMemo(() => new Map((classes || []).map((c) => [c.id, c])), [classes])
   const perBatch = stats?.per_batch || []
+  const CUR = currentPeriod()
 
   const [view, setView] = useState('batches') // 'batches' | 'slots' | 'students'
   const [activeBatch, setActiveBatch] = useState(null) // a per_batch entry
   const [activeSlot, setActiveSlot] = useState(null) // slot key | null
+  const [period, setPeriod] = useState(CUR)
   const [students, setStudents] = useState(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
@@ -64,10 +82,13 @@ export default function AdminStudents() {
     clsMap.get(batchId)?.slots?.find((s) => s.key === key)?.name
 
   const fetchStudents = useCallback(
-    (batchId, slotId) => {
+    (batchId, slotId, per) => {
       setStudents(null)
-      const q = slotId ? `?slot=${slotId}` : ''
-      adminApi(`/api/admin/batches/${batchId}${q}`).then(setStudents).catch(guard)
+      const params = new URLSearchParams()
+      if (slotId) params.set('slot', slotId)
+      if (per) params.set('period', per)
+      const q = params.toString()
+      adminApi(`/api/admin/batches/${batchId}${q ? `?${q}` : ''}`).then(setStudents).catch(guard)
     },
     [guard],
   )
@@ -77,8 +98,9 @@ export default function AdminStudents() {
     setActiveSlot(slotId)
     setSearch('')
     setFilter('all')
+    setPeriod(CUR)
     setView('students')
-    fetchStudents(entry.batch, slotId)
+    fetchStudents(entry.batch, slotId, CUR)
   }
 
   const openBatch = (entry) => {
@@ -88,6 +110,13 @@ export default function AdminStudents() {
     } else {
       openStudents(entry, null)
     }
+  }
+
+  const changeMonth = (delta) => {
+    const next = shiftPeriod(period, delta)
+    if (next > CUR) return
+    setPeriod(next)
+    fetchStudents(activeBatch.batch, activeSlot, next)
   }
 
   const visible = useMemo(() => {
@@ -105,7 +134,7 @@ export default function AdminStudents() {
       })
   }, [students, search, filter])
 
-  // ── Level 1: classes overview ──────────────────────────────────────────────
+  // ── Level 1: classes overview (2-up grid) ──────────────────────────────────
   if (view === 'batches') {
     return (
       <>
@@ -126,16 +155,16 @@ export default function AdminStudents() {
         ) : perBatch.length === 0 ? (
           <div className="card empty">No classes yet — add one from the Classes tab.</div>
         ) : (
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="class-grid">
             {perBatch.map((e) => {
               const cls = clsMap.get(e.batch)
               return (
-                <OverviewCard
+                <ClassTile
                   key={e.batch}
                   title={e.batch_label}
                   badge={!cls ? <span className="mini-badge">Deleted</span> : null}
                   subtitle={cls ? scheduleLabel(cls) : 'Removed class'}
-                  stat={e}
+                  count={e.total_students}
                   onClick={() => openBatch(e)}
                 />
               )
@@ -163,7 +192,7 @@ export default function AdminStudents() {
 
         <div className="stack" style={{ gap: 12 }}>
           {activeBatch.slots.map((s) => (
-            <OverviewCard
+            <SlotCard
               key={s.slot}
               title={slotName(activeBatch.batch, s.slot) || s.slot_label}
               subtitle={s.slot_label}
@@ -180,9 +209,10 @@ export default function AdminStudents() {
   // ── Level 2: students in a class/slot ──────────────────────────────────────
   const cls = clsMap.get(activeBatch.batch)
   const st = activeSlot ? activeBatch.slots.find((s) => s.slot === activeSlot) : activeBatch
-  const total = st?.total_students ?? students?.length ?? 0
-  const paidN = st?.paid_count ?? 0
-  const unpaidN = st?.unpaid_count ?? 0
+  // Counts reflect the SELECTED month (derived from the fetched roster).
+  const total = students?.length ?? 0
+  const paidN = students ? students.filter((s) => s.status === 'paid').length : 0
+  const unpaidN = total - paidN
   const subtitle = activeSlot ? st?.slot_label ?? '' : cls ? scheduleLabel(cls) : ''
   const backToLevel1 = () => setView(activeBatch.slots?.length ? 'slots' : 'batches')
 
@@ -198,8 +228,20 @@ export default function AdminStudents() {
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="stat-grid stat-grid-3">
+      {/* Month selector — current month by default; step back for earlier months */}
+      <div className="month-nav">
+        <button type="button" aria-label="Previous month" onClick={() => changeMonth(-1)}>‹</button>
+        <div className="month-nav-label">
+          {periodLabel(period)}
+          {period === CUR ? <span className="today-tag">This month</span> : null}
+        </div>
+        <button type="button" aria-label="Next month" onClick={() => changeMonth(1)} disabled={period >= CUR}>
+          ›
+        </button>
+      </div>
+
+      {/* Quick stats for the selected month */}
+      <div className="stat-grid stat-grid-3" style={{ marginTop: 12 }}>
         <div className="stat"><div className="num">{total}</div><div className="label">Total</div></div>
         <div className="stat"><div className="num" style={{ color: 'var(--paid)' }}>{paidN}</div><div className="label">Paid</div></div>
         <div className="stat"><div className="num" style={{ color: 'var(--unpaid)' }}>{unpaidN}</div><div className="label">Unpaid</div></div>
@@ -235,7 +277,7 @@ export default function AdminStudents() {
         <ListSkeleton rows={4} />
       ) : visible.length === 0 ? (
         <div className="card empty">
-          {students && students.length > 0 ? 'No students match.' : 'No students in this class yet.'}
+          {students && students.length > 0 ? 'No students match.' : 'No students in this class for this month.'}
         </div>
       ) : (
         <div className="stack" style={{ gap: 10, marginTop: 12 }}>
