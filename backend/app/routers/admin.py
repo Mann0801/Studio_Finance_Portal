@@ -312,6 +312,51 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
     return rows
 
 
+@router.get(
+    "/students",
+    response_model=list[AdminStudentRow],
+    dependencies=[Depends(require_admin)],
+)
+def all_students():
+    """Every student across all classes with their current-month status — powers
+    the universal search on the Students tab."""
+    sb = get_supabase()
+    period = current_period()
+    cmap = class_map()
+    students = sb.table("students").select("*").order("name").execute().data
+    ids = [s["id"] for s in students]
+    paid = _paid_amounts_for_period(period, ids)
+    received = _received_amounts_for_period(period, ids)
+
+    rows: list[AdminStudentRow] = []
+    for s in students:
+        cls = cmap.get(s["batch"])
+        join_date = _as_date(s["join_date"])
+        due = compute_due(_fee_cls(cls), join_date, period)
+        is_paid = s["id"] in paid
+        amount = paid[s["id"]] if is_paid else max(due.amount_paise - received.get(s["id"], 0), 0)
+        rows.append(
+            AdminStudentRow(
+                id=s["id"],
+                name=s["name"],
+                email=s.get("email"),
+                phone=s["phone"],
+                batch=s["batch"],
+                batch_label=class_label(cls),
+                batch_slot=s.get("batch_slot"),
+                slot_label=slot_label_of(cls, s.get("batch_slot")),
+                batch_deleted=_deleted(cls),
+                join_date=join_date,
+                period=period,
+                amount_paise=amount,
+                is_prorata=due.is_prorata,
+                status="paid" if is_paid else "unpaid",
+                whatsapp_url=None,
+            )
+        )
+    return rows
+
+
 @router.get("/stats", response_model=AdminStats, dependencies=[Depends(require_admin)])
 def stats():
     sb = get_supabase()
