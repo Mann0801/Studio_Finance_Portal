@@ -25,7 +25,7 @@ import AdminRecordCash from './pages/admin/AdminRecordCash'
 import AdminPayments from './pages/admin/AdminPayments'
 import AdminClasses from './pages/admin/AdminClasses'
 import AdminClassForm from './pages/admin/AdminClassForm'
-import AdminWhatsApp from './pages/admin/AdminWhatsApp'
+import AdminClassDetail from './pages/admin/AdminClassDetail'
 import AdminAnnouncements from './pages/admin/AdminAnnouncements'
 import AdminSettings from './pages/admin/AdminSettings'
 import Plans from './pages/Plans'
@@ -73,9 +73,9 @@ export default function App() {
             <Route path="/admin/students/:id/record-cash/:period" element={<AdminRecordCash />} />
             <Route path="/admin/classes" element={<AdminClasses />} />
             <Route path="/admin/classes/new" element={<AdminClassForm />} />
-            <Route path="/admin/classes/:id" element={<AdminClassForm />} />
+            <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
+            <Route path="/admin/classes/:id/edit" element={<AdminClassForm />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
-            <Route path="/admin/whatsapp" element={<AdminWhatsApp />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>

@@ -12,7 +12,6 @@ import {
   MenuIcon,
   CloseIcon,
   LogoutIcon,
-  WhatsAppIcon,
 } from './Icons'
 
 const TABS = [
@@ -20,7 +19,6 @@ const TABS = [
   { to: '/admin/students', label: 'Students', Icon: UsersIcon },
   { to: '/admin/classes', label: 'Classes', Icon: ClassIcon },
   { to: '/admin/payments', label: 'Payments', Icon: PaymentIcon },
-  { to: '/admin/whatsapp', label: 'WhatsApp Groups', Icon: WhatsAppIcon },
   { to: '/admin/announcements', label: 'Announcements', Icon: MegaphoneIcon },
   { to: '/admin/settings', label: 'Settings', Icon: SettingsIcon },
 ]
