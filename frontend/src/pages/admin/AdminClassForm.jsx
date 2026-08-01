@@ -84,7 +84,11 @@ export default function AdminClassForm() {
   return (
     <>
       <div className="topbar with-back">
-        <button className="back-btn" aria-label="Back" onClick={() => navigate('/admin/classes')}>
+        <button
+          className="back-btn"
+          aria-label="Back"
+          onClick={() => navigate(id ? `/admin/classes/${id}` : '/admin/classes')}
+        >
           <ArrowLeftIcon width={22} height={22} />
         </button>
         <div className="greeting">
@@ -163,7 +167,7 @@ function ClassForm({ id, initial }) {
       else await adminApi('/api/admin/classes', { method: 'POST', body })
       invalidateClasses()
       reloadStats()
-      navigate('/admin/classes')
+      navigate(id ? `/admin/classes/${id}` : '/admin/classes')
     } catch (err) {
       if (/expired|log in/i.test(err.message)) guard(err)
       else setError(err.message)

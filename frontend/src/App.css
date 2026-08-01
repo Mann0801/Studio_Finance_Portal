@@ -1437,6 +1437,95 @@ button.menu-item {
   margin-left: 6px;
 }
 
+/* Classes tab: tappable class cards (avatar + title). */
+.class-name-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  animation: card-in 0.28s ease both;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+.class-name-row:active {
+  transform: scale(0.99);
+  border-color: var(--accent);
+}
+.class-name-row .cls-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.class-name-row .cls-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 15.5px;
+}
+.class-name-row .bc-chev {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Class detail: label/value rows. */
+.detail-list {
+  display: flex;
+  flex-direction: column;
+}
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.detail-row:last-child {
+  border-bottom: none;
+}
+.detail-row .dr-label {
+  color: var(--muted);
+  font-size: 13.5px;
+  flex-shrink: 0;
+}
+.detail-row .dr-value {
+  font-weight: 600;
+  text-align: right;
+}
+.detail-slots {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+.detail-slots .dr-label {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.detail-slots .slot-row {
+  padding: 7px 0;
+  font-weight: 600;
+}
+.btn.danger-outline {
+  background: transparent;
+  border: 1px solid var(--unpaid);
+  color: var(--unpaid);
+}
+
 /* "Deleted" tag beside a removed class name (Students Level 1). */
 .mini-badge {
   display: inline-block;
