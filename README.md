@@ -1,40 +1,50 @@
 # Studio Finance — Fitness Studio Management
 
-A mobile-first PWA for a fitness studio: students sign up, pick a batch, and pay
-monthly fees online via Razorpay; the admin tracks payment status,
-revenue analytics, and posts announcements.
+A mobile-first PWA for a fitness studio: students sign up with a phone number,
+pick a class, and pay monthly fees online via Razorpay; the admin manages the
+class catalogue, tracks payment status month by month, records cash, and posts
+announcements.
 
 ## Stack
 - **Backend:** FastAPI (Python) — deployed on **Render**
 - **Frontend:** React + Vite (installable PWA) — deployed on **Vercel**
 - **Database + Auth:** Supabase (Postgres + Supabase Auth)
 - **Payments:** Razorpay (orders + checkout + webhook)
-- **Email reminders:** Resend (built, disabled until keys are added)
 
 ## Features
-- **Students:** signup with mandatory fields (name, email, 10-digit phone,
-  password, batch), immediate pro-rated first payment, dashboard with payment
-  status and history, announcement banner, installable on the home screen.
-- **Admin:** single login, stats strip, revenue analytics (this vs last month,
-  per-batch expected vs collected and collection rate), batch chips, student
-  cards with one-tap WhatsApp reminders, post/edit/delete announcements.
+- **Students:** phone-number + password signup (no email required), pick a class
+  and studio join date, immediate pro-rated first payment, dashboard showing the
+  current month's due plus any overdue months, payment history, per-class
+  WhatsApp group, announcement banner, installable on the home screen.
+- **Admin:** single login; collection stats (this vs last month, per-class
+  expected vs collected and collection rate); month-by-month view of every
+  payment across all classes; per-class rosters split into paid/unpaid with
+  universal member search; a runtime class catalogue (add/edit/delete classes,
+  fees, schedules and timing slots — no redeploy); cash recording including
+  partial payments; one-tap WhatsApp reminders; member management with
+  join-date edits that recompute dues and admin password resets;
+  post/edit/delete announcements.
 
-## Batches & fees
-| Batch       | Monthly fee |
-|-------------|-------------|
-| Yoga        | ₹2,500      |
-| Zumba       | ₹2,000      |
-| Gymnastics  | ₹3,000      |
+## Classes & fees
+Classes are a **runtime catalogue** stored in Postgres and managed from the admin
+UI — the studio adds, edits or removes classes (name, fee type, fee, schedule
+days, timing slots) with no redeploy. Signup options, dues, rosters and revenue
+breakdowns all query this catalogue dynamically. Fee types support monthly fees
+and session-based fees.
 
-First month is **pro-rata**: `round(fee × days_remaining / days_in_month)`, where
-`days_remaining` is inclusive of the join day. Every later month is the full fee,
-due on the 1st. All month math is in **IST**, on **calendar months**.
+The first month is **pro-rata**: for monthly classes,
+`round(fee × days_remaining / days_in_month)` where `days_remaining` is inclusive
+of the join day (a join on the 1st bills the full month); session-based classes
+pro-rate by remaining sessions. Every later month is the full fee, due on the
+1st. Cash can be recorded in full or in part — a month stays unpaid until the
+received total clears the due. All month math is in **IST**, on **calendar
+months**.
 
 ## Repository layout
 ```
-backend/    FastAPI app (fees, payments, admin, announcements, webhook)
+backend/    FastAPI app (fees, payments, admin, classes, announcements, webhook)
 frontend/   React + Vite PWA (student + admin UI)
-supabase/   schema.sql (tables + Row-Level Security)
+supabase/   schema.sql (base tables + RLS) and migrations/ (incremental changes)
 render.yaml         Render blueprint for the backend
 frontend/vercel.json Vercel config (SPA rewrite + PWA headers)
 ```
@@ -45,7 +55,9 @@ frontend/vercel.json Vercel config (SPA rewrite + PWA headers)
 
 ### Database
 Run `supabase/schema.sql` in the Supabase SQL editor (creates `students`,
-`payments`, `announcements` + RLS policies).
+`payments`, `announcements` + RLS policies), then run each file in
+`supabase/migrations/` in order — these add the dynamic `classes` catalogue,
+partial-payment tracking, and per-class WhatsApp fields.
 
 ### Backend
 ```bash
@@ -82,7 +94,6 @@ npm run dev
 | `ADMIN_JWT_SECRET` | Any long random string (signs the admin session token) |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Razorpay → Settings → API Keys (use `rzp_test_*` for development) |
 | `RAZORPAY_WEBHOOK_SECRET` | Set when you create the webhook (see step 5) |
-| `RESEND_API_KEY` / `REMINDER_FROM_EMAIL` | Optional; leave blank to disable email |
 
 ### `frontend/.env`
 Only **public** values go here (everything ships to the browser):
