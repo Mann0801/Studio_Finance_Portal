@@ -49,6 +49,16 @@ export default function Contact() {
             </span>
           </div>
         )}
+        {BUSINESS.youtube && (
+          <div className="lc-row">
+            <span className="lc-k">YouTube</span>
+            <span className="lc-v">
+              <a href={BUSINESS.youtube} target="_blank" rel="noreferrer">
+                {BUSINESS.youtubeHandle}
+              </a>
+            </span>
+          </div>
+        )}
       </div>
 
       <p className="muted" style={{ marginTop: 18 }}>

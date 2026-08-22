@@ -7,6 +7,8 @@ export const BUSINESS = {
   phones: ['9900521127', '9686390082'],
   instagram: 'https://www.instagram.com/fitwithseemamehta/',
   instagramHandle: '@fitwithseemamehta',
+  youtube: 'https://www.youtube.com/@FitWithSeemaMehta/featured',
+  youtubeHandle: '@FitWithSeemaMehta',
   address:
     '14, Ground Floor, next to The Greens Apartments, near Alpine Eco Apartments, ' +
     'Vinayaka Layout, Dodda Nekkundi Extension, Doddanekkundi, Bengaluru, Karnataka 560037',
