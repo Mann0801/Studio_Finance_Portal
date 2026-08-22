@@ -1,5 +1,5 @@
 import { BUSINESS } from '../../lib/business'
-import { WhatsAppIcon, PhoneIcon } from '../../components/Icons'
+import { WhatsAppIcon, PhoneIcon, InstagramIcon } from '../../components/Icons'
 
 const waLink = (phone) => `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`
 
@@ -53,11 +53,22 @@ export default function StudioContact() {
               <span className="li-main accent" style={{ fontSize: 14 }}>{BUSINESS.email}</span>
             </a>
           )}
+          {BUSINESS.instagram && (
+            <a className="list-item link-row" href={BUSINESS.instagram} target="_blank" rel="noreferrer">
+              <span className="muted">Instagram</span>
+              <span className="li-main accent" style={{ fontSize: 14 }}>{BUSINESS.instagramHandle}</span>
+            </a>
+          )}
         </div>
 
         <a className="btn block wa-cta" href={waLink(BUSINESS.phones[0])} target="_blank" rel="noreferrer">
           <WhatsAppIcon width={18} height={18} /> Message on WhatsApp
         </a>
+        {BUSINESS.instagram && (
+          <a className="btn block ig-cta" href={BUSINESS.instagram} target="_blank" rel="noreferrer">
+            <InstagramIcon width={18} height={18} /> Follow on Instagram
+          </a>
+        )}
         <a className="btn primary block" href={`tel:+91${BUSINESS.phones[0]}`}>
           <PhoneIcon width={18} height={18} /> Call the studio
         </a>

@@ -1900,6 +1900,16 @@ button.menu-item {
   gap: 8px;
   text-decoration: none;
 }
+.btn.ig-cta {
+  background: linear-gradient(135deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
 .btn.ghost.danger-text {
   color: var(--unpaid);
 }
