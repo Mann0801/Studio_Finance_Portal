@@ -21,13 +21,26 @@ function periodLabel(period) {
 
 /** One class's own dues/history/actions — a student in two classes gets two of
  * these, entirely independent of each other. */
-function EnrollmentCard({ en, classes, busy, onRecordCash, onEdit, onRemove, canRemove }) {
+function EnrollmentCard({
+  en,
+  classes,
+  busy,
+  onRecordCash,
+  onEdit,
+  onRemove,
+  canRemove,
+  onWaive,
+  onUnwaive,
+  onRemovePayment,
+}) {
   const cls = classById(classes, en.batch)
   const paid = en.status === 'paid'
+  const waived = en.status === 'waived'
   const [editing, setEditing] = useState(false)
   const [slot, setSlot] = useState(en.batch_slot || '')
   const [joinDate, setJoinDate] = useState(en.join_date)
   const [removeConfirm, setRemoveConfirm] = useState(false)
+  const [removePaymentConfirm, setRemovePaymentConfirm] = useState(null) // period being confirmed
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
@@ -112,22 +125,40 @@ function EnrollmentCard({ en, classes, busy, onRecordCash, onEdit, onRemove, can
 
           <div style={{ marginTop: 12 }}>
             <div className="muted small">
-              {periodLabel(en.period)} {paid ? '' : en.paid_paise > 0 ? '· balance' : '· due'}
+              {periodLabel(en.period)} {waived ? '· waived' : paid ? '' : en.paid_paise > 0 ? '· balance' : '· due'}
             </div>
-            <div className="amount" style={{ fontSize: 26 }}>{rupees(en.amount_paise)}</div>
-            {!paid && en.paid_paise > 0 && (
-              <div className="part-paid">{rupees(en.paid_paise)} already paid in cash</div>
+            {waived ? (
+              <p className="muted" style={{ margin: '4px 0 0' }}>This month's fee was forgiven.</p>
+            ) : (
+              <>
+                <div className="amount" style={{ fontSize: 26 }}>{rupees(en.amount_paise)}</div>
+                {!paid && en.paid_paise > 0 && (
+                  <div className="part-paid">{rupees(en.paid_paise)} already paid in cash</div>
+                )}
+              </>
             )}
           </div>
-          {!paid && en.amount_paise > 0 && (
+          {waived ? (
             <button
-              className="btn primary block"
+              className="btn ghost block"
               style={{ marginTop: 10 }}
-              onClick={() => onRecordCash(en.batch, en.period)}
+              onClick={() => onUnwaive(en.batch, en.period)}
               disabled={busy}
             >
-              Record cash payment
+              Un-waive this month
             </button>
+          ) : (
+            !paid &&
+            en.amount_paise > 0 && (
+              <div className="stack" style={{ gap: 8, marginTop: 10 }}>
+                <button className="btn primary block" onClick={() => onRecordCash(en.batch, en.period)} disabled={busy}>
+                  Record cash payment
+                </button>
+                <button className="btn ghost block" onClick={() => onWaive(en.batch, en.period)} disabled={busy}>
+                  Waive this month
+                </button>
+              </div>
+            )
           )}
 
           {en.outstanding.length > 0 && (
@@ -144,9 +175,14 @@ function EnrollmentCard({ en, classes, busy, onRecordCash, onEdit, onRemove, can
                         {p.paid_paise > 0 ? ` · ${rupees(p.paid_paise)} paid` : ''}
                       </div>
                     </div>
-                    <button className="btn primary sm" onClick={() => onRecordCash(en.batch, p.period)} disabled={busy}>
-                      Record
-                    </button>
+                    <div className="s-right" style={{ gap: 6 }}>
+                      <button className="btn primary sm" onClick={() => onRecordCash(en.batch, p.period)} disabled={busy}>
+                        Record
+                      </button>
+                      <button className="btn ghost sm" onClick={() => onWaive(en.batch, p.period)} disabled={busy}>
+                        Waive
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -172,25 +208,58 @@ function EnrollmentCard({ en, classes, busy, onRecordCash, onEdit, onRemove, can
             <>
               <div className="muted small" style={{ marginTop: 14 }}>Payment history</div>
               <div className="card flush list" style={{ marginTop: 6 }}>
-                {en.payments.map((p, i) => (
-                  <div className="list-item" key={i}>
-                    <div className="li-main">
-                      <div>{periodLabel(p.period)}</div>
-                      <div className="muted small">
-                        {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
-                        {p.method}
-                        {p.paid_at ? ` · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : ''}
-                        {p.status !== 'paid' ? ' · partial' : ''}
+                {en.payments.map((p, i) =>
+                  removePaymentConfirm === p.period ? (
+                    <div className="list-item" key={i} style={{ display: 'block' }}>
+                      <p className="muted small" style={{ margin: '0 0 8px' }}>
+                        Remove the {periodLabel(p.period)} payment ({rupees(p.paid_paise)})? The month
+                        goes back to unpaid.
+                      </p>
+                      <div className="stack" style={{ gap: 8 }}>
+                        <button
+                          className="btn danger sm"
+                          onClick={() => {
+                            onRemovePayment(en.batch, p.period)
+                            setRemovePaymentConfirm(null)
+                          }}
+                          disabled={busy}
+                        >
+                          Yes, remove it
+                        </button>
+                        <button className="btn ghost sm" onClick={() => setRemovePaymentConfirm(null)} disabled={busy}>
+                          Cancel
+                        </button>
                       </div>
                     </div>
-                    <span
-                      className="li-main"
-                      style={{ color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)' }}
-                    >
-                      {rupees(p.paid_paise)}
-                    </span>
-                  </div>
-                ))}
+                  ) : (
+                    <div className="list-item" key={i}>
+                      <div className="li-main">
+                        <div>{periodLabel(p.period)}</div>
+                        <div className="muted small">
+                          {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                          {p.method}
+                          {p.paid_at ? ` · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : ''}
+                          {p.status !== 'paid' ? ' · partial' : ''}
+                        </div>
+                      </div>
+                      <div className="s-right" style={{ alignItems: 'flex-end', gap: 4 }}>
+                        <span
+                          className="li-main"
+                          style={{ color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)' }}
+                        >
+                          {rupees(p.paid_paise)}
+                        </span>
+                        <button
+                          type="button"
+                          className="link-btn"
+                          onClick={() => setRemovePaymentConfirm(p.period)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ),
+                )}
               </div>
             </>
           )}
@@ -320,6 +389,27 @@ export default function AdminStudentDetail() {
       setBusy(false)
     }
   }
+
+  async function runPeriodAction(action, batch, period) {
+    setBusy(true)
+    setError('')
+    try {
+      const updated = await adminApi(`/api/admin/students/${id}/${action}`, {
+        method: 'POST',
+        body: { batch, period },
+      })
+      setData(updated)
+      reloadStats()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const waiveEnrollment = (batch, period) => runPeriodAction('waive', batch, period)
+  const unwaiveEnrollment = (batch, period) => runPeriodAction('unwaive', batch, period)
+  const removePayment = (batch, period) => runPeriodAction('remove-payment', batch, period)
 
   const enrolledIds = useMemo(() => new Set((data?.enrollments ?? []).map((e) => e.batch)), [data])
   const availableClasses = useMemo(
@@ -500,6 +590,9 @@ export default function AdminStudentDetail() {
               onEdit={editEnrollment}
               onRemove={removeEnrollment}
               canRemove={data.enrollments.length > 1}
+              onWaive={waiveEnrollment}
+              onUnwaive={unwaiveEnrollment}
+              onRemovePayment={removePayment}
             />
           ))}
 

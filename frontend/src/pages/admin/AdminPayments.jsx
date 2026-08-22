@@ -43,8 +43,9 @@ export default function AdminPayments() {
 
   // Collected: anyone with money in this month (full or partial cash).
   const collected = useMemo(() => rows.filter((r) => r.paid_paise > 0), [rows])
-  // Pending: not fully paid — a partial payer shows in both lists (paid some, owes some).
-  const pending = useMemo(() => rows.filter((r) => r.status !== 'paid'), [rows])
+  // Pending: not fully paid — a partial payer shows in both lists (paid some,
+  // owes some). A waived month is settled, not pending.
+  const pending = useMemo(() => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'), [rows])
 
   const visibleCollected = useMemo(() => {
     const q = search.trim().toLowerCase()

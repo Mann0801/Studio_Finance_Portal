@@ -148,3 +148,45 @@ def is_period_paid(student_id: str, class_id: str, period: str) -> bool:
         .execute()
     )
     return bool(res.data)
+
+
+def is_period_waived(student_id: str, class_id: str, period: str) -> bool:
+    row = get_payment_by_period(student_id, class_id, period)
+    return bool(row and row["status"] == "waived")
+
+
+def waive_period(student_id: str, class_id: str, period: str, due_paise: int, is_prorata: bool) -> None:
+    """Forgive a month's fee — e.g. dues that were charged by mistake, or a
+    month the studio decides to waive. No money is recorded; the month simply
+    stops showing as owed everywhere it's checked."""
+    get_supabase().table("payments").upsert(
+        {
+            "student_id": student_id,
+            "class_id": class_id,
+            "period": period,
+            "amount_paise": due_paise,
+            "paid_paise": 0,
+            "is_prorata": is_prorata,
+            "status": "waived",
+            "razorpay_order_id": f"waived-{student_id[:8]}-{class_id}-{period}",
+            "razorpay_payment_id": None,
+            "paid_at": None,
+        },
+        on_conflict="student_id,class_id,period",
+    ).execute()
+
+
+def delete_payment(student_id: str, class_id: str, period: str) -> bool:
+    """Reverse a (student, class, period) payment entirely — a mistaken cash
+    entry, a duplicate, or an un-waive. Returns True if a row existed to remove.
+    The month goes back to however it would look with no payment at all."""
+    res = (
+        get_supabase()
+        .table("payments")
+        .delete()
+        .eq("student_id", student_id)
+        .eq("class_id", class_id)
+        .eq("period", period)
+        .execute()
+    )
+    return bool(res.data)
