@@ -7,42 +7,45 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class ClassChoice(BaseModel):
+    batch: str
+    batch_slot: Optional[str] = None  # timing slot key, required for classes that have slots
+
+
 class SignupRequest(BaseModel):
     # The account (email + password) is created on the frontend via Supabase Auth;
     # this call attaches the profile to the verified user: display name, phone and
-    # chosen batch. Email is read server-side from the verified token.
+    # the chosen class(es). Email is read server-side from the verified token.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: str
-    batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
+    classes: list[ClassChoice] = Field(min_length=1, max_length=10)
     # The date the student actually started attending the studio (student-picked),
-    # NOT the app signup date. Drives pro-rata; range-validated in the router.
+    # NOT the app signup date. Shared by every class chosen at signup; drives
+    # pro-rata; range-validated in the router.
+    join_date: date
+
+
+class AddClassRequest(BaseModel):
+    # A student joining an additional class later, from the hamburger menu.
+    batch: str
+    batch_slot: Optional[str] = None
     join_date: date
 
 
 class UpdateProfileRequest(BaseModel):
     # Self-service profile edit from the student Profile tab. Username and email
-    # (the login identity) are not editable here; only display/contact details and
-    # the chosen batch + timing slot.
+    # (the login identity) are not editable here. Class changes happen via the
+    # "Add a class" flow (adding) or the admin (editing/removing), not here.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: str
-    batch_slot: Optional[str] = None  # timing slot key, required for Traditional Yoga
 
 
-class StudentOut(BaseModel):
+class StudentProfile(BaseModel):
+    """Identity-only shape — a student's classes live in ``enrollments``."""
     id: str
     name: str
     email: Optional[str] = None
     phone: str
-    batch: str
-    batch_label: str
-    fee_type: Optional[str] = None       # class fee model ('enquiry' → contact card)
-    batch_slot: Optional[str] = None
-    slot_label: Optional[str] = None
-    batch_deleted: bool = False          # true if the class was removed
-    join_date: date
-    whatsapp_joined: bool = False        # tapped "Join Group" at least once
 
 
 class PaymentOut(BaseModel):
@@ -63,8 +66,19 @@ class CurrentDue(BaseModel):
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
 
 
-class DashboardOut(BaseModel):
-    student: StudentOut
+class EnrollmentOut(BaseModel):
+    """One class a student is in, with its own dues/history — a student in two
+    classes gets two of these, each an independent payment thread."""
+    batch: str
+    batch_label: str
+    fee_type: Optional[str] = None       # class fee model ('enquiry' → contact card)
+    batch_slot: Optional[str] = None
+    slot_label: Optional[str] = None
+    batch_deleted: bool = False          # true if the class was removed
+    join_date: date
+    whatsapp_joined: bool = False        # tapped "Join Group" at least once, for this class
+    whatsapp_group_url: Optional[str] = None
+    days_member: int
     current: CurrentDue
     # Unpaid months before the current one (join month up to last month), each
     # with its server-computed amount. Lets a student clear earlier dues.
@@ -72,7 +86,14 @@ class DashboardOut(BaseModel):
     history: list[PaymentOut]
 
 
+class DashboardOut(BaseModel):
+    student: StudentProfile
+    enrollments: list[EnrollmentOut]
+
+
 class OrderRequest(BaseModel):
+    # Which class this payment is for.
+    batch: str
     # Optional; defaults to the current calendar month. The amount is NEVER taken
     # from the client — the server computes it from batch + join date + period.
     period: Optional[str] = None
@@ -83,6 +104,9 @@ class OrderResponse(BaseModel):
     order_id: str
     amount_paise: int
     currency: str = "INR"
+    batch: str
+    batch_label: str
+    slot_label: Optional[str] = None
     period: str
     studio_name: str
     prefill_name: str
@@ -230,27 +254,26 @@ class StudentPaymentRow(BaseModel):
     paid_paise: int = 0        # amount actually received (partial or full)
 
 
-class AdminStudentDetail(BaseModel):
-    id: str
-    name: str
-    email: Optional[str] = None
-    phone: str
+class AdminEnrollmentDetail(BaseModel):
+    """One class a student is in, from the admin's point of view — its own dues,
+    history and reminder link, entirely independent of the student's other
+    classes."""
     batch: str
     batch_label: str
     fee_type: Optional[str] = None
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
     batch_deleted: bool = False
-    join_date: date              # studio joining date (student-picked) — "Joined Studio"
-    signed_up_at: Optional[datetime] = None  # app account creation — "App Signup Date"
+    join_date: date              # studio joining date for THIS class — "Joined Studio"
     days_member: int
+    whatsapp_joined: bool = False
     # This month
     period: str
     amount_paise: int          # paid amount if paid, else the remaining balance
     is_prorata: bool
     status: str                # 'paid' | 'unpaid'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
-    # Lifetime
+    # Lifetime, for this class only
     # Unpaid months before the current one (join month up to last month), each
     # with its server-computed amount — lets the admin record cash for old dues.
     outstanding: list[CurrentDue] = []
@@ -261,7 +284,19 @@ class AdminStudentDetail(BaseModel):
     whatsapp_url: Optional[str] = None
 
 
+class AdminStudentDetail(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None
+    phone: str
+    signed_up_at: Optional[datetime] = None  # app account creation — "App Signup Date"
+    enrollments: list[AdminEnrollmentDetail]
+    total_paid_paise: int          # summed across every class
+
+
 class MarkPaidRequest(BaseModel):
+    # Which class this cash payment is for.
+    batch: str
     # Which month to record as cash-paid; defaults to the current calendar month.
     period: Optional[str] = None
     # Cash amount received (paise). None = the full remaining balance. A smaller
@@ -272,24 +307,34 @@ class MarkPaidRequest(BaseModel):
 class AdminCreateStudentRequest(BaseModel):
     # Admin registers a walk-in. Phone is the login identity; a password is set so
     # the member can sign in later (auto-generated and returned if left blank).
+    # Every class chosen here shares the one join date, same as student signup.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
-    batch: str
-    batch_slot: Optional[str] = None
+    classes: list[ClassChoice] = Field(min_length=1, max_length=10)
     join_date: Optional[date] = None  # defaults to today
     password: Optional[str] = Field(default=None, max_length=72)
 
 
 class AdminUpdateStudentRequest(BaseModel):
-    # Admin fixes a member's details. Email (the login identity) is not editable.
+    # Admin fixes a member's name/phone. Email (the login identity) is not
+    # editable. Class membership is managed via the enrollment endpoints below.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
+
+
+class AdminAddEnrollmentRequest(BaseModel):
+    # Admin enrolls a student into an additional class.
     batch: str
     batch_slot: Optional[str] = None
-    # Studio joining date. Editing it re-computes pro-rata for every unpaid month
-    # live (already-paid months keep their recorded amount). Admin can set any
-    # past date; only the future is rejected in the route.
-    join_date: Optional[date] = None
+    join_date: Optional[date] = None  # defaults to today
+
+
+class AdminUpdateEnrollmentRequest(BaseModel):
+    # Admin corrects one class's timing/joining date. Editing join_date
+    # re-computes pro-rata for every unpaid month in THIS class live (already-paid
+    # months keep their recorded amount). Only a future date is rejected.
+    batch_slot: Optional[str] = None
+    join_date: date
 
 
 class AdminCreateStudentResponse(BaseModel):

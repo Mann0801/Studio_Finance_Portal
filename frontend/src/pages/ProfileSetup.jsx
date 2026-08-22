@@ -59,8 +59,7 @@ export default function ProfileSetup() {
         body: {
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
-          batch: form.batch,
-          batch_slot: form.batch_slot,
+          classes: [{ batch: form.batch, batch_slot: form.batch_slot }],
           join_date: form.join_date,
         },
       })

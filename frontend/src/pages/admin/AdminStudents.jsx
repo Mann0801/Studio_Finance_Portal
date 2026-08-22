@@ -223,7 +223,7 @@ export default function AdminStudents() {
             <div className="stack" style={{ gap: 10 }}>
               {globalResults.map((s) => (
                 <StudentCard
-                  key={s.id}
+                  key={`${s.id}-${s.batch}`}
                   s={s}
                   onOpen={(id) => navigate(`/admin/students/${id}`)}
                   sub={`${s.batch_label}${s.slot_label ? ` · ${s.slot_label}` : ''}`}

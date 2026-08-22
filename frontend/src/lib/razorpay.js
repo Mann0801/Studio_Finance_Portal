@@ -67,17 +67,18 @@ async function loadCheckout() {
 }
 
 /**
- * Run the full pay flow for a period (default: current month):
+ * Run the full pay flow for one class's month (default: current month):
  * create a server order -> open Razorpay Checkout -> verify the callback.
  *
  * The amount is server-computed and locked into the order — the checkout shows
  * it pre-filled and the student cannot change it. Resolves with
- * `{ period, amountPaise, paymentId }` on success; rejects on failure/dismissal.
+ * `{ period, batch, batchLabel, slotLabel, amountPaise, paymentId }` on
+ * success; rejects on failure/dismissal.
  */
-export async function payForMonth(period) {
+export async function payForMonth(period, batch) {
   const order = await api('/api/payments/order', {
     method: 'POST',
-    body: period ? { period } : {},
+    body: { batch, ...(period ? { period } : {}) },
   })
   await loadCheckout()
 
@@ -100,6 +101,9 @@ export async function payForMonth(period) {
           const result = await verifyCheckout(resp)
           resolve({
             period: result?.period || order.period,
+            batch: order.batch,
+            batchLabel: order.batch_label,
+            slotLabel: order.slot_label,
             amountPaise: order.amount_paise,
             paymentId: resp.razorpay_payment_id,
             // false = our verify call couldn't reach the server; the payment
@@ -120,6 +124,3 @@ export async function payForMonth(period) {
     rzp.open()
   })
 }
-
-// Back-compat alias.
-export const payForCurrentMonth = () => payForMonth()

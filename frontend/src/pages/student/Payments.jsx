@@ -4,6 +4,7 @@ import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
 import DueCard from '../../components/DueCard'
+import ClassSwitcher from '../../components/ClassSwitcher'
 import { DownloadIcon, CashIcon } from '../../components/Icons'
 import { CardSkeleton, ListSkeleton } from '../../components/Skeleton'
 
@@ -13,23 +14,31 @@ function periodLabel(period) {
 }
 
 export default function Payments() {
-  const { data, loading, error } = useDashboard()
+  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
   const navigate = useNavigate()
 
+  const enrollments = data?.enrollments ?? []
+  const en = activeEnrollment
+
   // History shows every month money was received — including partial cash on a
   // month still being cleared (it also appears above as a balance to pay).
-  const historyRows = data?.history ?? []
+  const historyRows = en?.history ?? []
   // Oldest overdue month first (top priority); `outstanding` is newest→oldest.
-  const overdue = [...(data?.outstanding ?? [])].reverse()
+  const overdue = [...(en?.outstanding ?? [])].reverse()
 
   return (
     <>
       <div className="topbar">
         <div className="greeting">
           <h1>Payments</h1>
+          {en && <div className="hello" style={{ marginTop: 4 }}>{en.batch_label}</div>}
         </div>
       </div>
+
+      {enrollments.length > 1 && (
+        <ClassSwitcher enrollments={enrollments} activeId={activeClassId} onChange={setActiveClassId} />
+      )}
 
       {loading && (
         <>
@@ -40,18 +49,18 @@ export default function Payments() {
       )}
       {error && <p className="error">{error}</p>}
 
-      {data && (data.student.fee_type === 'enquiry' || data.student.batch_deleted) ? (
+      {en && (en.fee_type === 'enquiry' || en.batch_deleted) ? (
         <div className="card">
           <span className="card-title">
-            {data.student.batch_deleted ? 'Class no longer available' : 'Arranged with the studio'}
+            {en.batch_deleted ? 'Class no longer available' : 'Arranged with the studio'}
           </span>
           <p className="muted" style={{ margin: '8px 0 0', lineHeight: 1.5 }}>
-            {data.student.batch_deleted
+            {en.batch_deleted
               ? 'Your class was removed. Please contact the studio to be moved to another class.'
               : 'This class has no online payment. Contact the studio to arrange your membership.'}
           </p>
         </div>
-      ) : data ? (
+      ) : en ? (
         <>
           {/* Overdue earlier months first (top priority), then the current month —
               each as a full pay card with its own big Pay button. */}
@@ -60,7 +69,7 @@ export default function Payments() {
               key={m.period}
               month={m}
               paying={paying}
-              onPay={pay}
+              onPay={(period) => pay(period, en.batch)}
               style={i > 0 ? { marginTop: 12 } : undefined}
             />
           ))}
@@ -68,26 +77,26 @@ export default function Payments() {
           <div className="pay-card" style={overdue.length ? { marginTop: 12 } : undefined}>
             <div className="between">
               <span className="card-title">
-                {data.current.status === 'paid' ? 'Paid this month' : 'Due this month'}
+                {en.current.status === 'paid' ? 'Paid this month' : 'Due this month'}
               </span>
-              <StatusBadge status={data.current.status} />
+              <StatusBadge status={en.current.status} />
             </div>
-            <div className="amount">{rupees(data.current.amount_paise)}</div>
+            <div className="amount">{rupees(en.current.amount_paise)}</div>
             <div className="period">
-              {periodLabel(data.current.period)}
-              {data.current.is_prorata ? ' · pro-rated' : ''}
+              {periodLabel(en.current.period)}
+              {en.current.is_prorata ? ' · pro-rated' : ''}
             </div>
-            {data.current.status !== 'paid' && data.current.paid_paise > 0 && (
-              <div className="part-paid">{rupees(data.current.paid_paise)} already paid in cash</div>
+            {en.current.status !== 'paid' && en.current.paid_paise > 0 && (
+              <div className="part-paid">{rupees(en.current.paid_paise)} already paid in cash</div>
             )}
-            {data.current.status !== 'paid' && data.current.amount_paise > 0 && (
+            {en.current.status !== 'paid' && en.current.amount_paise > 0 && (
               <button
                 className="btn primary lg block"
                 style={{ marginTop: 18 }}
-                onClick={() => pay()}
+                onClick={() => pay(undefined, en.batch)}
                 disabled={paying}
               >
-                {paying ? 'Processing…' : `Pay ${rupees(data.current.amount_paise)} now`}
+                {paying ? 'Processing…' : `Pay ${rupees(en.current.amount_paise)} now`}
               </button>
             )}
             {payError && <p className="error" style={{ marginTop: 12 }}>{payError}</p>}
@@ -118,7 +127,7 @@ export default function Payments() {
                       <button
                         type="button"
                         className="link-btn receipt-link"
-                        onClick={() => navigate(`/receipt/${p.period}`)}
+                        onClick={() => navigate(`/receipt/${en.batch}/${p.period}`)}
                       >
                         <DownloadIcon width={14} height={14} /> Receipt
                       </button>

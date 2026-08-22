@@ -1,5 +1,6 @@
 """Payment routes: create a Razorpay order (locked, server-computed amount) and
-verify the client checkout callback."""
+verify the client checkout callback. Every order is for one specific class —
+a student in two classes has two independent payment threads."""
 from __future__ import annotations
 
 from datetime import date as _date
@@ -7,9 +8,10 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import get_current_student
-from ..classes_store import get_class
+from ..classes_store import class_label, get_class, slot_label_of
 from ..config import get_settings
 from ..db import get_supabase
+from ..enrollments_store import get_enrollment
 from ..fees import compute_due, current_period, period_of
 from ..payments_store import (
     amount_paid_for,
@@ -35,19 +37,23 @@ def _load_student(student_id: str) -> dict:
 def create_order(body: OrderRequest, student=Depends(get_current_student)):
     settings = get_settings()
     row = _load_student(student["id"])
-    cls = get_class(row["batch"])
+    enr = get_enrollment(student["id"], body.batch)
+    if not enr:
+        raise HTTPException(status_code=404, detail="You're not enrolled in this class")
+
+    cls = get_class(body.batch)
     if not cls or not cls.get("active", True):
-        raise HTTPException(status_code=400, detail="Your class needs to be reassigned; contact the studio")
+        raise HTTPException(status_code=400, detail="This class needs to be reassigned; contact the studio")
     if cls.get("fee_type") == "enquiry":
         raise HTTPException(status_code=400, detail="This class has no online payment; contact the studio")
-    join_date = row["join_date"]
+    join_date = enr["join_date"]
     if isinstance(join_date, str):
         join_date = _date.fromisoformat(join_date)
 
     period = body.period or current_period()
     if period < period_of(join_date):
         raise HTTPException(status_code=400, detail="No fee due before you joined")
-    if is_period_paid(student["id"], period):
+    if is_period_paid(student["id"], body.batch, period):
         raise HTTPException(status_code=409, detail="This month is already paid")
 
     due = compute_due(cls, join_date, period)
@@ -56,18 +62,19 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
 
     # Charge only what's still owed: the full fee minus any partial cash the admin
     # already recorded for this month.
-    already_paid = amount_paid_for(student["id"], period)
+    already_paid = amount_paid_for(student["id"], body.batch, period)
     remaining = due.amount_paise - already_paid
     if remaining <= 0:
         raise HTTPException(status_code=409, detail="This month is already paid")
 
     order = razorpay_service.create_order(
         amount_paise=remaining,
-        receipt=f"{student['id'][:8]}-{period}",
-        notes={"student_id": student["id"], "period": period},
+        receipt=f"{student['id'][:8]}-{body.batch}-{period}",
+        notes={"student_id": student["id"], "class_id": body.batch, "period": period},
     )
     upsert_created_order(
         student_id=student["id"],
+        class_id=body.batch,
         period=period,
         amount_paise=due.amount_paise,
         is_prorata=due.is_prorata,
@@ -75,10 +82,14 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
         paid_paise=already_paid,
     )
 
+    slot = enr.get("batch_slot")
     return OrderResponse(
         key_id=settings.razorpay_key_id,
         order_id=order["id"],
         amount_paise=remaining,
+        batch=body.batch,
+        batch_label=class_label(cls),
+        slot_label=slot_label_of(cls, slot),
         period=period,
         studio_name=settings.studio_name,
         prefill_name=row["name"],
@@ -104,4 +115,4 @@ def verify(body: VerifyRequest, student=Depends(get_current_student)):
         raise HTTPException(status_code=404, detail="Order not found")
 
     mark_paid(body.razorpay_order_id, body.razorpay_payment_id)
-    return {"status": "paid", "period": payment["period"]}
+    return {"status": "paid", "period": payment["period"], "batch": payment["class_id"]}

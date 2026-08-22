@@ -1,27 +1,15 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { api } from '../../lib/api'
 import { changePassword, toTenDigits } from '../../lib/auth'
-import {
-  useClasses,
-  classById,
-  hasSlots,
-  scheduleLabel,
-  priceLabel,
-  slotByKey,
-  slotTime,
-} from '../../lib/classes'
-import BatchPicker from '../../components/BatchPicker'
-import { ChevronDownIcon } from '../../components/Icons'
+import { PlusIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
-function validate(form, classes) {
+function validate(form) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
-  if (!form.batch) errors.batch = 'Please select a class'
-  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
-    errors.batch = 'Please choose a timing'
   // Password is optional — only validated if they typed a new one.
   if (form.newPassword) {
     if (form.newPassword.length < 8) errors.newPassword = 'At least 8 characters'
@@ -32,7 +20,6 @@ function validate(form, classes) {
 
 export default function Profile() {
   const { data, loading, error, reload } = useDashboard()
-  const { classes } = useClasses()
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
@@ -40,7 +27,6 @@ export default function Profile() {
   const [submitted, setSubmitted] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [classOpen, setClassOpen] = useState(false) // is the class picker expanded
 
   const startEdit = () => {
     const s = data.student
@@ -48,22 +34,18 @@ export default function Profile() {
       name: s.name,
       // Stored with country code (91…); show just the 10 digits for editing.
       phone: (s.phone || '').replace(/\D/g, '').slice(-10),
-      batch: s.batch,
-      batch_slot: s.batch_slot || null,
       newPassword: '',
       confirmPassword: '',
     })
     setErrors({})
     setSubmitted(false)
     setSaveError('')
-    setClassOpen(false)
     setEditing(true)
   }
 
   const cancelEdit = () => {
     setEditing(false)
     setForm(null)
-    setClassOpen(false)
   }
 
   const set = (k) => (e) => {
@@ -79,13 +61,11 @@ export default function Profile() {
       ? 'match'
       : 'mismatch'
 
-  const selectedCls = form ? classById(classes, form.batch) : null
-
   async function onSubmit(e) {
     e.preventDefault()
     setSaveError('')
     setSubmitted(true)
-    const fieldErrors = validate(form, classes)
+    const fieldErrors = validate(form)
     setErrors(fieldErrors)
     if (Object.keys(fieldErrors).length > 0) return
 
@@ -101,8 +81,6 @@ export default function Profile() {
         body: {
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
-          batch: form.batch,
-          batch_slot: form.batch_slot,
         },
       })
       await reload()
@@ -120,6 +98,8 @@ export default function Profile() {
       setBusy(false)
     }
   }
+
+  const enrollments = data?.enrollments ?? []
 
   return (
     <>
@@ -141,8 +121,7 @@ export default function Profile() {
             <div>
               <div style={{ fontWeight: 800, fontSize: 18 }}>{data.student.name}</div>
               <div className="muted small">
-                {data.student.batch_label}
-                {data.student.slot_label ? ` · ${data.student.slot_label}` : ' class'}
+                {enrollments.length} class{enrollments.length === 1 ? '' : 'es'}
               </div>
             </div>
           </div>
@@ -152,24 +131,29 @@ export default function Profile() {
               <span className="muted">Phone</span>
               <span className="li-main" style={{ fontSize: 14 }}>{data.student.phone}</span>
             </div>
-            <div className="list-item">
-              <span className="muted">Class</span>
-              <span className="li-main" style={{ fontSize: 14 }}>
-                {data.student.batch_label}
-                {data.student.slot_label ? ` · ${data.student.slot_label}` : ''}
-              </span>
-            </div>
-            <div className="list-item">
-              <span className="muted">Joined</span>
-              <span className="li-main" style={{ fontSize: 14 }}>
-                {new Date(data.student.join_date).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </span>
-            </div>
+            {enrollments.map((en) => (
+              <div className="list-item" key={en.batch}>
+                <span className="muted">Class</span>
+                <span className="li-main" style={{ fontSize: 14, textAlign: 'right' }}>
+                  {en.batch_label}
+                  {en.slot_label ? ` · ${en.slot_label}` : ''}
+                  <br />
+                  <span className="muted small">
+                    Joined{' '}
+                    {new Date(en.join_date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </span>
+              </div>
+            ))}
           </div>
+
+          <Link to="/add-class" className="btn ghost block">
+            <PlusIcon width={16} height={16} /> Add a class
+          </Link>
 
           <button className="btn primary block" onClick={startEdit}>
             Edit profile
@@ -247,52 +231,8 @@ export default function Profile() {
             </label>
           )}
 
-          {/* Class — collapsed summary that expands into the detailed picker */}
-          <div>
-            {classOpen ? (
-              <BatchPicker
-                classes={classes}
-                batch={form.batch}
-                slot={form.batch_slot}
-                error={errors.batch}
-                onSelect={(batch, slot) => {
-                  setForm((f) => ({ ...f, batch, batch_slot: slot }))
-                  if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
-                  const cls = classById(classes, batch)
-                  if (!hasSlots(cls) || slot) setClassOpen(false) // collapse once fully chosen
-                }}
-              />
-            ) : (
-              <>
-                <div className="legend" style={{ marginBottom: 8 }}>Class</div>
-                <button
-                  type="button"
-                  className={`class-select-btn ${errors.batch ? 'invalid' : ''}`}
-                  onClick={() => setClassOpen(true)}
-                >
-                  <span className="cs-main">
-                    <span className="cs-name">{selectedCls ? selectedCls.name : 'Select a class'}</span>
-                    {selectedCls && (
-                      <span className="cs-sub">
-                        {[
-                          scheduleLabel(selectedCls),
-                          form.batch_slot ? slotTime(slotByKey(selectedCls, form.batch_slot)) : '',
-                          priceLabel(selectedCls),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronDownIcon className="cs-chev" width={20} height={20} />
-                </button>
-                {errors.batch && <span className="field-error">{errors.batch}</span>}
-              </>
-            )}
-          </div>
-
           <p className="muted small" style={{ margin: '2px 0' }}>
-            Changing your class updates this month’s fee on your next visit to Home.
+            To change your class, use "Add a class" from the menu, or contact the studio.
           </p>
 
           {saveError && <p className="error">{saveError}</p>}

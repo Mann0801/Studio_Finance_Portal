@@ -8,6 +8,7 @@ import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
 import DueCard from '../../components/DueCard'
 import WhatsAppBanner from '../../components/WhatsAppBanner'
+import ClassSwitcher from '../../components/ClassSwitcher'
 import { CheckIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 import { whatsappGroupLink } from '../../lib/whatsapp'
@@ -61,12 +62,13 @@ function nextClassLabel(scheduleDays, startMinutes) {
 }
 
 export default function Home() {
-  const { data, loading, error } = useDashboard()
+  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
   const { classes } = useClasses()
   const { state } = useLocation()
   const [welcome, setWelcome] = useState(Boolean(state?.welcome))
-  const [waJustJoined, setWaJustJoined] = useState(false)
+  // Each class's "just joined" WhatsApp state is independent, keyed by class id.
+  const [justJoinedIds, setJustJoinedIds] = useState(() => new Set())
 
   useEffect(() => {
     if (!welcome) return
@@ -98,43 +100,40 @@ export default function Home() {
     )
   }
   if (error) return <>{welcomeOverlay}<p className="error" style={{ marginTop: 24 }}>{error}</p></>
-  if (!data) return welcomeOverlay
+  if (!data || !activeEnrollment) return welcomeOverlay
 
-  const { student, current, history = [], outstanding = [] } = data
-  const cls = classById(classes, student.batch)
-  const isEnquiry = student.fee_type === 'enquiry'
-  const isDeleted = student.batch_deleted
+  const { student, enrollments } = data
+  const en = activeEnrollment
+  const cls = classById(classes, en.batch)
+  const isEnquiry = en.fee_type === 'enquiry'
+  const isDeleted = en.batch_deleted
   const isContact = isEnquiry || isDeleted
 
-  // Floating WhatsApp reminder: shown until the student joins their class's group
+  // Floating WhatsApp reminder: shown until the student joins this class's group
   // (persisted server-side), then gone. Contact/enquiry classes are exempt.
   const waLink = whatsappGroupLink(cls)
-  const showWhatsApp = !isContact && !waJustJoined && !student.whatsapp_joined && Boolean(waLink)
+  const showWhatsApp =
+    !isContact && !justJoinedIds.has(en.batch) && !en.whatsapp_joined && Boolean(waLink)
 
   // One pay card per unpaid month — oldest (overdue) first so it's the top
   // priority, current month last. `outstanding` arrives newest→oldest.
-  const overdue = [...outstanding].reverse()
-  const currentUnpaid = current.status !== 'paid' && current.amount_paise > 0
-  const dueMonths = [...overdue, ...(currentUnpaid ? [current] : [])]
+  const overdue = [...en.outstanding].reverse()
+  const currentUnpaid = en.current.status !== 'paid' && en.current.amount_paise > 0
+  const dueMonths = [...overdue, ...(currentUnpaid ? [en.current] : [])]
 
-  const slot = student.batch_slot ? slotByKey(cls, student.batch_slot) : null
+  const slot = en.batch_slot ? slotByKey(cls, en.batch_slot) : null
   const startTime = slot?.start || cls?.start_time || null
   const nextDay = isContact ? null : nextClassLabel(cls?.schedule_days, parseTime(startTime))
   const classTime =
-    student.slot_label ||
+    en.slot_label ||
     (cls?.start_time && cls?.end_time ? `${cls.start_time} – ${cls.end_time}` : cls?.start_time || '')
   // Includes partial cash — history carries the amount actually received per month.
-  const totalPaid = history.reduce((s, p) => s + (p.paid_paise || 0), 0)
-  const memberSince = new Date(student.join_date).toLocaleDateString('en-IN', {
+  const totalPaid = en.history.reduce((s, p) => s + (p.paid_paise || 0), 0)
+  const memberSince = new Date(en.join_date).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   })
-  // Days since the studio joining date, counted inclusively so the join day is
-  // day 1 (local time).
-  const [jy, jm, jd] = student.join_date.split('-').map(Number)
-  const daysMember =
-    Math.max(0, Math.floor((Date.now() - new Date(jy, jm - 1, jd).getTime()) / 86400000)) + 1
 
   return (
     <>
@@ -144,10 +143,14 @@ export default function Home() {
           <img src={LOGO_SRC} alt="I'm Possible Fit" className="topbar-logo" />
           <h1>{greeting()}, {student.name.split(' ')[0]}</h1>
           <div className="hello" style={{ marginTop: 4 }}>
-            {isDeleted ? 'Class removed' : `${student.batch_label} class`}
+            {isDeleted ? 'Class removed' : `${en.batch_label} class`}
           </div>
         </div>
       </div>
+
+      {enrollments.length > 1 && (
+        <ClassSwitcher enrollments={enrollments} activeId={activeClassId} onChange={setActiveClassId} />
+      )}
 
       {/* Hero: one full pay card per unpaid month, oldest (overdue) on top */}
       {isContact ? (
@@ -171,7 +174,7 @@ export default function Home() {
         <div className="pay-card paid-card">
           <div className="paid-badge"><CheckIcon width={26} height={26} /></div>
           <div className="paid-title">You're all paid up</div>
-          <div className="period">{periodLabel(current.period)} · {rupees(current.amount_paise)} paid</div>
+          <div className="period">{periodLabel(en.current.period)} · {rupees(en.current.amount_paise)} paid</div>
         </div>
       ) : (
         <>
@@ -179,9 +182,9 @@ export default function Home() {
             <DueCard
               key={m.period}
               month={m}
-              isCurrent={m.period === current.period}
+              isCurrent={m.period === en.current.period}
               paying={paying}
-              onPay={pay}
+              onPay={(period) => pay(period, en.batch)}
               style={i > 0 ? { marginTop: 12 } : undefined}
             />
           ))}
@@ -202,9 +205,9 @@ export default function Home() {
         <div className="card class-home" style={{ marginTop: 16 }}>
           <span className="card-title">Your class</span>
           <div className="ch-name">{cls.name}</div>
-          {(scheduleLabel(cls) || student.slot_label) && (
+          {(scheduleLabel(cls) || en.slot_label) && (
             <div className="ch-sched">
-              {[scheduleLabel(cls), student.slot_label].filter(Boolean).join(' · ')}
+              {[scheduleLabel(cls), en.slot_label].filter(Boolean).join(' · ')}
             </div>
           )}
           {cls.description && <p className="ch-desc">{cls.description}</p>}
@@ -218,8 +221,8 @@ export default function Home() {
           <div className="label">Member since</div>
         </div>
         <div className="stat">
-          <div className="num" style={{ fontSize: 16 }}>{daysMember}</div>
-          <div className="label">{daysMember === 1 ? 'Day as member' : 'Days as member'}</div>
+          <div className="num" style={{ fontSize: 16 }}>{en.days_member}</div>
+          <div className="label">{en.days_member === 1 ? 'Day as member' : 'Days as member'}</div>
         </div>
         <div className="stat">
           <div className="num" style={{ fontSize: 16 }}>{rupees(totalPaid)}</div>
@@ -229,7 +232,11 @@ export default function Home() {
 
       {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
       {showWhatsApp && (
-        <WhatsAppBanner link={waLink} onJoined={() => setWaJustJoined(true)} />
+        <WhatsAppBanner
+          link={waLink}
+          classId={en.batch}
+          onJoined={() => setJustJoinedIds((prev) => new Set(prev).add(en.batch))}
+        />
       )}
 
       <div style={{ height: 20 }} />
