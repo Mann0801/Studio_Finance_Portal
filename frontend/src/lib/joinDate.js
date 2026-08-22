@@ -24,3 +24,14 @@ export function joinDateError(value) {
   if (value < MIN_JOIN_DATE) return 'For dates over 2 years ago, please contact the studio'
   return ''
 }
+
+// "1 October 2026" — always the 1st of whatever month it currently is, so the
+// existing-member signup hint stays correct every month without editing.
+export const FIRST_OF_THIS_MONTH_LABEL = (() => {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+})()

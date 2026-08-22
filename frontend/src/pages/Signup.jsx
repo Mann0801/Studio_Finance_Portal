@@ -6,7 +6,8 @@ import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
-import { MIN_JOIN_DATE, MAX_JOIN_DATE, joinDateError } from '../lib/joinDate'
+import { InfoIcon } from '../components/Icons'
+import { MIN_JOIN_DATE, MAX_JOIN_DATE, FIRST_OF_THIS_MONTH_LABEL, joinDateError } from '../lib/joinDate'
 
 const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'classes', 'join_date']
 
@@ -193,8 +194,24 @@ export default function Signup() {
           />
         </div>
 
+        <div className="card notice-card">
+          <InfoIcon className="notice-icon" width={22} height={22} />
+          <div>
+            <strong>Already a member of the studio?</strong>
+            <p>
+              As your payments and records move onto the app, please set your join date to{' '}
+              <strong>{FIRST_OF_THIS_MONTH_LABEL}</strong> so this month is billed in full rather
+              than as a partial amount.
+            </p>
+            <p>
+              <strong>New to the studio?</strong> Please choose the date you actually started
+              attending classes, not the date you're signing up for this app.
+            </p>
+          </div>
+        </div>
+
         <label id="f-join_date">
-          When did you first join the studio?
+          Studio join date
           <input
             type="date"
             value={form.join_date}
@@ -203,10 +220,9 @@ export default function Signup() {
             max={MAX_JOIN_DATE}
             className={errors.join_date ? 'invalid' : ''}
           />
-          <span className="field-hint">
-            This is the date you started attending classes, not the date you are signing up.
-            {form.classes.length > 1 ? ' It applies to every class you selected above.' : ''}
-          </span>
+          {form.classes.length > 1 && (
+            <span className="field-hint">It applies to every class you selected above.</span>
+          )}
           {errors.join_date && <span className="field-error">{errors.join_date}</span>}
         </label>
 
