@@ -1910,6 +1910,16 @@ button.menu-item {
   gap: 8px;
   text-decoration: none;
 }
+.btn.yt-cta {
+  background: #ff0000;
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
 .btn.ghost.danger-text {
   color: var(--unpaid);
 }
