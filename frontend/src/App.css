@@ -327,6 +327,32 @@ button.menu-item {
   padding: 0;
   overflow: hidden;
 }
+/* Prominent callout — e.g. the existing-member join-date notice on signup.
+   Deliberately louder than a plain .card so it actually gets read. */
+.notice-card {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.notice-card .notice-icon {
+  color: var(--accent-bright);
+  flex: none;
+  margin-top: 1px;
+}
+.notice-card strong {
+  font-size: 15px;
+  color: var(--accent-bright);
+}
+.notice-card p {
+  margin: 5px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.notice-card p + p {
+  margin-top: 8px;
+}
 .card-title {
   font-size: 13px;
   color: var(--muted);

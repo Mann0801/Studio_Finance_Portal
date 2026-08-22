@@ -6,6 +6,7 @@ import { toTenDigits } from '../../lib/auth'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
 import { ArrowLeftIcon, CheckIcon } from '../../components/Icons'
+import { FIRST_OF_THIS_MONTH_LABEL } from '../../lib/joinDate'
 
 function validate(form, classes) {
   const errors = {}
@@ -214,6 +215,10 @@ export default function AddStudent() {
         <label>
           Join date <span className="muted small">(optional — defaults to today; applies to every class selected)</span>
           <input type="date" value={form.join_date} onChange={set('join_date')} />
+          <span className="field-hint">
+            Registering an existing member switching onto the app? Use {FIRST_OF_THIS_MONTH_LABEL} so
+            their first month isn't billed as a partial month.
+          </span>
         </label>
 
         <label>
