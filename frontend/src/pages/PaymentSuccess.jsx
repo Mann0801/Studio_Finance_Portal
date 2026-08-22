@@ -44,11 +44,21 @@ export default function PaymentSuccess() {
   // Direct visits with no payment context go home.
   if (!state?.period) return <Navigate to="/" replace />
 
-  const paidOn = new Date().toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  const now = new Date()
+  const paidOn =
+    now.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    }) +
+    ', ' +
+    now.toLocaleTimeString('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    })
 
   return (
     <div className="success-wrap page">
