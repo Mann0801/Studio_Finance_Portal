@@ -11,9 +11,9 @@ function periodLabel(period) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
 }
 
-/** Full page to record a cash payment (full or partial) for one month. */
+/** Full page to record a cash payment (full or partial) for one class's month. */
 export default function AdminRecordCash() {
-  const { id, period } = useParams()
+  const { id, batch, period } = useParams()
   const navigate = useNavigate()
   const { reloadStats } = useAdmin()
   const [data, setData] = useState(null)
@@ -30,21 +30,23 @@ export default function AdminRecordCash() {
 
   const back = () => navigate(`/admin/students/${id}`)
 
+  const enrollment = data?.enrollments?.find((e) => e.batch === batch)
+
   // Remaining balance + how much is already paid for this month.
-  const forThisMonth = data && period === data.period
-  const outstandingRow = data?.outstanding?.find((x) => x.period === period)
+  const forThisMonth = enrollment && period === enrollment.period
+  const outstandingRow = enrollment?.outstanding?.find((x) => x.period === period)
   const remaining = forThisMonth
-    ? data.status !== 'paid'
-      ? data.amount_paise
+    ? enrollment.status !== 'paid'
+      ? enrollment.amount_paise
       : 0
     : outstandingRow?.amount_paise || 0
-  const alreadyPaid = forThisMonth ? data?.paid_paise || 0 : outstandingRow?.paid_paise || 0
+  const alreadyPaid = forThisMonth ? enrollment?.paid_paise || 0 : outstandingRow?.paid_paise || 0
 
   async function record(amountPaise) {
     setBusy(true)
     setError('')
     try {
-      const body = { period }
+      const body = { batch, period }
       if (amountPaise != null) body.amount_paise = amountPaise
       await adminApi(`/api/admin/students/${id}/mark-paid`, { method: 'POST', body })
       reloadStats()
@@ -72,10 +74,10 @@ export default function AdminRecordCash() {
       {!data && !error && <CardSkeleton lines={2} />}
       {error && <p className="error">{error}</p>}
 
-      {data && (
+      {data && enrollment && (
         <>
           <div className="card">
-            <div className="muted small">{data.name}</div>
+            <div className="muted small">{data.name} · {enrollment.batch_label}</div>
             <div className="card-title" style={{ marginTop: 2 }}>{periodLabel(period)}</div>
             {remaining > 0 ? (
               <>

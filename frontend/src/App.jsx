@@ -10,6 +10,7 @@ import ProfileSetup from './pages/ProfileSetup'
 import PaymentSuccess from './pages/PaymentSuccess'
 import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
+import AddClass from './pages/student/AddClass'
 import Profile from './pages/student/Profile'
 import StudioContact from './pages/student/StudioContact'
 import WhatsAppGroup from './pages/student/WhatsAppGroup'
@@ -70,7 +71,7 @@ export default function App() {
             <Route path="/admin/students" element={<AdminStudents />} />
             <Route path="/admin/students/new" element={<AddStudent />} />
             <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
-            <Route path="/admin/students/:id/record-cash/:period" element={<AdminRecordCash />} />
+            <Route path="/admin/students/:id/record-cash/:batch/:period" element={<AdminRecordCash />} />
             <Route path="/admin/classes" element={<AdminClasses />} />
             <Route path="/admin/classes/new" element={<AdminClassForm />} />
             <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
@@ -87,7 +88,8 @@ export default function App() {
             <Route element={<StudentLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/payments" element={<Payments />} />
-              <Route path="/receipt/:period" element={<Receipt />} />
+              <Route path="/add-class" element={<AddClass />} />
+              <Route path="/receipt/:batch/:period" element={<Receipt />} />
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/whatsapp-group" element={<WhatsAppGroup />} />
               <Route path="/contact" element={<StudioContact />} />

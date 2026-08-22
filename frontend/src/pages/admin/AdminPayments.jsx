@@ -251,7 +251,7 @@ export default function AdminPayments() {
               </p>
               <div className="card flush list">
                 {pending.map((s) => (
-                  <div className="list-item pay-row" key={s.id}>
+                  <div className="list-item pay-row" key={`${s.id}-${s.batch}`}>
                     <div className="li-main">
                       <div className="feed-name">{s.name}</div>
                       <div className="muted small">

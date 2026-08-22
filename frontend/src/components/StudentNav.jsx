@@ -12,6 +12,7 @@ import {
   CloseIcon,
   LogoutIcon,
   WhatsAppIcon,
+  PlusIcon,
 } from './Icons'
 
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { to: '/payments', label: 'Payments', Icon: PaymentIcon },
   { to: '/announcements', label: 'Announcements', Icon: MegaphoneIcon },
   { to: '/whatsapp-group', label: 'WhatsApp Group', Icon: WhatsAppIcon },
+  { to: '/add-class', label: 'Add a class', Icon: PlusIcon },
   { to: '/contact', label: 'Contact', Icon: PhoneIcon },
   { to: '/profile', label: 'Settings', Icon: SettingsIcon },
 ]

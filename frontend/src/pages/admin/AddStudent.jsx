@@ -12,9 +12,9 @@ function validate(form, classes) {
   if (!form.name.trim()) errors.name = 'Please enter their full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (form.password && form.password.length < 8) errors.password = 'At least 8 characters'
-  if (!form.batch) errors.batch = 'Please select a class'
-  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
-    errors.batch = 'Please choose a timing'
+  if (form.classes.length === 0) errors.classes = 'Please select at least one class'
+  else if (form.classes.some((c) => hasSlots(classById(classes, c.batch)) && !c.batch_slot))
+    errors.classes = 'Please choose a timing for every selected class'
   return errors
 }
 
@@ -26,8 +26,7 @@ export default function AddStudent() {
   const [form, setForm] = useState({
     name: '',
     phone: '',
-    batch: '',
-    batch_slot: null,
+    classes: [], // [{ batch, batch_slot }]
     join_date: '',
     password: '',
   })
@@ -42,6 +41,25 @@ export default function AddStudent() {
     const value = e?.target ? e.target.value : e
     setForm((f) => ({ ...f, [k]: value }))
     if (submitted) setErrors((prev) => ({ ...prev, [k]: undefined }))
+  }
+
+  const toggleClass = (batch) => {
+    setForm((f) => {
+      const exists = f.classes.some((c) => c.batch === batch)
+      const nextClasses = exists
+        ? f.classes.filter((c) => c.batch !== batch)
+        : [...f.classes, { batch, batch_slot: null }]
+      return { ...f, classes: nextClasses }
+    })
+    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
+  }
+
+  const selectSlot = (batch, slot) => {
+    setForm((f) => ({
+      ...f,
+      classes: f.classes.map((c) => (c.batch === batch ? { ...c, batch_slot: slot } : c)),
+    }))
+    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
   }
 
   async function onSubmit(e) {
@@ -59,8 +77,7 @@ export default function AddStudent() {
         body: {
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
-          batch: form.batch,
-          batch_slot: form.batch_slot,
+          classes: form.classes,
           join_date: form.join_date || null,
           password: form.password.trim() || null,
         },
@@ -99,8 +116,9 @@ export default function AddStudent() {
           <div className="paid-badge"><CheckIcon width={26} height={26} /></div>
           <h2 className="profile-name" style={{ marginTop: 12 }}>{done.student.name}</h2>
           <div className="muted">
-            {done.student.batch_label}
-            {done.student.slot_label ? ` · ${done.student.slot_label}` : ''}
+            {done.student.enrollments
+              .map((e) => (e.slot_label ? `${e.batch_label} · ${e.slot_label}` : e.batch_label))
+              .join(', ')}
           </div>
         </div>
 
@@ -139,7 +157,7 @@ export default function AddStudent() {
             onClick={() => {
               setDone(null)
               setSubmitted(false)
-              setForm({ name: '', phone: '', batch: '', batch_slot: null, join_date: '', password: '' })
+              setForm({ name: '', phone: '', classes: [], join_date: '', password: '' })
             }}
           >
             Add another
@@ -186,17 +204,15 @@ export default function AddStudent() {
 
         <BatchPicker
           classes={classes}
-          batch={form.batch}
-          slot={form.batch_slot}
-          error={errors.batch}
-          onSelect={(batch, slot) => {
-            setForm((f) => ({ ...f, batch, batch_slot: slot }))
-            if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
-          }}
+          multiple
+          selected={form.classes}
+          error={errors.classes}
+          onToggle={toggleClass}
+          onSlotSelect={selectSlot}
         />
 
         <label>
-          Join date <span className="muted small">(optional — defaults to today)</span>
+          Join date <span className="muted small">(optional — defaults to today; applies to every class selected)</span>
           <input type="date" value={form.join_date} onChange={set('join_date')} />
         </label>
 

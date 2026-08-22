@@ -8,7 +8,7 @@ import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, joinDateError } from '../lib/joinDate'
 
-const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'batch', 'join_date']
+const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'classes', 'join_date']
 
 function scrollToFirstError(errs) {
   const first = FIELD_ORDER.find((k) => errs[k])
@@ -24,9 +24,9 @@ function validate(form, classes) {
   if (!form.password) errors.password = 'Set a password'
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.confirm !== form.password) errors.confirm = 'Passwords do not match'
-  if (!form.batch) errors.batch = 'Please select a class'
-  else if (hasSlots(classById(classes, form.batch)) && !form.batch_slot)
-    errors.batch = 'Please choose a timing'
+  if (form.classes.length === 0) errors.classes = 'Please select at least one class'
+  else if (form.classes.some((c) => hasSlots(classById(classes, c.batch)) && !c.batch_slot))
+    errors.classes = 'Please choose a timing for every selected class'
   const jd = joinDateError(form.join_date)
   if (jd) errors.join_date = jd
   return errors
@@ -40,8 +40,7 @@ export default function Signup() {
     phone: '',
     password: '',
     confirm: '',
-    batch: '',
-    batch_slot: null,
+    classes: [], // [{ batch, batch_slot }]
     join_date: '',
   })
   const [errors, setErrors] = useState({})
@@ -53,6 +52,25 @@ export default function Signup() {
     const value = e?.target ? e.target.value : e
     setForm((f) => ({ ...f, [k]: value }))
     if (submitted) setErrors((prev) => ({ ...prev, [k]: undefined }))
+  }
+
+  const toggleClass = (batch) => {
+    setForm((f) => {
+      const exists = f.classes.some((c) => c.batch === batch)
+      const nextClasses = exists
+        ? f.classes.filter((c) => c.batch !== batch)
+        : [...f.classes, { batch, batch_slot: null }]
+      return { ...f, classes: nextClasses }
+    })
+    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
+  }
+
+  const selectSlot = (batch, slot) => {
+    setForm((f) => ({
+      ...f,
+      classes: f.classes.map((c) => (c.batch === batch ? { ...c, batch_slot: slot } : c)),
+    }))
+    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
   }
 
   // Live confirm-password state (updates as they type).
@@ -77,14 +95,14 @@ export default function Signup() {
     try {
       // 1) Create the account (phone + password → logs in immediately).
       await signUpWithPhone(form.phone, form.password)
-      // 2) Create the student profile (idempotent, keyed to the verified user).
+      // 2) Create the student profile + chosen class(es) (idempotent, keyed to
+      //    the verified user).
       await api('/api/signup', {
         method: 'POST',
         body: {
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
-          batch: form.batch,
-          batch_slot: form.batch_slot,
+          classes: form.classes,
           join_date: form.join_date,
         },
       })
@@ -164,16 +182,14 @@ export default function Signup() {
           ) : null}
         </label>
 
-        <div id="f-batch">
+        <div id="f-classes">
           <BatchPicker
             classes={classes}
-            batch={form.batch}
-            slot={form.batch_slot}
-            error={errors.batch}
-            onSelect={(batch, slot) => {
-              setForm((f) => ({ ...f, batch, batch_slot: slot }))
-              if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
-            }}
+            multiple
+            selected={form.classes}
+            error={errors.classes}
+            onToggle={toggleClass}
+            onSlotSelect={selectSlot}
           />
         </div>
 
@@ -189,6 +205,7 @@ export default function Signup() {
           />
           <span className="field-hint">
             This is the date you started attending classes, not the date you are signing up.
+            {form.classes.length > 1 ? ' It applies to every class you selected above.' : ''}
           </span>
           {errors.join_date && <span className="field-error">{errors.join_date}</span>}
         </label>

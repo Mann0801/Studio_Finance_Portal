@@ -1,4 +1,7 @@
-"""Database operations for payments, shared by the payments router and webhook."""
+"""Database operations for payments, shared by the payments router and webhook.
+
+Every payment belongs to one (student, class) pair — a student in two classes
+has two independent payment threads, never merged."""
 from __future__ import annotations
 
 from typing import Optional
@@ -9,22 +12,25 @@ from .fees import now_local
 
 def upsert_created_order(
     student_id: str,
+    class_id: str,
     period: str,
     amount_paise: int,
     is_prorata: bool,
     order_id: str,
     paid_paise: int = 0,
 ) -> None:
-    """Record (or refresh) the pending order for a (student, period).
+    """Record (or refresh) the pending order for a (student, class, period).
 
-    Uses the unique(student_id, period) constraint so retrying a payment for the
-    same month overwrites the prior pending order rather than duplicating it.
-    ``amount_paise`` is the full month fee; ``paid_paise`` preserves any partial
-    cash already recorded so the online order only needs to cover the remainder.
+    Uses the unique(student_id, class_id, period) constraint so retrying a
+    payment for the same month/class overwrites the prior pending order rather
+    than duplicating it. ``amount_paise`` is the full month fee; ``paid_paise``
+    preserves any partial cash already recorded so the online order only needs
+    to cover the remainder.
     """
     get_supabase().table("payments").upsert(
         {
             "student_id": student_id,
+            "class_id": class_id,
             "period": period,
             "amount_paise": amount_paise,
             "paid_paise": paid_paise,
@@ -34,16 +40,17 @@ def upsert_created_order(
             "razorpay_payment_id": None,
             "paid_at": None,
         },
-        on_conflict="student_id,period",
+        on_conflict="student_id,class_id,period",
     ).execute()
 
 
-def get_payment_by_period(student_id: str, period: str) -> Optional[dict]:
+def get_payment_by_period(student_id: str, class_id: str, period: str) -> Optional[dict]:
     res = (
         get_supabase()
         .table("payments")
         .select("*")
         .eq("student_id", student_id)
+        .eq("class_id", class_id)
         .eq("period", period)
         .limit(1)
         .execute()
@@ -51,36 +58,44 @@ def get_payment_by_period(student_id: str, period: str) -> Optional[dict]:
     return res.data[0] if res.data else None
 
 
-def amount_paid_for(student_id: str, period: str) -> int:
-    """Cash/online paise recorded toward a month so far (0 if nothing yet)."""
-    row = get_payment_by_period(student_id, period)
+def amount_paid_for(student_id: str, class_id: str, period: str) -> int:
+    """Cash/online paise recorded toward a (student, class, period) so far (0 if
+    nothing yet)."""
+    row = get_payment_by_period(student_id, class_id, period)
     return (row.get("paid_paise") or 0) if row else 0
 
 
 def record_cash_payment(
-    student_id: str, period: str, amount_now_paise: int, due_paise: int, is_prorata: bool
+    student_id: str,
+    class_id: str,
+    period: str,
+    amount_now_paise: int,
+    due_paise: int,
+    is_prorata: bool,
 ) -> None:
-    """Add a cash amount toward a (student, period). Accumulates on top of anything
-    already paid; the month flips to 'paid' only once the full fee is covered.
-    No Razorpay payment id — that's how cash is distinguished from an online payment."""
-    prev = amount_paid_for(student_id, period)
+    """Add a cash amount toward a (student, class, period). Accumulates on top of
+    anything already paid; the month flips to 'paid' only once the full fee is
+    covered. No Razorpay payment id — that's how cash is distinguished from an
+    online payment."""
+    prev = amount_paid_for(student_id, class_id, period)
     new_paid = min(prev + max(amount_now_paise, 0), due_paise)
     fully = new_paid >= due_paise
     get_supabase().table("payments").upsert(
         {
             "student_id": student_id,
+            "class_id": class_id,
             "period": period,
             "amount_paise": due_paise,
             "paid_paise": new_paid,
             "is_prorata": is_prorata,
             "status": "paid" if fully else "created",
-            "razorpay_order_id": f"cash-{student_id[:8]}-{period}",
+            "razorpay_order_id": f"cash-{student_id[:8]}-{class_id}-{period}",
             "razorpay_payment_id": None,
             # Stamp the time cash was last received (even for a partial) so it
             # shows dated in the payment history.
             "paid_at": now_local().isoformat(),
         },
-        on_conflict="student_id,period",
+        on_conflict="student_id,class_id,period",
     ).execute()
 
 
@@ -98,7 +113,9 @@ def get_payment_by_order(order_id: str) -> Optional[dict]:
 
 def mark_paid(order_id: str, payment_id: str) -> bool:
     """Mark the order's payment row paid. Idempotent — returns True if a row was
-    transitioned to (or already in) paid for this order."""
+    transitioned to (or already in) paid for this order. Order-scoped, so this
+    already resolves the correct (student, class) pair without needing it passed
+    in explicitly."""
     sb = get_supabase()
     existing = get_payment_by_order(order_id)
     if not existing:
@@ -118,12 +135,13 @@ def mark_paid(order_id: str, payment_id: str) -> bool:
     return True
 
 
-def is_period_paid(student_id: str, period: str) -> bool:
+def is_period_paid(student_id: str, class_id: str, period: str) -> bool:
     res = (
         get_supabase()
         .table("payments")
         .select("status")
         .eq("student_id", student_id)
+        .eq("class_id", class_id)
         .eq("period", period)
         .eq("status", "paid")
         .limit(1)

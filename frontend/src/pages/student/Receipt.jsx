@@ -15,11 +15,12 @@ const fmtDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
 
 export default function Receipt() {
-  const { period } = useParams()
+  const { batch, period } = useParams()
   const navigate = useNavigate()
   const { data, loading } = useDashboard()
 
-  const payment = data?.history?.find((p) => p.period === period && p.status === 'paid')
+  const enrollment = data?.enrollments?.find((e) => e.batch === batch)
+  const payment = enrollment?.history?.find((p) => p.period === period && p.status === 'paid')
 
   return (
     <>
@@ -50,7 +51,7 @@ export default function Receipt() {
               <div className="receipt-row"><span className="muted">Student</span><span>{data.student.name}</span></div>
               <div className="receipt-row">
                 <span className="muted">Class</span>
-                <span>{data.student.batch_label}{data.student.slot_label ? ` · ${data.student.slot_label}` : ''}</span>
+                <span>{enrollment.batch_label}{enrollment.slot_label ? ` · ${enrollment.slot_label}` : ''}</span>
               </div>
               <div className="receipt-row"><span className="muted">Month</span><span>{periodLabel(payment.period)}</span></div>
               <div className="receipt-row"><span className="muted">Paid on</span><span>{fmtDate(payment.paid_at)}</span></div>

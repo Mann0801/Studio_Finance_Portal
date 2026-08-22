@@ -5,16 +5,22 @@ import { WhatsAppIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 import { BUSINESS } from '../../lib/business'
 
-// Reachable any time from the menu. Shows the student's class WhatsApp group with
-// the invite link, so they can join (or re-open it) whenever they like.
+// Reachable any time from the menu. Shows every one of the student's classes'
+// WhatsApp groups with their invite links, so they can join (or re-open) each
+// whenever they like.
 export default function WhatsAppGroup() {
   const { data, loading, reload } = useDashboard()
   const { classes } = useClasses()
-  const student = data?.student
-  const link = student ? whatsappGroupLink(classById(classes, student.batch)) : null
+  const enrollments = data?.enrollments ?? []
 
-  const join = () => {
-    markWhatsappJoined()
+  const groups = enrollments.map((en) => ({
+    enrollment: en,
+    link: whatsappGroupLink(classById(classes, en.batch)),
+  }))
+  const withLinks = groups.filter((g) => g.link)
+
+  const join = (classId) => {
+    markWhatsappJoined(classId)
     reload?.()
   }
 
@@ -22,13 +28,13 @@ export default function WhatsAppGroup() {
     <>
       <div className="topbar">
         <div className="greeting">
-          <h1>WhatsApp Group</h1>
+          <h1>WhatsApp Group{enrollments.length > 1 ? 's' : ''}</h1>
         </div>
       </div>
 
       {loading && <CardSkeleton lines={2} />}
 
-      {data && !link && (
+      {data && withLinks.length === 0 && (
         <div className="card">
           <span className="card-title">No group for your class yet</span>
           <p className="muted" style={{ margin: '8px 0 0', lineHeight: 1.55 }}>
@@ -38,12 +44,12 @@ export default function WhatsAppGroup() {
         </div>
       )}
 
-      {data && link && (
-        <div className="wa-page-card">
+      {withLinks.map(({ enrollment: en, link }) => (
+        <div className="wa-page-card" key={en.batch} style={{ marginTop: 12 }}>
           <div className="wa-icon">
             <WhatsAppIcon width={46} height={46} />
           </div>
-          <h2>Join our WhatsApp Group</h2>
+          <h2>{en.batch_label}</h2>
           <p>
             If you haven’t joined yet, please join using the link below to stay updated with class
             schedules, announcements, payment reminders and important updates from the studio.
@@ -53,12 +59,12 @@ export default function WhatsAppGroup() {
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={join}
+            onClick={() => join(en.batch)}
           >
             Join Group
           </a>
         </div>
-      )}
+      ))}
     </>
   )
 }

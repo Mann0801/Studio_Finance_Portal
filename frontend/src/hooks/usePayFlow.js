@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { payForMonth } from '../lib/razorpay'
 import { useDashboard } from '../context/DashboardContext'
 
-/* Shared "Pay Now" handler: opens Razorpay, and on success refreshes the
-   dashboard and shows the success screen. Used by Home and Payments. */
+/* Shared "Pay Now" handler: opens Razorpay for one class's month, and on
+   success refreshes the dashboard and shows the success screen. Used by Home
+   and Payments. `batch` defaults to the currently active class. */
 export function usePayFlow() {
   const navigate = useNavigate()
-  const { reload, data } = useDashboard()
+  const { reload, data, activeClassId } = useDashboard()
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
 
-  async function pay(period) {
+  async function pay(period, batch = activeClassId) {
     setError('')
     setPaying(true)
     try {
-      const result = await payForMonth(period)
+      const result = await payForMonth(period, batch)
       await reload()
       // If the client couldn't confirm the payment (mobile network blip after
       // UPI), the Razorpay webhook records it server-side a moment later — keep
@@ -32,8 +33,6 @@ export function usePayFlow() {
         state: {
           ...result,
           studentName: data?.student?.name,
-          batchLabel: data?.student?.batch_label,
-          slotLabel: data?.student?.slot_label,
         },
         replace: true,
       })
