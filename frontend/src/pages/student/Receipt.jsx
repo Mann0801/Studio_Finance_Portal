@@ -11,8 +11,23 @@ function periodLabel(period) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
 }
 
-const fmtDate = (iso) =>
-  iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
+const fmtDateTime = (iso) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  })
+  const time = d.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  })
+  return `${date}, ${time}`
+}
 
 export default function Receipt() {
   const { batch, period } = useParams()
@@ -54,7 +69,7 @@ export default function Receipt() {
                 <span>{enrollment.batch_label}{enrollment.slot_label ? ` · ${enrollment.slot_label}` : ''}</span>
               </div>
               <div className="receipt-row"><span className="muted">Month</span><span>{periodLabel(payment.period)}</span></div>
-              <div className="receipt-row"><span className="muted">Paid on</span><span>{fmtDate(payment.paid_at)}</span></div>
+              <div className="receipt-row"><span className="muted">Paid on</span><span>{fmtDateTime(payment.paid_at)}</span></div>
               <div className="receipt-row total"><span>Amount paid</span><span>{rupees(payment.amount_paise)}</span></div>
             </div>
             <div className="muted small" style={{ textAlign: 'center', marginTop: 12 }}>
