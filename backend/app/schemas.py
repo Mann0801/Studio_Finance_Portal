@@ -294,6 +294,13 @@ class AdminStudentDetail(BaseModel):
     total_paid_paise: int          # summed across every class
 
 
+class PeriodActionRequest(BaseModel):
+    # Which class + month an admin correction (waive / un-waive / remove a
+    # payment) applies to; period defaults to the current calendar month.
+    batch: str
+    period: Optional[str] = None
+
+
 class MarkPaidRequest(BaseModel):
     # Which class this cash payment is for.
     batch: str

@@ -17,6 +17,7 @@ from ..payments_store import (
     amount_paid_for,
     get_payment_by_order,
     is_period_paid,
+    is_period_waived,
     mark_paid,
     upsert_created_order,
 )
@@ -55,6 +56,8 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
         raise HTTPException(status_code=400, detail="No fee due before you joined")
     if is_period_paid(student["id"], body.batch, period):
         raise HTTPException(status_code=409, detail="This month is already paid")
+    if is_period_waived(student["id"], body.batch, period):
+        raise HTTPException(status_code=409, detail="This month's fee has been waived")
 
     due = compute_due(cls, join_date, period)
     if due.amount_paise <= 0:
