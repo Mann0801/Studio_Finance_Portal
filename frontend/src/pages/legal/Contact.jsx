@@ -39,6 +39,16 @@ export default function Contact() {
           <span className="lc-k">Address</span>
           <span className="lc-v">{BUSINESS.address}</span>
         </div>
+        {BUSINESS.instagram && (
+          <div className="lc-row">
+            <span className="lc-k">Instagram</span>
+            <span className="lc-v">
+              <a href={BUSINESS.instagram} target="_blank" rel="noreferrer">
+                {BUSINESS.instagramHandle}
+              </a>
+            </span>
+          </div>
+        )}
       </div>
 
       <p className="muted" style={{ marginTop: 18 }}>

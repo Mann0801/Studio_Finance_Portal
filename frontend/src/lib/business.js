@@ -5,6 +5,8 @@ export const BUSINESS = {
   owner: 'Seema Mehta',
   email: 'i.am.possible.fit@gmail.com',
   phones: ['9900521127', '9686390082'],
+  instagram: 'https://www.instagram.com/fitwithseemamehta/',
+  instagramHandle: '@fitwithseemamehta',
   address:
     '14, Ground Floor, next to The Greens Apartments, near Alpine Eco Apartments, ' +
     'Vinayaka Layout, Dodda Nekkundi Extension, Doddanekkundi, Bengaluru, Karnataka 560037',
