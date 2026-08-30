@@ -353,6 +353,44 @@ button.menu-item {
 .notice-card p + p {
   margin-top: 8px;
 }
+.join-date-sheet {
+  text-align: center;
+}
+.join-date-sheet .notice-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.join-date-sheet p {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  text-align: left;
+}
+.join-date-sheet p + p {
+  margin-top: 10px;
+}
+.join-date-sheet strong {
+  color: var(--accent-bright);
+}
+.date-field-wrap {
+  position: relative;
+}
+.date-field-wrap input {
+  width: 100%;
+}
+.date-field-shield {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
 .card-title {
   font-size: 13px;
   color: var(--muted);
