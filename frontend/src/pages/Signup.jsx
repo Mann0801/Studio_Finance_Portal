@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { signUpWithPhone, setLastPhone, toTenDigits } from '../lib/auth'
@@ -6,6 +6,7 @@ import { useClasses, classById, hasSlots } from '../lib/classes'
 import { STUDIO_NAME, LOGO_SRC } from '../lib/brand'
 import BatchPicker from '../components/BatchPicker'
 import LegalFooter from '../components/LegalFooter'
+import JoinDateNoticeModal from '../components/JoinDateNoticeModal'
 import { InfoIcon } from '../components/Icons'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, FIRST_OF_THIS_MONTH_LABEL, joinDateError } from '../lib/joinDate'
 
@@ -48,6 +49,18 @@ export default function Signup() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // The join-date notice must be acknowledged (blocking) before the date
+  // picker opens the first time; the input stays read-only until then.
+  const [joinDateAcked, setJoinDateAcked] = useState(false)
+  const [showJoinDateNotice, setShowJoinDateNotice] = useState(false)
+  const joinDateRef = useRef(null)
+  useEffect(() => {
+    if (joinDateAcked) {
+      joinDateRef.current?.focus()
+      joinDateRef.current?.showPicker?.()
+    }
+  }, [joinDateAcked])
 
   const set = (k) => (e) => {
     const value = e?.target ? e.target.value : e
@@ -212,14 +225,25 @@ export default function Signup() {
 
         <label id="f-join_date">
           Studio join date
-          <input
-            type="date"
-            value={form.join_date}
-            onChange={set('join_date')}
-            min={MIN_JOIN_DATE}
-            max={MAX_JOIN_DATE}
-            className={errors.join_date ? 'invalid' : ''}
-          />
+          <div className="date-field-wrap">
+            <input
+              ref={joinDateRef}
+              type="date"
+              value={form.join_date}
+              onChange={set('join_date')}
+              min={MIN_JOIN_DATE}
+              max={MAX_JOIN_DATE}
+              className={errors.join_date ? 'invalid' : ''}
+              readOnly={!joinDateAcked}
+              onFocus={() => !joinDateAcked && setShowJoinDateNotice(true)}
+            />
+            {!joinDateAcked && (
+              <div
+                className="date-field-shield"
+                onClick={() => setShowJoinDateNotice(true)}
+              />
+            )}
+          </div>
           {form.classes.length > 1 && (
             <span className="field-hint">It applies to every class you selected above.</span>
           )}
@@ -241,6 +265,14 @@ export default function Signup() {
       </p>
 
       <LegalFooter />
+
+      <JoinDateNoticeModal
+        open={showJoinDateNotice}
+        onOk={() => {
+          setShowJoinDateNotice(false)
+          setJoinDateAcked(true)
+        }}
+      />
     </div>
   )
 }
