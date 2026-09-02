@@ -75,10 +75,12 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="auth-foot">
-        New here? <Link to="/signup">Create an account</Link>
-      </p>
-      <p className="auth-foot" style={{ marginTop: 6 }}>
+      <p className="auth-or">New here?</p>
+      <Link to="/signup" className="btn ghost lg block signup-cta">
+        Create an account
+      </Link>
+
+      <p className="auth-foot" style={{ marginTop: 14 }}>
         <Link to="/plans">Browse our classes &amp; pricing →</Link>
       </p>
 
