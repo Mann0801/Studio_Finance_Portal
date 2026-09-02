@@ -889,6 +889,27 @@ button.menu-item {
   margin-top: 22px;
   font-size: 14px;
 }
+.auth-or {
+  text-align: center;
+  color: var(--muted);
+  margin: 22px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* Gentle "look here" pulse so new students notice this button, same treatment as .menu-btn. */
+.btn.signup-cta {
+  animation: menu-pulse 2.6s ease-in-out infinite;
+}
+.btn.signup-cta:active {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn.signup-cta {
+    animation: none;
+  }
+}
 
 /* ── Batch picker (signup) ── */
 .batch-list {
