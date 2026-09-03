@@ -1372,6 +1372,24 @@ button.menu-item {
   gap: 8px;
   flex-shrink: 0;
 }
+.s-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.s-amount {
+  font-size: 13px;
+  font-weight: 700;
+}
+.s-amount.paid {
+  color: var(--paid);
+}
+.s-amount.unpaid {
+  color: var(--unpaid);
+}
+.s-amount.waived {
+  color: var(--muted);
+}
 .wa-btn {
   display: inline-flex;
   align-items: center;
