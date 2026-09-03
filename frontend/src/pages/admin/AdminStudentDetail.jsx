@@ -14,6 +14,19 @@ import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', opts) : '—'
 
+const fmtDateTime = (iso) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
+  const time = d.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  })
+  return `${date}, ${time}`
+}
+
 function periodLabel(period) {
   const [y, m] = period.split('-').map(Number)
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
@@ -198,7 +211,7 @@ function EnrollmentCard({
               <span className="muted">Last payment</span>
               <span className="li-main" style={{ fontSize: 14 }}>
                 {en.last_payment_paise != null
-                  ? `${rupees(en.last_payment_paise)} · ${fmtDate(en.last_payment_at, { day: 'numeric', month: 'short' })}`
+                  ? `${rupees(en.last_payment_paise)} · ${fmtDateTime(en.last_payment_at)}`
                   : 'None yet'}
               </span>
             </div>
@@ -238,7 +251,7 @@ function EnrollmentCard({
                         <div className="muted small">
                           {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
                           {p.method}
-                          {p.paid_at ? ` · ${fmtDate(p.paid_at, { day: 'numeric', month: 'short' })}` : ''}
+                          {p.paid_at ? ` · ${fmtDateTime(p.paid_at)}` : ''}
                           {p.status !== 'paid' ? ' · partial' : ''}
                         </div>
                       </div>

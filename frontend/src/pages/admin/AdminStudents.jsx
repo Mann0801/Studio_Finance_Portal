@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
+import { rupees } from '../../lib/batches'
 import { useClasses, scheduleLabel } from '../../lib/classes'
 import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
 import StatusBadge from '../../components/StatusBadge'
@@ -33,7 +34,10 @@ function StudentCard({ s, onOpen, sub }) {
         {s.batch_deleted ? (
           <span className="badge deleted">Batch Deleted</span>
         ) : (
-          <StatusBadge status={s.status} />
+          <div className="s-status-row">
+            <span className={`s-amount ${s.status}`}>{rupees(s.amount_paise)}</span>
+            <StatusBadge status={s.status} />
+          </div>
         )}
         {s.whatsapp_url && (
           <a

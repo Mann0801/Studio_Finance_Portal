@@ -14,7 +14,20 @@ function pct(n) {
 
 function dateLabel(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  })
+  const time = d.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  })
+  return `${date}, ${time}`
 }
 
 const TABS = [
@@ -98,7 +111,7 @@ export default function AdminPayments() {
       periodLabel(period),
       (p.paid_paise / 100).toFixed(2),
       p.method || '',
-      p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-IN') : '',
+      p.paid_at ? dateLabel(p.paid_at) : '',
     ])
     downloadCsv(`payments-${period}.csv`, toCsv(headers, csvRows))
   }

@@ -25,7 +25,7 @@ function monthProgress() {
 
 function timeLabel(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function AdminHome() {
