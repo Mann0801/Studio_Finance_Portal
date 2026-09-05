@@ -22,6 +22,10 @@ import AdminHome from './pages/admin/AdminHome'
 import AdminStudents from './pages/admin/AdminStudents'
 import AddStudent from './pages/admin/AddStudent'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
+import AdminEnrollmentDetail from './pages/admin/AdminEnrollmentDetail'
+import AdminEditStudent from './pages/admin/AdminEditStudent'
+import AdminAddEnrollment from './pages/admin/AdminAddEnrollment'
+import AdminResetPassword from './pages/admin/AdminResetPassword'
 import AdminJoinDateCheck from './pages/admin/AdminJoinDateCheck'
 import AdminSignups from './pages/admin/AdminSignups'
 import AdminRecordCash from './pages/admin/AdminRecordCash'
@@ -73,6 +77,10 @@ export default function App() {
             <Route path="/admin/students" element={<AdminStudents />} />
             <Route path="/admin/students/new" element={<AddStudent />} />
             <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
+            <Route path="/admin/students/:id/edit" element={<AdminEditStudent />} />
+            <Route path="/admin/students/:id/add-class" element={<AdminAddEnrollment />} />
+            <Route path="/admin/students/:id/reset-password" element={<AdminResetPassword />} />
+            <Route path="/admin/students/:id/classes/:batch" element={<AdminEnrollmentDetail />} />
             <Route path="/admin/join-dates" element={<AdminJoinDateCheck />} />
             <Route path="/admin/signups" element={<AdminSignups />} />
             <Route path="/admin/students/:id/record-cash/:batch/:period" element={<AdminRecordCash />} />
