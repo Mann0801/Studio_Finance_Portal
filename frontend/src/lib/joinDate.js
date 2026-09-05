@@ -35,3 +35,14 @@ export const FIRST_OF_THIS_MONTH_LABEL = (() => {
     year: 'numeric',
   })
 })()
+
+// The signup notice tells existing members to set their join date to the 1st
+// of whichever month they sign up in (see FIRST_OF_THIS_MONTH_LABEL above),
+// so the "correct" join date for a given account is the 1st of ITS signup
+// month, not a fixed date — this lets the admin check work correctly in any
+// month, not just the launch month.
+export function expectedJoinDate(signedUpAtIso) {
+  if (!signedUpAtIso) return null
+  const d = new Date(signedUpAtIso)
+  return localDateStr(new Date(d.getFullYear(), d.getMonth(), 1))
+}

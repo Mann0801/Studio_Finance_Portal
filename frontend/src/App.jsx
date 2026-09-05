@@ -22,6 +22,7 @@ import AdminHome from './pages/admin/AdminHome'
 import AdminStudents from './pages/admin/AdminStudents'
 import AddStudent from './pages/admin/AddStudent'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
+import AdminJoinDateCheck from './pages/admin/AdminJoinDateCheck'
 import AdminRecordCash from './pages/admin/AdminRecordCash'
 import AdminPayments from './pages/admin/AdminPayments'
 import AdminClasses from './pages/admin/AdminClasses'
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/admin/students" element={<AdminStudents />} />
             <Route path="/admin/students/new" element={<AddStudent />} />
             <Route path="/admin/students/:id" element={<AdminStudentDetail />} />
+            <Route path="/admin/join-dates" element={<AdminJoinDateCheck />} />
             <Route path="/admin/students/:id/record-cash/:batch/:period" element={<AdminRecordCash />} />
             <Route path="/admin/classes" element={<AdminClasses />} />
             <Route path="/admin/classes/new" element={<AdminClassForm />} />
