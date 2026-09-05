@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
@@ -42,6 +43,7 @@ function dateTimeLabel(iso) {
 }
 
 export default function AdminHome() {
+  const navigate = useNavigate()
   const { stats, guard } = useAdmin()
   const [activity, setActivity] = useState(null)
 
@@ -73,22 +75,34 @@ export default function AdminHome() {
         </div>
       ) : (
         <div className="stat-grid">
-          <div className="stat">
+          <button type="button" className="stat tappable" onClick={() => navigate('/admin/students')}>
             <div className="num">{stats.total_students}</div>
             <div className="label">Active students</div>
-          </div>
-          <div className="stat">
+          </button>
+          <button
+            type="button"
+            className="stat tappable"
+            onClick={() => navigate('/admin/payments?tab=collected')}
+          >
             <div className="num" style={{ color: 'var(--paid)' }}>{stats.paid_count}</div>
             <div className="label">Paid this month</div>
-          </div>
-          <div className="stat">
+          </button>
+          <button
+            type="button"
+            className="stat tappable"
+            onClick={() => navigate('/admin/payments?tab=pending')}
+          >
             <div className="num" style={{ color: 'var(--unpaid)' }}>{stats.unpaid_count}</div>
             <div className="label">Unpaid this month</div>
-          </div>
-          <div className="stat">
+          </button>
+          <button
+            type="button"
+            className="stat tappable"
+            onClick={() => navigate('/admin/payments?tab=collected')}
+          >
             <div className="num">{rupees(stats.revenue_paise)}</div>
             <div className="label">of {rupees(stats.expected_paise)} expected</div>
-          </div>
+          </button>
         </div>
       )}
 
