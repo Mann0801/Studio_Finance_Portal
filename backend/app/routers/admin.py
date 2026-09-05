@@ -635,6 +635,7 @@ def activity():
             continue
         recent_signups.append(
             ActivitySignup(
+                id=s["id"],
                 name=s["name"],
                 batch=e["class_id"],
                 batch_label=class_label(cmap.get(e["class_id"])),
@@ -644,6 +645,41 @@ def activity():
         )
 
     return AdminActivity(recent_payments=recent_payments, recent_signups=recent_signups)
+
+
+@router.get(
+    "/signups",
+    response_model=list[ActivitySignup],
+    dependencies=[Depends(require_admin)],
+)
+def all_signups():
+    """Every signup/enrollment ever made, most recent first — the full history
+    behind Home's 'New signups' feed (which only shows the latest handful)."""
+    sb = get_supabase()
+    cmap = class_map()
+    enrolls = (
+        sb.table("enrollments")
+        .select("student_id, class_id, join_date, created_at")
+        .order("created_at", desc=True)
+        .execute()
+    ).data
+    smap = _students_by_id([e["student_id"] for e in enrolls])
+    rows: list[ActivitySignup] = []
+    for e in enrolls:
+        s = smap.get(e["student_id"])
+        if not s:
+            continue
+        rows.append(
+            ActivitySignup(
+                id=s["id"],
+                name=s["name"],
+                batch=e["class_id"],
+                batch_label=class_label(cmap.get(e["class_id"])),
+                join_date=_as_date(e["join_date"]),
+                signed_up_at=e.get("created_at"),
+            )
+        )
+    return rows
 
 
 @router.get(

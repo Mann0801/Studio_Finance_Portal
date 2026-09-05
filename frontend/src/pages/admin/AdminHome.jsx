@@ -4,6 +4,7 @@ import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
 import { LOGO_SRC } from '../../lib/brand'
+import { ChevronRightIcon } from '../../components/Icons'
 import { Skeleton } from '../../components/Skeleton'
 
 function greeting() {
@@ -117,7 +118,10 @@ export default function AdminHome() {
 
       {/* New signups */}
       <div className="card flush" style={{ marginTop: 20 }}>
-        <div className="feed-head">New signups</div>
+        <button type="button" className="feed-head feed-head-link" onClick={() => navigate('/admin/signups')}>
+          New signups
+          <ChevronRightIcon width={16} height={16} />
+        </button>
         <div className="list scroll-list">
           {!activity ? (
             <div className="list-item"><Skeleton height={16} width="60%" /></div>
@@ -131,31 +135,6 @@ export default function AdminHome() {
                   <span className="muted small"> · {s.batch_label}</span>
                 </span>
                 <span className="muted small">{dateTimeLabel(s.signed_up_at)}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Recent payments */}
-      <div className="card flush" style={{ marginTop: 16 }}>
-        <div className="feed-head">Recent payments</div>
-        <div className="list scroll-list">
-          {!activity ? (
-            <div className="list-item"><Skeleton height={16} width="60%" /></div>
-          ) : activity.recent_payments.length === 0 ? (
-            <div className="list-item"><span className="muted small">No payments yet.</span></div>
-          ) : (
-            activity.recent_payments.map((p, i) => (
-              <div className="list-item" key={`p${i}`}>
-                <span className="li-main">
-                  <span className="feed-name">{p.name}</span>
-                  <span className="muted small"> · {p.batch_label}</span>
-                </span>
-                <span className="feed-right">
-                  <span style={{ color: 'var(--paid)', fontWeight: 700 }}>{rupees(p.amount_paise)}</span>
-                  <span className="muted small">{dateTimeLabel(p.paid_at)}</span>
-                </span>
               </div>
             ))
           )}
