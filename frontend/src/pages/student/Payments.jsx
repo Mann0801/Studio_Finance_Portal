@@ -87,7 +87,7 @@ export default function Payments() {
               {en.current.is_prorata ? ' · pro-rated' : ''}
             </div>
             {en.current.status !== 'paid' && en.current.paid_paise > 0 && (
-              <div className="part-paid">{rupees(en.current.paid_paise)} already paid in cash</div>
+              <div className="part-paid">{rupees(en.current.paid_paise)} already paid</div>
             )}
             {en.current.status !== 'paid' && en.current.amount_paise > 0 && (
               <button
@@ -115,7 +115,7 @@ export default function Payments() {
                     <div className="li-main">{periodLabel(p.period)}</div>
                     <div className="li-sub">
                       {p.is_prorata ? 'Pro-rated · ' : ''}
-                      {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                      {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
                       {p.method}
                       {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
                       {p.status !== 'paid' ? ' · partial' : ''}

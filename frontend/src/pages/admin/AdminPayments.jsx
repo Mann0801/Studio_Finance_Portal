@@ -252,7 +252,7 @@ export default function AdminPayments() {
                       <div className="feed-name">{p.name}</div>
                       <div className="muted small">
                         {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} ·{' '}
-                        {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                        {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
                         {p.method}{p.status === 'partial' ? ' · partial' : ''}
                       </div>
                     </div>

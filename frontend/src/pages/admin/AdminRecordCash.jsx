@@ -20,6 +20,7 @@ export default function AdminRecordCash() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [custom, setCustom] = useState('')
+  const [methodNote, setMethodNote] = useState('')
 
   const load = useCallback(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -48,6 +49,7 @@ export default function AdminRecordCash() {
     try {
       const body = { batch, period }
       if (amountPaise != null) body.amount_paise = amountPaise
+      if (methodNote.trim()) body.method = methodNote.trim()
       await adminApi(`/api/admin/students/${id}/mark-paid`, { method: 'POST', body })
       reloadStats()
       navigate(`/admin/students/${id}`, { replace: true })
@@ -67,7 +69,7 @@ export default function AdminRecordCash() {
           <ArrowLeftIcon width={22} height={22} />
         </button>
         <div className="greeting">
-          <h1>Record cash</h1>
+          <h1>Record payment</h1>
         </div>
       </div>
 
@@ -84,7 +86,7 @@ export default function AdminRecordCash() {
                 <div className="muted small" style={{ marginTop: 10 }}>Balance owed</div>
                 <div className="amount" style={{ fontSize: 30 }}>{rupees(remaining)}</div>
                 {alreadyPaid > 0 && (
-                  <div className="part-paid">{rupees(alreadyPaid)} already paid in cash</div>
+                  <div className="part-paid">{rupees(alreadyPaid)} already paid</div>
                 )}
               </>
             ) : (
@@ -96,9 +98,22 @@ export default function AdminRecordCash() {
 
           {remaining > 0 && (
             <>
+              <div className="form" style={{ marginTop: 16 }}>
+                <label>
+                  Payment type <span className="muted small">(optional — e.g. GPay, Cash, Netbanking)</span>
+                  <input
+                    type="text"
+                    value={methodNote}
+                    onChange={(e) => setMethodNote(e.target.value)}
+                    placeholder="Cash"
+                    maxLength={40}
+                  />
+                </label>
+              </div>
+
               <button
                 className="btn primary lg block"
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 10 }}
                 onClick={() => record(null)}
                 disabled={busy}
               >

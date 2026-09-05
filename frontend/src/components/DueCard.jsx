@@ -22,7 +22,7 @@ export default function DueCard({ month, isCurrent = false, paying, onPay, style
         {month.is_prorata ? ' · pro-rated' : ''}
       </div>
       {month.paid_paise > 0 && (
-        <div className="part-paid">{rupees(month.paid_paise)} already paid in cash</div>
+        <div className="part-paid">{rupees(month.paid_paise)} already paid</div>
       )}
       <button
         className="btn primary lg block"

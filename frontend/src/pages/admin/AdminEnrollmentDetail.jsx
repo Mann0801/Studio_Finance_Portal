@@ -214,7 +214,7 @@ export default function AdminEnrollmentDetail() {
                   <>
                     <div className="amount" style={{ fontSize: 26 }}>{rupees(en.amount_paise)}</div>
                     {!paid && en.paid_paise > 0 && (
-                      <div className="part-paid">{rupees(en.paid_paise)} already paid in cash</div>
+                      <div className="part-paid">{rupees(en.paid_paise)} already paid</div>
                     )}
                   </>
                 )}
@@ -232,7 +232,7 @@ export default function AdminEnrollmentDetail() {
                   en.amount_paise > 0 && (
                     <div className="stack" style={{ gap: 8, marginTop: 10 }}>
                       <button className="btn primary block" onClick={() => goRecord(en.period)} disabled={busy}>
-                        Record cash payment
+                        Record payment
                       </button>
                       <button className="btn ghost block" onClick={() => onWaive(en.period)} disabled={busy}>
                         Waive this month
@@ -317,7 +317,7 @@ export default function AdminEnrollmentDetail() {
                           <div className="li-main">
                             <div>{periodLabel(p.period)}</div>
                             <div className="muted small">
-                              {p.method === 'Cash' && <CashIcon width={12} height={12} className="cash-ico" />}
+                              {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
                               {p.method}
                               {p.paid_at ? ` · ${fmtDateTime(p.paid_at)}` : ''}
                               {p.status !== 'paid' ? ' · partial' : ''}

@@ -10,6 +10,14 @@ from .db import get_supabase
 from .fees import now_local
 
 
+def payment_method_label(row: dict) -> str:
+    """A manually-recorded payment's type/note (GPay, Cash, Netbanking, ...),
+    falling back to Cash/Online for rows from before this was recorded."""
+    if row.get("method"):
+        return row["method"]
+    return "Online" if row.get("razorpay_payment_id") else "Cash"
+
+
 def upsert_created_order(
     student_id: str,
     class_id: str,
@@ -72,11 +80,16 @@ def record_cash_payment(
     amount_now_paise: int,
     due_paise: int,
     is_prorata: bool,
+    method: Optional[str] = None,
 ) -> None:
-    """Add a cash amount toward a (student, class, period). Accumulates on top of
-    anything already paid; the month flips to 'paid' only once the full fee is
-    covered. No Razorpay payment id — that's how cash is distinguished from an
-    online payment."""
+    """Add a manually-recorded amount toward a (student, class, period) —
+    cash, GPay, netbanking, or anything else paid outside the app. Accumulates
+    on top of anything already paid; the month flips to 'paid' only once the
+    full fee is covered. No Razorpay payment id — that's how a manual entry is
+    distinguished from an online payment. ``method`` is a free-text label
+    (e.g. "GPay") shown in payment history; it reflects only the most recent
+    entry, same as ``paid_at``, since a period is one accumulating row rather
+    than a ledger of every partial contribution."""
     prev = amount_paid_for(student_id, class_id, period)
     new_paid = min(prev + max(amount_now_paise, 0), due_paise)
     fully = new_paid >= due_paise
@@ -91,6 +104,7 @@ def record_cash_payment(
             "status": "paid" if fully else "created",
             "razorpay_order_id": f"cash-{student_id[:8]}-{class_id}-{period}",
             "razorpay_payment_id": None,
+            "method": (method or "").strip() or None,
             # Stamp the time cash was last received (even for a partial) so it
             # shows dated in the payment history.
             "paid_at": now_local().isoformat(),

@@ -23,6 +23,7 @@ from ..enrollments_store import (
     set_whatsapp_joined,
 )
 from ..fees import compute_due, current_period, is_settled, now_local, period_of, previous_period
+from ..payments_store import payment_method_label
 from ..schemas import (
     AddClassRequest,
     ClassChoice,
@@ -150,7 +151,7 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
             status=p["status"],
             paid_at=p.get("paid_at"),
             paid_paise=(p.get("paid_paise") or 0),
-            method="Cash" if not p.get("razorpay_payment_id") else "Online",
+            method=payment_method_label(p),
         )
         for p in payments
         if p["status"] == "paid" or (p.get("paid_paise") or 0) > 0
