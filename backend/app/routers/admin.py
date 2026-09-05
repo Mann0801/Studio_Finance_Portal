@@ -296,7 +296,7 @@ def _students_by_id(ids: list[str]) -> dict[str, dict]:
     rows = (
         get_supabase()
         .table("students")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, created_at")
         .in_("id", list(set(ids)))
         .execute()
         .data
@@ -418,6 +418,7 @@ def all_students():
                 slot_label=slot_label_of(cls, e.get("batch_slot")),
                 batch_deleted=_deleted(cls),
                 join_date=join_date,
+                signed_up_at=s.get("created_at"),
                 period=period,
                 amount_paise=amount,
                 is_prorata=due.is_prorata,

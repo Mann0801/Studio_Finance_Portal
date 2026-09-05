@@ -141,6 +141,7 @@ class AdminStudentRow(BaseModel):
     slot_label: Optional[str] = None
     batch_deleted: bool = False
     join_date: date
+    signed_up_at: Optional[datetime] = None  # app account creation — for spotting mis-set join dates
     period: str
     amount_paise: int
     is_prorata: bool

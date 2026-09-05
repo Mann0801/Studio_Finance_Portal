@@ -149,15 +149,17 @@ def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
                 _count_session_days(year, month, weekdays, from_day=join_date.day), spm
             )
             per_session = Decimal(fee) / Decimal(spm)
-            return DueAmount(
-                period, _round_to_rupee_paise(per_session * Decimal(remaining)), True
-            )
+            amount = _round_to_rupee_paise(per_session * Decimal(remaining))
+            # Joining early enough that all N sessions are still available this
+            # month is a full pack, not a pro-rated one — don't mislabel it.
+            return DueAmount(period, amount, amount < fee)
         return DueAmount(period, fee, False)
 
     if fee_type == PER_SESSION:
         if is_join_month:
+            full_sessions = _count_session_days(year, month, weekdays)
             sessions = _count_session_days(year, month, weekdays, from_day=join_date.day)
-            return DueAmount(period, fee * sessions, True)
+            return DueAmount(period, fee * sessions, sessions < full_sessions)
         sessions = _count_session_days(year, month, weekdays)
         return DueAmount(period, fee * sessions, False)
 
