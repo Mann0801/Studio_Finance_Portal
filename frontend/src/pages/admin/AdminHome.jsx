@@ -124,12 +124,12 @@ export default function AdminHome() {
           <ChevronRightIcon width={16} height={16} />
         </button>
         {!activity ? (
-          <div className="signup-row"><Skeleton height={16} width="60%" /></div>
+          <div className="data-row"><Skeleton height={16} width="60%" /></div>
         ) : activity.recent_signups.length === 0 ? (
-          <div className="signup-row"><span className="muted small">No signups yet.</span></div>
+          <div className="data-row"><span className="muted small">No signups yet.</span></div>
         ) : (
           <>
-            <div className="signup-row head">
+            <div className="data-row head">
               <span>Name</span>
               <span>Class</span>
               <span style={{ textAlign: 'right' }}>Signed up</span>
@@ -137,16 +137,16 @@ export default function AdminHome() {
             <div className="scroll-list">
               {activity.recent_signups.map((s, i) => (
                 <div
-                  className="signup-row"
+                  className="data-row"
                   key={`${s.id}-${s.batch}-${i}`}
                   role="button"
                   tabIndex={0}
                   onClick={() => navigate(`/admin/students/${s.id}`)}
                   onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
                 >
-                  <span className="signup-name">{s.name}</span>
-                  <span className="signup-class">{s.batch_label}</span>
-                  <span className="signup-when">
+                  <span className="data-name">{s.name}</span>
+                  <span className="data-sub">{s.batch_label}</span>
+                  <span className="data-end">
                     {dateOnly(s.signed_up_at)}
                     <br />
                     {timeOnly(s.signed_up_at)}

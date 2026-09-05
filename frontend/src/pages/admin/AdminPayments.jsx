@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
-import { SearchIcon, DownloadIcon, WhatsAppIcon, CashIcon } from '../../components/Icons'
+import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
 import { toCsv, downloadCsv } from '../../lib/csv'
 import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
@@ -238,29 +238,36 @@ export default function AdminPayments() {
             </div>
           ) : (
             <div className="card flush" style={{ marginTop: 12 }}>
-              <div className="list scroll-list scroll-tall">
+              <div className="data-row head">
+                <span>Name</span>
+                <span>Class</span>
+                <span style={{ textAlign: 'right' }}>Paid</span>
+              </div>
+              <div className="scroll-list scroll-tall">
                 {visibleCollected.map((p) => (
                   <div
-                    className="list-item pay-row tappable"
+                    className="data-row"
                     key={p.id}
                     role="button"
                     tabIndex={0}
                     onClick={() => navigate(`/admin/students/${p.id}`)}
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.id}`)}
                   >
-                    <div className="li-main">
-                      <div className="feed-name">{p.name}</div>
-                      <div className="muted small">
-                        {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''} ·{' '}
-                        {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
-                        {p.method}{p.status === 'partial' ? ' · partial' : ''}
-                      </div>
-                    </div>
-                    <div className="feed-right">
-                      <span style={{ color: p.status === 'partial' ? 'var(--warn)' : 'var(--paid)', fontWeight: 700 }}>
+                    <span className="data-name">{p.name}</span>
+                    <span className="data-sub data-sub-2line">
+                      <span>{p.batch_label}</span>
+                      {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
+                    </span>
+                    <div className="data-end">
+                      <div style={{ color: p.status === 'partial' ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
                         {rupees(p.paid_paise)}
-                      </span>
-                      <span className="muted small">{dateLabel(p.paid_at) || periodLabel(period)}</span>
+                      </div>
+                      {p.status === 'partial' && (
+                        <div style={{ color: 'var(--warn)', fontWeight: 700 }}>partial</div>
+                      )}
+                      {p.method && p.method !== 'Online' && p.method !== 'Cash' && (
+                        <div className="muted">{p.method}</div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -286,35 +293,46 @@ export default function AdminPayments() {
               <p className="muted small" style={{ margin: '0 0 8px' }}>
                 Tap Remind to open WhatsApp with a prefilled message.
               </p>
-              <div className="card flush list">
+              <div className="card flush">
+                <div className="data-row head">
+                  <span>Name</span>
+                  <span>Class</span>
+                  <span style={{ textAlign: 'right' }}>Due</span>
+                </div>
                 {pending.map((s) => (
                   <div
-                    className="list-item pay-row tappable"
+                    className="data-row"
                     key={`${s.id}-${s.batch}`}
                     role="button"
                     tabIndex={0}
                     onClick={() => navigate(`/admin/students/${s.id}`)}
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
                   >
-                    <div className="li-main">
-                      <div className="feed-name">{s.name}</div>
-                      <div className="muted small">
-                        {rupees(Math.max(s.due_paise - s.paid_paise, 0))} due · {s.batch_label}
-                        {s.slot_label ? ` · ${s.slot_label}` : ''}
-                        {s.status === 'partial' ? ' · part-paid' : ''}
+                    <span className="data-name">{s.name}</span>
+                    <span className="data-sub data-sub-2line">
+                      <span>{s.batch_label}</span>
+                      {s.slot_label && <span className="data-sub-timing">{s.slot_label}</span>}
+                    </span>
+                    <div className="data-end">
+                      <div style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 16 }}>
+                        {rupees(Math.max(s.due_paise - s.paid_paise, 0))}
                       </div>
+                      {s.status === 'partial' && (
+                        <div style={{ color: 'var(--warn)', fontWeight: 700 }}>part-paid</div>
+                      )}
+                      {s.whatsapp_url && (
+                        <a
+                          className="wa-btn"
+                          href={s.whatsapp_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ marginTop: 4, minHeight: 26, padding: '0 10px', fontSize: 12 }}
+                        >
+                          <WhatsAppIcon width={12} height={12} /> Remind
+                        </a>
+                      )}
                     </div>
-                    {s.whatsapp_url && (
-                      <a
-                        className="wa-btn"
-                        href={s.whatsapp_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <WhatsAppIcon width={16} height={16} /> Remind
-                      </a>
-                    )}
                   </div>
                 ))}
               </div>
