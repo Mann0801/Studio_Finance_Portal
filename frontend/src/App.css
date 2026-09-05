@@ -1201,6 +1201,14 @@ button.menu-item {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-soft);
 }
+.list-item.tappable {
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.list-item.tappable:active {
+  transform: scale(0.99);
+  background: var(--border-soft);
+}
 .list-item:last-child {
   border-bottom: none;
 }
@@ -1265,6 +1273,19 @@ button.menu-item {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.feed-head.feed-head-link {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.feed-head.feed-head-link:active {
+  opacity: 0.7;
 }
 .feed-name {
   font-weight: 700;

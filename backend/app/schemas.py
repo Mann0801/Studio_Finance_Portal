@@ -195,6 +195,7 @@ class ActivityPayment(BaseModel):
 
 
 class ActivitySignup(BaseModel):
+    id: str  # student id — for tapping through to their profile
     name: str
     batch: str
     batch_label: str
