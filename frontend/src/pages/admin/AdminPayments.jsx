@@ -76,6 +76,9 @@ export default function AdminPayments() {
     [pending],
   )
   const pendingCount = pending.length
+  const collectionRate = loading || month.expected_paise <= 0
+    ? 0
+    : Math.min(Math.round((month.collected_paise / month.expected_paise) * 100), 100)
 
   // By batch: collapse the roster into per-class collection, with slot breakdown.
   const byBatch = useMemo(() => {
@@ -162,23 +165,30 @@ export default function AdminPayments() {
           <div className="amount" style={{ fontSize: 34, marginTop: 2 }}>
             {rupees(month.collected_paise)}
           </div>
-          <div className="pay-hero-sub">
-            {month.is_current && stats && (
+          <div className="muted small" style={{ marginTop: 2 }}>of {rupees(month.expected_paise)} expected</div>
+
+          <div className="ct-bar" style={{ marginTop: 12 }}>
+            <span style={{ width: `${collectionRate}%` }} />
+          </div>
+          <div className="ct-stats">
+            <span className="ct-dot paid">{month.paid_count} paid</span>
+            <span className="ct-dot unpaid">{pendingCount} pending</span>
+          </div>
+
+          {month.is_current && stats && (
+            <div className="pay-hero-sub">
               <span
                 className="pay-chip"
                 style={{ color: stats.revenue_change_pct >= 0 ? 'var(--paid)' : 'var(--unpaid)' }}
               >
                 {pct(stats.revenue_change_pct)} vs last month
               </span>
-            )}
-            <span className="pay-chip">of {rupees(month.expected_paise)} expected</span>
-            <span className="pay-chip">{month.paid_count} paid</span>
-          </div>
+            </div>
+          )}
           {pendingCount > 0 && (
             <div className="pay-hero-pending">
               <span className="dot unpaid" />
-              <strong>{rupees(pendingTotal)}</strong>&nbsp;pending from {pendingCount} student
-              {pendingCount === 1 ? '' : 's'}
+              <strong>{rupees(pendingTotal)}</strong>&nbsp;still pending
             </div>
           )}
         </div>
