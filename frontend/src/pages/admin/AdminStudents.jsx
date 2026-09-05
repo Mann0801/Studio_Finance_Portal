@@ -334,10 +334,16 @@ export default function AdminStudents() {
       </div>
 
       {/* Quick stats for the selected month */}
-      <div className="stat-grid stat-grid-3" style={{ marginTop: 12 }}>
-        <div className="stat"><div className="num">{total}</div><div className="label">Total</div></div>
-        <div className="stat"><div className="num" style={{ color: 'var(--paid)' }}>{paidN}</div><div className="label">Paid</div></div>
-        <div className="stat"><div className="num" style={{ color: 'var(--unpaid)' }}>{unpaidN}</div><div className="label">Unpaid</div></div>
+      <div className="card class-status-card" style={{ marginTop: 12 }}>
+        <div className="num">
+          {total}
+          <small>student{total === 1 ? '' : 's'}</small>
+        </div>
+        <div className="ct-bar"><span style={{ width: `${pct(paidN, total)}%` }} /></div>
+        <div className="ct-stats">
+          <span className="ct-dot paid">{paidN} paid</span>
+          <span className="ct-dot unpaid">{unpaidN} unpaid</span>
+        </div>
       </div>
 
       {/* Search */}

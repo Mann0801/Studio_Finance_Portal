@@ -1558,20 +1558,20 @@ button.menu-item {
   color: var(--muted);
   margin-left: 6px;
 }
-.class-tile .ct-bar {
+.ct-bar {
   height: 5px;
   border-radius: 3px;
   background: var(--border-soft);
   overflow: hidden;
   margin-top: 10px;
 }
-.class-tile .ct-bar span {
+.ct-bar span {
   display: block;
   height: 100%;
   background: var(--paid);
   border-radius: inherit;
 }
-.class-tile .ct-stats {
+.ct-stats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1580,12 +1580,12 @@ button.menu-item {
   font-size: 12px;
   font-weight: 600;
 }
-.class-tile .ct-dot {
+.ct-dot {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
-.class-tile .ct-dot::before {
+.ct-dot::before {
   content: '';
   width: 7px;
   height: 7px;
@@ -1593,11 +1593,22 @@ button.menu-item {
   background: currentColor;
   flex-shrink: 0;
 }
-.class-tile .ct-dot.paid {
+.ct-dot.paid {
   color: var(--paid);
 }
-.class-tile .ct-dot.unpaid {
+.ct-dot.unpaid {
   color: var(--unpaid);
+}
+.class-status-card .num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+.class-status-card .num small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 6px;
 }
 
 /* Classes tab: tappable class cards (avatar + title). */
