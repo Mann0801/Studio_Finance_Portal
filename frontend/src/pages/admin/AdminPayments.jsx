@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
@@ -42,7 +43,11 @@ export default function AdminPayments() {
   const [period, setPeriod] = useState(CUR)
   const [month, setMonth] = useState(null)
   const [search, setSearch] = useState('')
-  const [tab, setTab] = useState('collected')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => {
+    const requested = searchParams.get('tab')
+    return TABS.some((t) => t.id === requested) ? requested : 'collected'
+  })
 
   // Reload the whole roster whenever the selected month changes.
   useEffect(() => {

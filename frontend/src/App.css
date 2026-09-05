@@ -472,6 +472,18 @@ button.menu-item {
   padding: 16px;
   animation: card-in 0.28s ease both;
 }
+.stat.tappable {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+.stat.tappable:active {
+  transform: scale(0.98);
+  border-color: var(--accent);
+}
 .stat .num {
   font-size: 26px;
   font-weight: 800;
