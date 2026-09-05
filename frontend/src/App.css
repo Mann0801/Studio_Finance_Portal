@@ -1543,11 +1543,6 @@ button.menu-item {
   font-size: 15.5px;
   line-height: 1.25;
 }
-.class-tile .ct-sched {
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 3px;
-}
 .class-tile .ct-spacer {
   flex: 1;
   min-height: 12px;
@@ -1562,6 +1557,47 @@ button.menu-item {
   font-weight: 600;
   color: var(--muted);
   margin-left: 6px;
+}
+.class-tile .ct-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border-soft);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.class-tile .ct-bar span {
+  display: block;
+  height: 100%;
+  background: var(--paid);
+  border-radius: inherit;
+}
+.class-tile .ct-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.class-tile .ct-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.class-tile .ct-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.class-tile .ct-dot.paid {
+  color: var(--paid);
+}
+.class-tile .ct-dot.unpaid {
+  color: var(--unpaid);
 }
 
 /* Classes tab: tappable class cards (avatar + title). */

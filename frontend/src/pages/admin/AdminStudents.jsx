@@ -63,16 +63,23 @@ const FILTERS = [
 
 const pct = (paid, total) => (total ? Math.round((paid / total) * 100) : 0)
 
-/** A class tile for the 2-up overview grid — name, schedule and student count. */
-function ClassTile({ title, badge, subtitle, count, onClick }) {
+/** A class tile for the 2-up overview grid — name, student count, and a
+    paid/unpaid breakdown so the admin can see who needs attention without
+    tapping in. */
+function ClassTile({ title, badge, count, paid, unpaid, onClick }) {
+  const rate = pct(paid, count)
   return (
     <button className="class-tile" onClick={onClick}>
       <div className="ct-name">{title}{badge}</div>
-      {subtitle && <div className="ct-sched">{subtitle}</div>}
       <div className="ct-spacer" />
       <div className="ct-count">
         {count}
         <small>student{count === 1 ? '' : 's'}</small>
+      </div>
+      <div className="ct-bar"><span style={{ width: `${rate}%` }} /></div>
+      <div className="ct-stats">
+        <span className="ct-dot paid">{paid} paid</span>
+        <span className="ct-dot unpaid">{unpaid} unpaid</span>
       </div>
     </button>
   )
@@ -248,8 +255,9 @@ export default function AdminStudents() {
                   key={e.batch}
                   title={e.batch_label}
                   badge={!cls ? <span className="mini-badge">Deleted</span> : null}
-                  subtitle={cls ? scheduleLabel(cls) : 'Removed class'}
                   count={e.total_students}
+                  paid={e.paid_count}
+                  unpaid={e.unpaid_count}
                   onClick={() => openBatch(e)}
                 />
               )
