@@ -312,6 +312,9 @@ class MarkPaidRequest(BaseModel):
     # Cash amount received (paise). None = the full remaining balance. A smaller
     # amount is recorded as a partial payment; the month stays unpaid until cleared.
     amount_paise: Optional[int] = Field(default=None, ge=1)
+    # Free-text note on how this was actually paid (e.g. "GPay", "Netbanking"),
+    # for a payment made outside the app. Defaults to showing as "Cash" if left blank.
+    method: Optional[str] = Field(default=None, max_length=40)
 
 
 class AdminCreateStudentRequest(BaseModel):

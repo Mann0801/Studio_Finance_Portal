@@ -50,6 +50,7 @@ from ..payments_store import (
     amount_paid_for,
     delete_payment,
     is_period_waived,
+    payment_method_label,
     record_cash_payment,
     waive_period,
 )
@@ -85,11 +86,6 @@ from ..schemas import (
 )
 from ..services.whatsapp import reminder_link
 from ..util import normalize_phone, phone_login_email
-
-
-def _payment_method(row: dict) -> str:
-    """Cash payments have no Razorpay payment id; everything else is online."""
-    return "Online" if row.get("razorpay_payment_id") else "Cash"
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -711,7 +707,7 @@ def payment_history(limit: int = 100):
                 amount_paise=p.get("paid_paise") or 0,  # amount actually collected
                 period=p["period"],
                 paid_at=p.get("paid_at"),
-                method=_payment_method(p),
+                method=payment_method_label(p),
                 is_partial=p["status"] != "paid",
             )
         )
@@ -781,7 +777,7 @@ def month_view(period: str):
                 due_paise=due_paise,
                 paid_paise=paid_paise,
                 status=status,
-                method=_payment_method(pay) if (pay and paid_paise > 0) else None,
+                method=payment_method_label(pay) if (pay and paid_paise > 0) else None,
                 paid_at=pay.get("paid_at") if pay else None,
                 is_prorata=due.is_prorata,
                 whatsapp_url=wa,
@@ -872,7 +868,7 @@ def _build_enrollment_detail(
             period=p["period"],
             amount_paise=p["amount_paise"],
             paid_at=p.get("paid_at"),
-            method=_payment_method(p),
+            method=payment_method_label(p),
             status=p["status"],
             paid_paise=(p.get("paid_paise") or 0),
         )
@@ -1147,7 +1143,9 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         # clamped so it can never exceed what's owed.
         requested = body.amount_paise if body.amount_paise is not None else remaining
         amount = max(1, min(requested, remaining))
-        record_cash_payment(student_id, body.batch, period, amount, due.amount_paise, due.is_prorata)
+        record_cash_payment(
+            student_id, body.batch, period, amount, due.amount_paise, due.is_prorata, method=body.method
+        )
     return _build_student_detail(s)
 
 
