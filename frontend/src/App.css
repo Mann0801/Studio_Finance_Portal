@@ -1529,36 +1529,6 @@ button.menu-item {
   font-size: 13px;
   margin-top: 2px;
 }
-.batch-card .bc-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin-top: 10px;
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.batch-card .bc-total {
-  color: var(--text);
-}
-.batch-card .bc-dot {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.batch-card .bc-dot::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.batch-card .bc-dot.paid {
-  color: var(--paid);
-}
-.batch-card .bc-dot.unpaid {
-  color: var(--unpaid);
-}
 .batch-card .bc-right {
   display: flex;
   flex-direction: column;
@@ -1568,12 +1538,12 @@ button.menu-item {
 }
 .batch-card .bc-rate {
   font-weight: 800;
-  font-size: 16px;
+  font-size: 20px;
 }
-.batch-card .bc-rate-pct {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent-bright);
+.batch-card .bc-count-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .batch-card .bc-chev {
   color: var(--muted);

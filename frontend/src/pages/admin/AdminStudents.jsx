@@ -85,7 +85,8 @@ function ClassTile({ title, badge, count, paid, unpaid, onClick }) {
   )
 }
 
-/** A slot summary card (timing picker for classes with slots). */
+/** A slot summary card (timing picker for classes with slots) — same
+    progress-bar + paid/unpaid look as the class tiles and class-detail card. */
 function SlotCard({ title, subtitle, stat, onClick }) {
   const total = stat?.total_students ?? 0
   const paid = stat?.paid_count ?? 0
@@ -95,15 +96,17 @@ function SlotCard({ title, subtitle, stat, onClick }) {
       <div className="bc-main">
         <div className="bc-name">{title}</div>
         {subtitle && <div className="bc-sched">{subtitle}</div>}
-        <div className="bc-stats">
-          <span className="bc-total">{total} student{total === 1 ? '' : 's'}</span>
-          <span className="bc-dot paid">{paid} paid</span>
-          <span className="bc-dot unpaid">{unpaid} unpaid</span>
+        <div className="ct-bar" style={{ marginTop: 10 }}>
+          <span style={{ width: `${pct(paid, total)}%` }} />
+        </div>
+        <div className="ct-stats">
+          <span className="ct-dot paid">{paid} paid</span>
+          <span className="ct-dot unpaid">{unpaid} unpaid</span>
         </div>
       </div>
       <div className="bc-right">
-        <div className="bc-rate">{paid}/{total}</div>
-        <div className="bc-rate-pct">{pct(paid, total)}%</div>
+        <div className="bc-rate">{total}</div>
+        <div className="bc-count-label">student{total === 1 ? '' : 's'}</div>
         <ChevronRightIcon className="bc-chev" width={20} height={20} />
       </div>
     </button>
