@@ -135,21 +135,6 @@ def mark_paid(order_id: str, payment_id: str) -> bool:
     return True
 
 
-def is_period_paid(student_id: str, class_id: str, period: str) -> bool:
-    res = (
-        get_supabase()
-        .table("payments")
-        .select("status")
-        .eq("student_id", student_id)
-        .eq("class_id", class_id)
-        .eq("period", period)
-        .eq("status", "paid")
-        .limit(1)
-        .execute()
-    )
-    return bool(res.data)
-
-
 def is_period_waived(student_id: str, class_id: str, period: str) -> bool:
     row = get_payment_by_period(student_id, class_id, period)
     return bool(row and row["status"] == "waived")

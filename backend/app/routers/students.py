@@ -22,7 +22,7 @@ from ..enrollments_store import (
     list_enrollments,
     set_whatsapp_joined,
 )
-from ..fees import compute_due, current_period, now_local, period_of, previous_period
+from ..fees import compute_due, current_period, is_settled, now_local, period_of, previous_period
 from ..schemas import (
     AddClassRequest,
     ClassChoice,
@@ -99,21 +99,24 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
     period = current_period()
     due = compute_due(fee_cls, join_date, period)
 
-    paid_periods = {p["period"] for p in payments if p["status"] == "paid"}
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
-    # Partial cash recorded per month (paid but not yet fully settled).
+    # Partial cash/online recorded per month (may or may not fully cover the due).
     paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in payments}
-    this_paid = paid_so_far.get(period, 0)
+    this_sofar = paid_so_far.get(period, 0)
     if period in waived_periods:
         current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="waived", paid_paise=0)
     else:
+        # Always compare what's been received against a FRESH due, not a stored
+        # status flag — a join-date edit can raise what's actually owed for a
+        # month that was already marked paid, and this is what surfaces the gap.
+        settled = is_settled(due.amount_paise, this_sofar)
         current = CurrentDue(
             period=period,
-            amount_paise=due.amount_paise if period in paid_periods else max(due.amount_paise - this_paid, 0),
+            amount_paise=this_sofar if settled else max(due.amount_paise - this_sofar, 0),
             is_prorata=due.is_prorata,
-            status="paid" if period in paid_periods else "unpaid",
-            paid_paise=this_paid,
+            status="paid" if settled else "unpaid",
+            paid_paise=this_sofar,
         )
 
     # Earlier months (join month .. last month) still owed for THIS class.
@@ -121,9 +124,10 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
-        if p not in paid_periods and p not in waived_periods:
+        if p not in waived_periods:
             past_due = compute_due(fee_cls, join_date, p)
-            remaining = past_due.amount_paise - paid_so_far.get(p, 0)
+            received = paid_so_far.get(p, 0)
+            remaining = past_due.amount_paise - received
             if remaining > 0:
                 outstanding.append(
                     CurrentDue(
@@ -131,7 +135,7 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
                         amount_paise=remaining,
                         is_prorata=past_due.is_prorata,
                         status="unpaid",
-                        paid_paise=paid_so_far.get(p, 0),
+                        paid_paise=received,
                     )
                 )
         p = previous_period(p)
