@@ -25,22 +25,23 @@ function monthProgress() {
   return { day, total, monthName, pct: Math.round((day / total) * 100) }
 }
 
-function dateTimeLabel(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-IN', {
+function dateOnly(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
     timeZone: 'Asia/Kolkata',
   })
-  const time = d.toLocaleTimeString('en-IN', {
+}
+
+function timeOnly(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('en-IN', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kolkata',
   })
-  return `${date}, ${time}`
 }
 
 export default function AdminHome() {
@@ -117,28 +118,44 @@ export default function AdminHome() {
       </div>
 
       {/* New signups */}
-      <div className="card flush" style={{ marginTop: 20 }}>
+      <div className="card flush signup-table" style={{ marginTop: 20 }}>
         <button type="button" className="feed-head feed-head-link" onClick={() => navigate('/admin/signups')}>
           New signups
           <ChevronRightIcon width={16} height={16} />
         </button>
-        <div className="list scroll-list">
-          {!activity ? (
-            <div className="list-item"><Skeleton height={16} width="60%" /></div>
-          ) : activity.recent_signups.length === 0 ? (
-            <div className="list-item"><span className="muted small">No signups yet.</span></div>
-          ) : (
-            activity.recent_signups.map((s, i) => (
-              <div className="list-item" key={`s${i}`}>
-                <span className="li-main">
-                  <span className="feed-name">{s.name}</span>
-                  <span className="muted small"> · {s.batch_label}</span>
-                </span>
-                <span className="muted small">{dateTimeLabel(s.signed_up_at)}</span>
-              </div>
-            ))
-          )}
-        </div>
+        {!activity ? (
+          <div className="signup-row"><Skeleton height={16} width="60%" /></div>
+        ) : activity.recent_signups.length === 0 ? (
+          <div className="signup-row"><span className="muted small">No signups yet.</span></div>
+        ) : (
+          <>
+            <div className="signup-row head">
+              <span>Name</span>
+              <span>Class</span>
+              <span style={{ textAlign: 'right' }}>Signed up</span>
+            </div>
+            <div className="scroll-list">
+              {activity.recent_signups.map((s, i) => (
+                <div
+                  className="signup-row"
+                  key={`${s.id}-${s.batch}-${i}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/admin/students/${s.id}`)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
+                >
+                  <span className="signup-name">{s.name}</span>
+                  <span className="signup-class">{s.batch_label}</span>
+                  <span className="signup-when">
+                    {dateOnly(s.signed_up_at)}
+                    <br />
+                    {timeOnly(s.signed_up_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div style={{ height: 28 }} />
