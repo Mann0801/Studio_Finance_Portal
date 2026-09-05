@@ -342,7 +342,9 @@ export default function AdminStudentDetail() {
 
   useEffect(() => load(), [load])
 
-  const back = () => navigate('/admin/students')
+  // Go back to wherever the admin actually came from (Payments, Students,
+  // Join Date Check, ...) rather than always landing on the Students tab.
+  const back = () => navigate(-1)
 
   function startEdit() {
     setFormError('')
