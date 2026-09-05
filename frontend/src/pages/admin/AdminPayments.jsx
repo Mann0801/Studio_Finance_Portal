@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { rupees } from '../../lib/batches'
@@ -38,6 +38,7 @@ const TABS = [
 ]
 
 export default function AdminPayments() {
+  const navigate = useNavigate()
   const { stats, guard } = useAdmin()
   const CUR = currentPeriod()
   const [period, setPeriod] = useState(CUR)
@@ -229,7 +230,14 @@ export default function AdminPayments() {
             <div className="card flush" style={{ marginTop: 12 }}>
               <div className="list scroll-list scroll-tall">
                 {visibleCollected.map((p) => (
-                  <div className="list-item pay-row" key={p.id}>
+                  <div
+                    className="list-item pay-row tappable"
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/admin/students/${p.id}`)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.id}`)}
+                  >
                     <div className="li-main">
                       <div className="feed-name">{p.name}</div>
                       <div className="muted small">
@@ -270,7 +278,14 @@ export default function AdminPayments() {
               </p>
               <div className="card flush list">
                 {pending.map((s) => (
-                  <div className="list-item pay-row" key={`${s.id}-${s.batch}`}>
+                  <div
+                    className="list-item pay-row tappable"
+                    key={`${s.id}-${s.batch}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/admin/students/${s.id}`)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
+                  >
                     <div className="li-main">
                       <div className="feed-name">{s.name}</div>
                       <div className="muted small">
@@ -280,7 +295,13 @@ export default function AdminPayments() {
                       </div>
                     </div>
                     {s.whatsapp_url && (
-                      <a className="wa-btn" href={s.whatsapp_url} target="_blank" rel="noreferrer">
+                      <a
+                        className="wa-btn"
+                        href={s.whatsapp_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <WhatsAppIcon width={16} height={16} /> Remind
                       </a>
                     )}

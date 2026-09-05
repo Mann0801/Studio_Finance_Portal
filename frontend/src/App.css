@@ -1281,6 +1281,14 @@ button.menu-item {
 .pay-row {
   align-items: flex-start;
 }
+.pay-row.tappable {
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.pay-row.tappable:active {
+  transform: scale(0.99);
+  background: var(--border-soft);
+}
 .list-item.as-button {
   width: 100%;
   background: transparent;
