@@ -199,6 +199,7 @@ class ActivitySignup(BaseModel):
     batch: str
     batch_label: str
     join_date: date
+    signed_up_at: Optional[datetime] = None  # actual app account creation — has a time, join_date doesn't
 
 
 class AdminActivity(BaseModel):
