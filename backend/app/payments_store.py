@@ -189,3 +189,29 @@ def delete_payment(student_id: str, class_id: str, period: str) -> bool:
         .execute()
     )
     return bool(res.data)
+
+
+def move_payment(
+    student_id: str,
+    class_id: str,
+    from_period: str,
+    to_period: str,
+    due_paise: int,
+    is_prorata: bool,
+) -> None:
+    """Reassign a payment to a different month — e.g. an online payment came
+    in for July when it was actually meant to cover September. The underlying
+    transaction (Razorpay id, method, amount received, paid_at) is untouched;
+    only which month it counts toward changes. amount_paise/status are
+    recomputed against the new month's due, same as everywhere else."""
+    row = get_payment_by_period(student_id, class_id, from_period)
+    paid_paise = (row.get("paid_paise") or 0) if row else 0
+    fully = due_paise > 0 and paid_paise >= due_paise
+    get_supabase().table("payments").update(
+        {
+            "period": to_period,
+            "amount_paise": due_paise,
+            "is_prorata": is_prorata,
+            "status": "paid" if fully else "created",
+        }
+    ).eq("student_id", student_id).eq("class_id", class_id).eq("period", from_period).execute()

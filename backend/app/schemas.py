@@ -304,6 +304,14 @@ class PeriodActionRequest(BaseModel):
     period: Optional[str] = None
 
 
+class MovePaymentRequest(BaseModel):
+    # Reassign a recorded payment from one month to another for this class —
+    # e.g. it was recorded under the wrong month.
+    batch: str
+    from_period: str
+    to_period: str
+
+
 class MarkPaidRequest(BaseModel):
     # Which class this cash payment is for.
     batch: str

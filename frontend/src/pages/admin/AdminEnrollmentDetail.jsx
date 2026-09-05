@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import { MAX_JOIN_DATE } from '../../lib/joinDate'
+import { currentPeriod } from '../../lib/periods'
 import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
@@ -47,6 +48,10 @@ export default function AdminEnrollmentDetail() {
   const [editErr, setEditErr] = useState('')
   const [removeConfirm, setRemoveConfirm] = useState(false)
   const [removePaymentConfirm, setRemovePaymentConfirm] = useState(null)
+  const [moveTarget, setMoveTarget] = useState(null)
+  const [moveTo, setMoveTo] = useState('')
+  const [moveErr, setMoveErr] = useState('')
+  const [moving, setMoving] = useState(false)
 
   const load = useCallback(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -107,6 +112,25 @@ export default function AdminEnrollmentDetail() {
   const onWaive = (period) => runPeriodAction('waive', period)
   const onUnwaive = (period) => runPeriodAction('unwaive', period)
   const onRemovePayment = (period) => runPeriodAction('remove-payment', period)
+
+  async function movePayment(fromPeriod, toPeriod) {
+    setMoving(true)
+    setMoveErr('')
+    try {
+      const updated = await adminApi(`/api/admin/students/${id}/move-payment`, {
+        method: 'POST',
+        body: { batch, from_period: fromPeriod, to_period: toPeriod },
+      })
+      setData(updated)
+      reloadStats()
+      setMoveTarget(null)
+      setMoveTo('')
+    } catch (e) {
+      setMoveErr(e.message)
+    } finally {
+      setMoving(false)
+    }
+  }
 
   async function removeEnrollment() {
     setBusy(true)
@@ -312,6 +336,39 @@ export default function AdminEnrollmentDetail() {
                             </button>
                           </div>
                         </div>
+                      ) : moveTarget === p.period ? (
+                        <div className="list-item" key={i} style={{ display: 'block' }}>
+                          <p className="muted small" style={{ margin: '0 0 8px' }}>
+                            Move the {periodLabel(p.period)} payment ({rupees(p.paid_paise)}) to which month?
+                          </p>
+                          <input
+                            type="month"
+                            value={moveTo}
+                            onChange={(e) => setMoveTo(e.target.value)}
+                            min={en.join_date.slice(0, 7)}
+                            max={currentPeriod()}
+                          />
+                          {moveErr && <p className="error">{moveErr}</p>}
+                          <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+                            <button
+                              className="btn primary sm"
+                              disabled={!moveTo || moveTo === p.period || moving}
+                              onClick={() => movePayment(p.period, moveTo)}
+                            >
+                              {moving ? 'Moving…' : 'Move'}
+                            </button>
+                            <button
+                              className="btn ghost sm"
+                              onClick={() => {
+                                setMoveTarget(null)
+                                setMoveErr('')
+                              }}
+                              disabled={moving}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="list-item" key={i}>
                           <div className="li-main">
@@ -330,13 +387,26 @@ export default function AdminEnrollmentDetail() {
                             >
                               {rupees(p.paid_paise)}
                             </span>
-                            <button
-                              type="button"
-                              className="link-btn"
-                              onClick={() => setRemovePaymentConfirm(p.period)}
-                            >
-                              Remove
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                type="button"
+                                className="btn ghost sm"
+                                onClick={() => {
+                                  setMoveTarget(p.period)
+                                  setMoveTo('')
+                                  setMoveErr('')
+                                }}
+                              >
+                                Move
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost sm danger-text"
+                                onClick={() => setRemovePaymentConfirm(p.period)}
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ),
