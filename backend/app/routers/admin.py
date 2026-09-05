@@ -40,6 +40,7 @@ from ..enrollments_store import (
 from ..fees import (
     compute_due,
     current_period,
+    is_settled,
     now_local,
     parse_period,
     period_of,
@@ -48,7 +49,6 @@ from ..fees import (
 from ..payments_store import (
     amount_paid_for,
     delete_payment,
-    is_period_paid,
     is_period_waived,
     record_cash_payment,
     waive_period,
@@ -123,21 +123,6 @@ def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
             raise HTTPException(status_code=422, detail="Please choose a timing slot")
         return slot
     return None
-
-
-def _paid_amounts_for_period(period: str, class_id: str | None = None) -> dict[tuple[str, str], int]:
-    """Map (student_id, class_id) -> paid amount_paise for `period` (only fully
-    'paid' rows). Used to decide who counts as Paid this month."""
-    q = (
-        get_supabase()
-        .table("payments")
-        .select("student_id, class_id, amount_paise")
-        .eq("period", period)
-        .eq("status", "paid")
-    )
-    if class_id is not None:
-        q = q.eq("class_id", class_id)
-    return {(r["student_id"], r["class_id"]): r["amount_paise"] for r in q.execute().data}
 
 
 def _received_amounts_for_period(period: str, class_id: str | None = None) -> dict[tuple[str, str], int]:
@@ -334,7 +319,6 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
     # Only members who had joined by the selected month owed a fee then.
     enrolls = [e for e in enrolls if period >= period_of(_as_date(e["join_date"]))]
     smap = _students_by_id([e["student_id"] for e in enrolls])
-    paid = _paid_amounts_for_period(period, batch)
     received = _received_amounts_for_period(period, batch)
     waived = _waived_keys_for_period(period)
 
@@ -346,10 +330,13 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
         join_date = _as_date(e["join_date"])
         due = compute_due(_fee_cls(cls), join_date, period)
         key = (e["student_id"], batch)
-        is_paid = key in paid
         is_waived = key in waived
+        received_amt = received.get(key, 0)
+        # Always compare against a fresh due, not a stored status flag — a
+        # join-date edit can raise what's owed for a month already marked paid.
+        is_paid = not is_waived and is_settled(due.amount_paise, received_amt)
         # For an unpaid student, show what's still owed (fee minus any partial cash).
-        amount = 0 if is_waived else paid[key] if is_paid else max(due.amount_paise - received.get(key, 0), 0)
+        amount = 0 if is_waived else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
         sl = slot_label_of(cls, e.get("batch_slot"))
         wa = None
         if not is_paid and not is_waived and amount > 0:
@@ -390,7 +377,6 @@ def all_students():
     cmap = class_map()
     enrolls = all_enrollments()
     smap = _students_by_id([e["student_id"] for e in enrolls])
-    paid = _paid_amounts_for_period(period)
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
 
@@ -403,9 +389,10 @@ def all_students():
         join_date = _as_date(e["join_date"])
         due = compute_due(_fee_cls(cls), join_date, period)
         key = (e["student_id"], e["class_id"])
-        is_paid = key in paid
         is_waived = key in waived
-        amount = 0 if is_waived else paid[key] if is_paid else max(due.amount_paise - received.get(key, 0), 0)
+        received_amt = received.get(key, 0)
+        is_paid = not is_waived and is_settled(due.amount_paise, received_amt)
+        amount = 0 if is_waived else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
         rows.append(
             AdminStudentRow(
                 id=s["id"],
@@ -435,7 +422,6 @@ def stats():
     period = current_period()
     prev = previous_period(period)
     enrolls = all_enrollments()
-    paid = _paid_amounts_for_period(period)              # fully-paid → Paid count
     received = _received_amounts_for_period(period)      # incl. partial cash → revenue
     waived = _waived_keys_for_period(period)              # forgiven → not owed, not paid
     last_month_received = _received_amounts_for_period(prev)
@@ -443,21 +429,23 @@ def stats():
 
     def _group_stat(fee_cls: dict | None, members: list[dict]):
         # A waived enrollment is settled (nothing owed) — counted alongside paid
-        # ones so paid_count + unpaid_count still equals total_students.
-        settled_keys = [
-            (m["student_id"], m["class_id"])
-            for m in members
-            if (m["student_id"], m["class_id"]) in paid or (m["student_id"], m["class_id"]) in waived
-        ]
-        # Revenue counts real money received, including partial cash on months not
-        # yet fully paid. Waiving forgives money, it doesn't count as received.
-        revenue = sum(received.get((m["student_id"], m["class_id"]), 0) for m in members)
-        expected = sum(
-            0
-            if (m["student_id"], m["class_id"]) in waived
-            else compute_due(fee_cls, _as_date(m["join_date"]), period).amount_paise
-            for m in members
-        )
+        # ones so paid_count + unpaid_count still equals total_students. "Paid"
+        # is always a fresh amount-vs-due comparison, not a stored status flag —
+        # a join-date edit can raise what's owed for a month already marked paid.
+        settled_keys = []
+        revenue = 0
+        expected = 0
+        for m in members:
+            key = (m["student_id"], m["class_id"])
+            received_amt = received.get(key, 0)
+            revenue += received_amt
+            if key in waived:
+                settled_keys.append(key)
+                continue
+            due_paise = compute_due(fee_cls, _as_date(m["join_date"]), period).amount_paise
+            expected += due_paise
+            if is_settled(due_paise, received_amt):
+                settled_keys.append(key)
         return settled_keys, revenue, expected
 
     per_batch: list[BatchStat] = []
@@ -544,14 +532,13 @@ def unpaid_students():
     cmap = class_map()
     enrolls = all_enrollments()
     smap = _students_by_id([e["student_id"] for e in enrolls])
-    paid = _paid_amounts_for_period(period)
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
         key = (e["student_id"], e["class_id"])
-        if key in paid or key in waived:
+        if key in waived:
             continue
         s = smap.get(e["student_id"])
         if not s:
@@ -775,7 +762,9 @@ def month_view(period: str):
         # a waived month is shown so it doesn't look like a missing row.
         if due_paise <= 0 and paid_paise <= 0 and not is_waived:
             continue
-        is_paid = bool(pay and pay["status"] == "paid")
+        # A fresh amount-vs-due comparison, not the stored status flag — a
+        # join-date edit can raise what's owed for a month already marked paid.
+        is_paid = (not is_waived) and is_settled(due_paise, paid_paise)
         status = "waived" if is_waived else "paid" if is_paid else ("partial" if paid_paise > 0 else "unpaid")
         remaining = max(due_paise - paid_paise, 0)
         sl = slot_label_of(cls, e.get("batch_slot"))
@@ -846,7 +835,6 @@ def _build_enrollment_detail(
     # Total received includes partial cash on months not yet fully paid.
     total_paid = sum((p.get("paid_paise") or 0) for p in payments)
     last = max(paid_rows, key=lambda p: p.get("paid_at") or "", default=None)
-    this_paid = next((p for p in paid_rows if p["period"] == period), None)
     paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in payments}
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
@@ -855,15 +843,17 @@ def _build_enrollment_detail(
     # Earlier months (join month .. last month) still owed for THIS class — so
     # the admin can record cash against an old unpaid month, not just the
     # current one. Partial cash reduces the balance shown but keeps the month
-    # owing until cleared.
-    paid_periods = {p["period"] for p in paid_rows}
+    # owing until cleared. Always a fresh amount-vs-due comparison, not a
+    # stored status flag — a join-date edit can raise what's owed for a month
+    # already marked paid, and this is what surfaces the gap.
     join_period = period_of(join_date)
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
-        if p not in paid_periods and p not in waived_periods:
+        if p not in waived_periods:
             past_due = compute_due(_fee_cls(cls), join_date, p)
-            remaining = past_due.amount_paise - paid_so_far.get(p, 0)
+            received = paid_so_far.get(p, 0)
+            remaining = past_due.amount_paise - received
             if remaining > 0:
                 outstanding.append(
                     CurrentDue(
@@ -871,7 +861,7 @@ def _build_enrollment_detail(
                         amount_paise=remaining,
                         is_prorata=past_due.is_prorata,
                         status="unpaid",
-                        paid_paise=paid_so_far.get(p, 0),
+                        paid_paise=received,
                     )
                 )
         p = previous_period(p)
@@ -891,10 +881,11 @@ def _build_enrollment_detail(
     ]
 
     this_sofar = paid_so_far.get(period, 0)
+    this_settled = not this_waived and is_settled(due.amount_paise, this_sofar)
     this_remaining = 0 if this_waived else max(due.amount_paise - this_sofar, 0)
     sl = slot_label_of(cls, enr.get("batch_slot"))
     wa = None
-    if not this_paid and not this_waived and this_remaining > 0:
+    if not this_settled and not this_waived and this_remaining > 0:
         wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), this_remaining, period)
 
     return AdminEnrollmentDetail(
@@ -908,9 +899,9 @@ def _build_enrollment_detail(
         days_member=max((now_local().date() - join_date).days, 0),
         whatsapp_joined=bool(enr.get("whatsapp_joined", False)),
         period=period,
-        amount_paise=this_paid["amount_paise"] if this_paid else this_remaining,
+        amount_paise=this_sofar if this_settled else this_remaining,
         is_prorata=due.is_prorata,
-        status="waived" if this_waived else "paid" if this_paid else "unpaid",
+        status="waived" if this_waived else "paid" if this_settled else "unpaid",
         paid_paise=this_sofar,
         outstanding=outstanding,
         total_paid_paise=total_paid,
@@ -1149,15 +1140,14 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         raise HTTPException(
             status_code=400, detail="This month is waived — un-waive it first to record cash"
         )
-    if not is_period_paid(student_id, body.batch, period):
-        due = compute_due(_fee_cls(get_class(body.batch)), join_date, period)
-        remaining = due.amount_paise - amount_paid_for(student_id, body.batch, period)
-        if remaining > 0:
-            # None → clear the whole remaining balance; a number → partial cash,
-            # clamped so it can never exceed what's owed.
-            requested = body.amount_paise if body.amount_paise is not None else remaining
-            amount = max(1, min(requested, remaining))
-            record_cash_payment(student_id, body.batch, period, amount, due.amount_paise, due.is_prorata)
+    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period)
+    remaining = due.amount_paise - amount_paid_for(student_id, body.batch, period)
+    if remaining > 0:
+        # None → clear the whole remaining balance; a number → partial cash,
+        # clamped so it can never exceed what's owed.
+        requested = body.amount_paise if body.amount_paise is not None else remaining
+        amount = max(1, min(requested, remaining))
+        record_cash_payment(student_id, body.batch, period, amount, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 
 
@@ -1178,9 +1168,9 @@ def waive_student_period(student_id: str, body: PeriodActionRequest):
     period = body.period or current_period()
     if period < period_of(join_date):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
-    if is_period_paid(student_id, body.batch, period):
-        raise HTTPException(status_code=400, detail="This month is already paid — remove the payment first")
     due = compute_due(_fee_cls(get_class(body.batch)), join_date, period)
+    if is_settled(due.amount_paise, amount_paid_for(student_id, body.batch, period)):
+        raise HTTPException(status_code=400, detail="This month is already paid — remove the payment first")
     waive_period(student_id, body.batch, period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 

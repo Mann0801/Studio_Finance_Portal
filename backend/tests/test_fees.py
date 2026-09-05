@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from app.fees import compute_due, previous_period
+from app.fees import compute_due, is_settled, previous_period
 
 
 def monthly(fee_paise, days=(0, 1, 2, 3, 4)):
@@ -159,3 +159,32 @@ def test_deleted_class_none_is_zero():
 )
 def test_previous_period(period, expected):
     assert previous_period(period) == expected
+
+
+# ── is_settled: the live "paid or not" source of truth ─────────────────────────
+# Status must always come from comparing what's been received against a FRESH
+# due, never from a stored status flag — a join-date edit can raise what's
+# owed for a month that was already marked paid (see the "3rd -> 1st" case:
+# someone pays the prorated 2223, admin corrects the join date to the 1st, the
+# true due becomes 2300, and the remaining 77 must surface as still owed).
+def test_settled_when_received_covers_due():
+    assert is_settled(2300_00, 2300_00) is True
+
+
+def test_settled_when_overpaid_no_credit_implied():
+    # Never a refund/credit — just stays settled.
+    assert is_settled(2300_00, 2500_00) is True
+
+
+def test_not_settled_when_underpaid():
+    assert is_settled(2300_00, 2223_00) is False
+
+
+def test_not_settled_with_nothing_received():
+    assert is_settled(2300_00, 0) is False
+
+
+def test_zero_due_is_never_settled_with_nothing_received():
+    # Matches existing behavior: a genuinely $0-due period with no money in
+    # isn't reported as "paid" just because there's nothing owed.
+    assert is_settled(0, 0) is False

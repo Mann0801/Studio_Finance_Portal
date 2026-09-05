@@ -103,6 +103,19 @@ def _zero(period: str) -> DueAmount:
     return DueAmount(period=period, amount_paise=0, is_prorata=False)
 
 
+def is_settled(due_paise: int, received_paise: int) -> bool:
+    """Whether enough has been received to cover a freshly computed due.
+
+    This is deliberately the single source of truth for "paid or not" —
+    callers should derive status from this rather than trusting a payment
+    row's stored status, since a later join-date (or fee) edit can change
+    what's actually owed for a month that was already marked paid. A period
+    with nothing due is trivially settled. Never implies a refund/credit when
+    received exceeds due — it just stays settled, no negative balance shown.
+    """
+    return due_paise > 0 and received_paise >= due_paise
+
+
 def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
     """How much a student in class ``cls`` owes for ``period``.
 
