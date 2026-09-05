@@ -5,22 +5,23 @@ import { adminApi } from '../../lib/adminApi'
 import { ArrowLeftIcon } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
 
-function dateTimeLabel(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-IN', {
+function dateOnly(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
     timeZone: 'Asia/Kolkata',
   })
-  const time = d.toLocaleTimeString('en-IN', {
+}
+
+function timeOnly(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('en-IN', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kolkata',
   })
-  return `${date}, ${time}`
 }
 
 export default function AdminSignups() {
@@ -53,25 +54,30 @@ export default function AdminSignups() {
       ) : signups.length === 0 ? (
         <div className="card empty">No signups yet.</div>
       ) : (
-        <div className="card flush" style={{ marginTop: 12 }}>
-          <div className="list">
-            {signups.map((s, i) => (
-              <div
-                className="list-item tappable"
-                key={`${s.id}-${s.batch}-${i}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/admin/students/${s.id}`)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
-              >
-                <span className="li-main">
-                  <span className="feed-name">{s.name}</span>
-                  <span className="muted small"> · {s.batch_label}</span>
-                </span>
-                <span className="muted small">{dateTimeLabel(s.signed_up_at)}</span>
-              </div>
-            ))}
+        <div className="card flush signup-table" style={{ marginTop: 12 }}>
+          <div className="signup-row head">
+            <span>Name</span>
+            <span>Class</span>
+            <span style={{ textAlign: 'right' }}>Signed up</span>
           </div>
+          {signups.map((s, i) => (
+            <div
+              className="signup-row"
+              key={`${s.id}-${s.batch}-${i}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/admin/students/${s.id}`)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
+            >
+              <span className="signup-name">{s.name}</span>
+              <span className="signup-class">{s.batch_label}</span>
+              <span className="signup-when">
+                {dateOnly(s.signed_up_at)}
+                <br />
+                {timeOnly(s.signed_up_at)}
+              </span>
+            </div>
+          ))}
         </div>
       )}
       <div style={{ height: 28 }} />
