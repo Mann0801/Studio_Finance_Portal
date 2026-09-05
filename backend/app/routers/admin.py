@@ -639,6 +639,7 @@ def activity():
                 batch=e["class_id"],
                 batch_label=class_label(cmap.get(e["class_id"])),
                 join_date=_as_date(e["join_date"]),
+                signed_up_at=e.get("created_at"),
             )
         )
 
