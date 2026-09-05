@@ -49,7 +49,9 @@ from ..fees import (
 from ..payments_store import (
     amount_paid_for,
     delete_payment,
+    get_payment_by_period,
     is_period_waived,
+    move_payment,
     payment_method_label,
     record_cash_payment,
     waive_period,
@@ -79,6 +81,7 @@ from ..schemas import (
     ClassWriteRequest,
     CurrentDue,
     MarkPaidRequest,
+    MovePaymentRequest,
     PeriodActionRequest,
     SlotStat,
     StudentPaymentRow,
@@ -1205,6 +1208,43 @@ def remove_student_payment(student_id: str, body: PeriodActionRequest):
     period = body.period or current_period()
     if not delete_payment(student_id, body.batch, period):
         raise HTTPException(status_code=404, detail="No payment found for that month")
+    return _build_student_detail(s)
+
+
+@router.post(
+    "/students/{student_id}/move-payment",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def move_student_payment(student_id: str, body: MovePaymentRequest):
+    """Reassign a recorded payment to a different month for the same class —
+    e.g. an online payment came in for July when it was actually meant to
+    cover September. The transaction itself (Razorpay id, method, amount,
+    paid_at) is unchanged; only which month it counts toward moves."""
+    s = _load_student_or_404(student_id)
+    enr = get_enrollment(student_id, body.batch)
+    if not enr:
+        raise HTTPException(status_code=404, detail="Not enrolled in this class")
+    if body.to_period == body.from_period:
+        raise HTTPException(status_code=400, detail="Pick a different month to move it to")
+    join_date = _as_date(enr["join_date"])
+    if body.to_period < period_of(join_date):
+        raise HTTPException(status_code=400, detail="No fee was due before they joined")
+    if body.to_period > current_period():
+        raise HTTPException(status_code=400, detail="That month hasn't started yet")
+
+    row = get_payment_by_period(student_id, body.batch, body.from_period)
+    if not row or (row.get("paid_paise") or 0) <= 0:
+        raise HTTPException(status_code=404, detail="No payment found for that month")
+    if row["status"] == "waived":
+        raise HTTPException(status_code=400, detail="Un-waive this month first, then move it")
+    if get_payment_by_period(student_id, body.batch, body.to_period):
+        raise HTTPException(
+            status_code=409, detail="That month already has a payment recorded — remove it first"
+        )
+
+    due = compute_due(_fee_cls(get_class(body.batch)), join_date, body.to_period)
+    move_payment(student_id, body.batch, body.from_period, body.to_period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 
 
