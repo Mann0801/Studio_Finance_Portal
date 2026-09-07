@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { adminApi } from '../../lib/adminApi'
+import { formatPhoneDisplay } from '../../lib/auth'
 import { ArrowLeftIcon, WhatsAppIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
@@ -35,16 +36,18 @@ export default function AdminResetPassword() {
   }
 
   function copy() {
-    navigator.clipboard?.writeText(`Phone: ${student.phone}\nPassword: ${tempPassword}`).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
+    navigator.clipboard
+      ?.writeText(`Phone: ${formatPhoneDisplay(student.phone)}\nPassword: ${tempPassword}`)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
   }
 
   const waLink = () => {
     const msg =
       `Your I'm Possible Fit login was reset.\n` +
-      `Phone: ${student.phone}\nNew password: ${tempPassword}\n` +
+      `Phone: ${formatPhoneDisplay(student.phone)}\nNew password: ${tempPassword}\n` +
       `You can change it anytime from your profile in the app.`
     return `https://wa.me/${(student.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
   }
@@ -74,7 +77,7 @@ export default function AdminResetPassword() {
           <div className="card flush list" style={{ marginTop: 10 }}>
             <div className="list-item">
               <span className="muted">Phone</span>
-              <span className="li-main" style={{ fontSize: 14 }}>{student.phone}</span>
+              <span className="li-main" style={{ fontSize: 14 }}>{formatPhoneDisplay(student.phone)}</span>
             </div>
             <div className="list-item">
               <span className="muted">Password</span>

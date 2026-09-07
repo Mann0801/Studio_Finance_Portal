@@ -20,6 +20,18 @@ export const toTenDigits = (raw) => {
   return digits.length > 10 ? digits.slice(-10) : digits
 }
 
+/** Display a stored phone (e.g. "919845799667") as "+91 9845799667" — the
+ *  country code kept visually separate from the number, matching the Login
+ *  page's phone field. Falls back to whatever was passed if it's not a
+ *  recognizable phone. */
+export const formatPhoneDisplay = (raw) => {
+  const digits = String(raw || '').replace(/\D/g, '')
+  if (digits.length <= 10) return digits ? `+91 ${digits}` : raw || ''
+  const ten = digits.slice(-10)
+  const cc = digits.slice(0, digits.length - 10)
+  return `+${cc} ${ten}`
+}
+
 /**
  * Create the account with phone + password. With "Confirm email" off in Supabase
  * this returns a live session immediately — no email is sent. Throws a friendly

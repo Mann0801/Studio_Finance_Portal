@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { toTenDigits } from '../../lib/auth'
+import { formatPhoneDisplay, toTenDigits } from '../../lib/auth'
 import { useClasses, classById, hasSlots } from '../../lib/classes'
 import BatchPicker from '../../components/BatchPicker'
 import { ArrowLeftIcon, CheckIcon } from '../../components/Icons'
@@ -94,7 +94,7 @@ export default function AddStudent() {
   }
 
   function copyCreds() {
-    const text = `Phone: ${done.student.phone}\nPassword: ${done.temp_password}`
+    const text = `Phone: ${formatPhoneDisplay(done.student.phone)}\nPassword: ${done.temp_password}`
     navigator.clipboard?.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
@@ -133,7 +133,7 @@ export default function AddStudent() {
             <div className="card flush list" style={{ marginTop: 10 }}>
               <div className="list-item">
                 <span className="muted">Phone</span>
-                <span className="li-main" style={{ fontSize: 14 }}>{done.student.phone}</span>
+                <span className="li-main" style={{ fontSize: 14 }}>{formatPhoneDisplay(done.student.phone)}</span>
               </div>
               <div className="list-item">
                 <span className="muted">Password</span>

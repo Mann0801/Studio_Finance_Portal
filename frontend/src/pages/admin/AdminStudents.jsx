@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
+import { formatPhoneDisplay } from '../../lib/auth'
 import { rupees } from '../../lib/batches'
 import { useClasses, scheduleLabel } from '../../lib/classes'
 import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
@@ -388,7 +389,7 @@ export default function AdminStudents() {
               key={s.id}
               s={s}
               onOpen={(id) => navigate(`/admin/students/${id}`)}
-              sub={s.phone}
+              sub={formatPhoneDisplay(s.phone)}
             />
           ))}
         </div>
