@@ -39,51 +39,33 @@ export default function StudioContact() {
           </a>
         </div>
 
-        <div className="card flush list">
-          <div className="list-item">
-            <span className="muted">Call</span>
-            <span className="phone-links">
-              {BUSINESS.phones.map((ph) => (
-                <a key={ph} className="li-main accent" href={phoneToTelHref(ph)}>{formatPhoneDisplay(ph)}</a>
-              ))}
-            </span>
-          </div>
-          {BUSINESS.email && (
+        {BUSINESS.email && (
+          <div className="card flush list">
             <a className="list-item link-row" href={`mailto:${BUSINESS.email}`}>
               <span className="muted">Email</span>
               <span className="li-main accent" style={{ fontSize: 14 }}>{BUSINESS.email}</span>
             </a>
-          )}
-          {BUSINESS.instagram && (
-            <a className="list-item link-row" href={BUSINESS.instagram} target="_blank" rel="noreferrer">
-              <span className="muted">Instagram</span>
-              <span className="li-main accent" style={{ fontSize: 14 }}>{BUSINESS.instagramHandle}</span>
-            </a>
-          )}
-          {BUSINESS.youtube && (
-            <a className="list-item link-row" href={BUSINESS.youtube} target="_blank" rel="noreferrer">
-              <span className="muted">YouTube</span>
-              <span className="li-main accent" style={{ fontSize: 14 }}>{BUSINESS.youtubeHandle}</span>
-            </a>
-          )}
-        </div>
+          </div>
+        )}
 
-        <a className="btn block wa-cta" href={waLink(BUSINESS.phones[0])} target="_blank" rel="noreferrer">
+        <a className="btn block contact-cta wa-cta" href={waLink(BUSINESS.phones[0])} target="_blank" rel="noreferrer">
           <WhatsAppIcon width={18} height={18} /> Message on WhatsApp
         </a>
         {BUSINESS.instagram && (
-          <a className="btn block ig-cta" href={BUSINESS.instagram} target="_blank" rel="noreferrer">
+          <a className="btn block contact-cta ig-cta" href={BUSINESS.instagram} target="_blank" rel="noreferrer">
             <InstagramIcon width={18} height={18} /> Follow on Instagram
           </a>
         )}
         {BUSINESS.youtube && (
-          <a className="btn block yt-cta" href={BUSINESS.youtube} target="_blank" rel="noreferrer">
+          <a className="btn block contact-cta yt-cta" href={BUSINESS.youtube} target="_blank" rel="noreferrer">
             <YouTubeIcon width={18} height={18} /> Subscribe on YouTube
           </a>
         )}
-        <a className="btn primary block" href={phoneToTelHref(BUSINESS.phones[0])}>
-          <PhoneIcon width={18} height={18} /> Call the studio
-        </a>
+        {BUSINESS.phones.map((ph) => (
+          <a key={ph} className="btn block contact-cta call-cta" href={phoneToTelHref(ph)}>
+            <PhoneIcon width={18} height={18} /> Call {formatPhoneDisplay(ph)}
+          </a>
+        ))}
       </div>
       <div style={{ height: 28 }} />
     </>

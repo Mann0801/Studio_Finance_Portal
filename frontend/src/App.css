@@ -2113,35 +2113,32 @@ button.menu-item {
   transform: scale(0.99);
   border-color: var(--accent);
 }
-.btn.wa-cta {
-  background: #1f8a4c;
-  color: #fff;
-  border: none;
+.btn.contact-cta {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   text-decoration: none;
+  transition: transform 0.12s ease, border-color 0.15s ease;
 }
-.btn.ig-cta {
-  background: linear-gradient(135deg, #f9ce34 0%, #ee2a7b 55%, #6228d7 100%);
-  color: #fff;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
+.btn.contact-cta:active {
+  transform: scale(0.98);
+  border-color: var(--accent);
 }
-.btn.yt-cta {
-  background: #ff0000;
-  color: #fff;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
+.btn.wa-cta svg {
+  color: #25d366;
+}
+.btn.ig-cta svg {
+  color: #e1306c;
+}
+.btn.yt-cta svg {
+  color: #ff0000;
+}
+.btn.call-cta svg {
+  color: var(--accent-bright);
 }
 .btn.ghost.danger-text {
   color: var(--unpaid);
@@ -2419,14 +2416,6 @@ button.menu-item {
   border-radius: 999px;
 }
 
-/* Two studio numbers stacked in one "Call" row. */
-.phone-links {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  font-weight: 700;
-}
 
 /* Embedded map on the Contact page. */
 .map-embed {
