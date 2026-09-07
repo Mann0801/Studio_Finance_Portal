@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { api } from '../../lib/api'
-import { changePassword, toTenDigits } from '../../lib/auth'
+import { changePassword, formatPhoneDisplay, toTenDigits } from '../../lib/auth'
 import { PlusIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
@@ -129,7 +129,7 @@ export default function Profile() {
           <div className="card flush list">
             <div className="list-item">
               <span className="muted">Phone</span>
-              <span className="li-main" style={{ fontSize: 14 }}>{data.student.phone}</span>
+              <span className="li-main" style={{ fontSize: 14 }}>{formatPhoneDisplay(data.student.phone)}</span>
             </div>
           </div>
 
