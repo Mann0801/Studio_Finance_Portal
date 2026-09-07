@@ -327,6 +327,14 @@ button.menu-item {
   padding: 0;
   overflow: hidden;
 }
+.card.tappable {
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+.card.tappable:active {
+  transform: scale(0.98);
+  border-color: var(--accent);
+}
 /* Prominent callout — e.g. the existing-member join-date notice on signup.
    Deliberately louder than a plain .card so it actually gets read. */
 .notice-card {
@@ -1255,16 +1263,6 @@ button.menu-item {
 }
 .search input::placeholder {
   color: var(--muted);
-}
-.stat-grid.stat-grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-}
-.stat-grid-3 .stat {
-  padding: 14px 12px;
-}
-.stat-grid-3 .num {
-  font-size: 19px;
 }
 .feed-head {
   padding: 12px 16px 4px;

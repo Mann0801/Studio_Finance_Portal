@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
 import { rupees } from '../../lib/batches'
@@ -67,6 +67,7 @@ export default function Home() {
   const { pay, paying, error: payError } = usePayFlow()
   const { classes } = useClasses()
   const { state } = useLocation()
+  const navigate = useNavigate()
   const [welcome, setWelcome] = useState(Boolean(state?.welcome))
   // Each class's "just joined" WhatsApp state is independent, keyed by class id.
   const [justJoinedIds, setJustJoinedIds] = useState(() => new Set())
@@ -203,7 +204,14 @@ export default function Home() {
 
       {/* Your class */}
       {cls && (
-        <div className="card class-home" style={{ marginTop: 16 }}>
+        <div
+          className="card class-home tappable"
+          style={{ marginTop: 16 }}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/profile')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate('/profile')}
+        >
           <span className="card-title">Your class</span>
           <div className="ch-name">{cls.name}</div>
           {(scheduleLabel(cls) || en.slot_label) && (
@@ -216,19 +224,17 @@ export default function Home() {
       )}
 
       {/* Membership summary */}
-      <div className="stat-grid stat-grid-3" style={{ marginTop: 16 }}>
+      <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="stat">
-          <div className="num" style={{ fontSize: 14.5 }}>{memberSince}</div>
-          <div className="label">Member since</div>
+          <div className="num" style={{ fontSize: 15 }}>{memberSince}</div>
+          <div className="label">
+            Member since · {en.days_member} {en.days_member === 1 ? 'day' : 'days'}
+          </div>
         </div>
-        <div className="stat">
-          <div className="num" style={{ fontSize: 16 }}>{en.days_member}</div>
-          <div className="label">{en.days_member === 1 ? 'Day as member' : 'Days as member'}</div>
-        </div>
-        <div className="stat">
+        <button type="button" className="stat tappable" onClick={() => navigate('/payments')}>
           <div className="num" style={{ fontSize: 16 }}>{rupees(totalPaid)}</div>
           <div className="label">Total paid</div>
-        </div>
+        </button>
       </div>
 
       {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
