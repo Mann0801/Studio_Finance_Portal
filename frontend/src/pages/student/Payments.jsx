@@ -117,11 +117,15 @@ export default function Payments() {
               {historyRows.map((p) => (
                 <div className="data-row static" key={p.period}>
                   <span className="data-name">{periodLabel(p.period)}</span>
-                  <span className="data-sub">
-                    {p.is_prorata ? 'Pro-rated · ' : ''}
-                    {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
-                    {p.method}
-                    {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
+                  <span className="data-sub data-sub-2line">
+                    <span>
+                      {p.is_prorata ? 'Pro-rated · ' : ''}
+                      {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
+                      {p.method}
+                    </span>
+                    {p.paid_at && (
+                      <span className="data-sub-timing">{new Date(p.paid_at).toLocaleDateString('en-IN')}</span>
+                    )}
                   </span>
                   <div className="data-end">
                     <div
