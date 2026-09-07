@@ -131,25 +131,30 @@ export default function Profile() {
               <span className="muted">Phone</span>
               <span className="li-main" style={{ fontSize: 14 }}>{data.student.phone}</span>
             </div>
-            {enrollments.map((en) => (
-              <div className="list-item" key={en.batch}>
-                <span className="muted">Class</span>
-                <span className="li-main" style={{ fontSize: 14, textAlign: 'right' }}>
-                  {en.batch_label}
-                  {en.slot_label ? ` · ${en.slot_label}` : ''}
-                  <br />
-                  <span className="muted small">
-                    Joined{' '}
+          </div>
+
+          {enrollments.length > 0 && (
+            <div className="card flush">
+              <div className="data-row head">
+                <span>Class</span>
+                <span>Timing</span>
+                <span style={{ textAlign: 'right' }}>Joined</span>
+              </div>
+              {enrollments.map((en) => (
+                <div className="data-row static" key={en.batch}>
+                  <span className="data-name">{en.batch_label}</span>
+                  <span className="data-sub">{en.slot_label || '—'}</span>
+                  <div className="data-end">
                     {new Date(en.join_date).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
                     })}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <Link to="/add-class" className="btn ghost block">
             <PlusIcon width={16} height={16} /> Add a class

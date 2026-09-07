@@ -1355,6 +1355,14 @@ button.menu-item {
   color: var(--muted);
   white-space: nowrap;
 }
+/* A data-row whose actions live inline (buttons/links inside the row)
+   rather than the whole row navigating somewhere on tap. */
+.data-row.static {
+  cursor: default;
+}
+.data-row.static:active {
+  background: none;
+}
 .list-item.as-button {
   width: 100%;
   background: transparent;

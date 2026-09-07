@@ -16,23 +16,23 @@ const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' })
 function EnrollmentRow({ en, onOpen }) {
   return (
     <div
-      className="list-item tappable"
+      className="data-row"
       role="button"
       tabIndex={0}
       onClick={() => onOpen(en.batch)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(en.batch)}
     >
-      <div className="li-main">
-        <div>{en.batch_label}</div>
-        <div className="muted small">
-          {en.slot_label}
-          {en.batch_deleted ? (en.slot_label ? ' · ' : '') + 'Batch Deleted' : ''}
+      <span className="data-name">{en.batch_label}</span>
+      <span className="data-sub">
+        {en.slot_label}
+        {en.batch_deleted ? (en.slot_label ? ' · ' : '') + 'Batch Deleted' : ''}
+      </span>
+      <div className="data-end">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+          <span className={`s-amount ${en.status}`} style={{ fontSize: 14 }}>{rupees(en.amount_paise)}</span>
+          <StatusBadge status={en.status} />
+          <ChevronRightIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
         </div>
-      </div>
-      <div className="s-right" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <span className={`s-amount ${en.status}`}>{rupees(en.amount_paise)}</span>
-        <StatusBadge status={en.status} />
-        <ChevronRightIcon width={18} height={18} style={{ color: 'var(--muted)' }} />
       </div>
     </div>
   )
@@ -140,7 +140,12 @@ export default function AdminStudentDetail() {
           <div className="section-h" style={{ marginTop: 20, marginBottom: 0 }}>
             <h2>Classes</h2>
           </div>
-          <div className="card flush list" style={{ marginTop: 8 }}>
+          <div className="card flush" style={{ marginTop: 8 }}>
+            <div className="data-row head">
+              <span>Class</span>
+              <span>Timing</span>
+              <span style={{ textAlign: 'right' }}>Status</span>
+            </div>
             {data.enrollments.map((en) => (
               <EnrollmentRow
                 key={en.batch}

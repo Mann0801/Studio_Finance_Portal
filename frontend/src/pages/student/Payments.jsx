@@ -108,31 +108,42 @@ export default function Payments() {
           {historyRows.length === 0 ? (
             <div className="card empty">No payments yet.</div>
           ) : (
-            <div className="card flush list">
+            <div className="card flush">
+              <div className="data-row head">
+                <span>Month</span>
+                <span>Paid via</span>
+                <span style={{ textAlign: 'right' }}>Amount</span>
+              </div>
               {historyRows.map((p) => (
-                <div className="list-item" key={p.period}>
-                  <div>
-                    <div className="li-main">{periodLabel(p.period)}</div>
-                    <div className="li-sub">
-                      {p.is_prorata ? 'Pro-rated · ' : ''}
-                      {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
-                      {p.method}
-                      {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
-                      {p.status !== 'paid' ? ' · partial' : ''}
+                <div className="data-row static" key={p.period}>
+                  <span className="data-name">{periodLabel(p.period)}</span>
+                  <span className="data-sub">
+                    {p.is_prorata ? 'Pro-rated · ' : ''}
+                    {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
+                    {p.method}
+                    {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString('en-IN')}` : ''}
+                  </span>
+                  <div className="data-end">
+                    <div
+                      style={{
+                        color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)',
+                        fontWeight: 700,
+                        fontSize: 16,
+                      }}
+                    >
+                      {rupees(p.paid_paise)}
                     </div>
-                  </div>
-                  <div className="s-right" style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <span className="li-amt">{rupees(p.paid_paise)}</span>
                     {p.status === 'paid' ? (
                       <button
                         type="button"
                         className="link-btn receipt-link"
+                        style={{ marginTop: 4 }}
                         onClick={() => navigate(`/receipt/${en.batch}/${p.period}`)}
                       >
                         <DownloadIcon width={14} height={14} /> Receipt
                       </button>
                     ) : (
-                      <span className="badge unpaid">Partial</span>
+                      <div style={{ color: 'var(--warn)', fontWeight: 700, marginTop: 4 }}>partial</div>
                     )}
                   </div>
                 </div>
