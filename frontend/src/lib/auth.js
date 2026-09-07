@@ -32,6 +32,19 @@ export const formatPhoneDisplay = (raw) => {
   return `+${cc} ${ten}`
 }
 
+/** A `tel:` href for a stored phone. Dialers need a leading "+" before the
+ *  country code to recognize the number — a bare "919845799667" (91 baked
+ *  into the digits with no "+") gets read as one long invalid number and
+ *  fails to dial. Always emit "+<cc><10 digits>", defaulting to +91 when
+ *  no country code is stored. */
+export const phoneToTelHref = (raw) => {
+  const digits = String(raw || '').replace(/\D/g, '')
+  if (!digits) return ''
+  const ten = digits.slice(-10)
+  const cc = digits.length > 10 ? digits.slice(0, digits.length - 10) : '91'
+  return `tel:+${cc}${ten}`
+}
+
 /**
  * Create the account with phone + password. With "Confirm email" off in Supabase
  * this returns a live session immediately — no email is sent. Throws a friendly

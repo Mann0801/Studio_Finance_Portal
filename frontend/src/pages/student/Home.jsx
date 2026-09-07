@@ -6,6 +6,7 @@ import { rupees } from '../../lib/batches'
 import { useClasses, classById, scheduleLabel, slotByKey } from '../../lib/classes'
 import { LOGO_SRC, STUDIO_NAME } from '../../lib/brand'
 import { BUSINESS } from '../../lib/business'
+import { formatPhoneDisplay, phoneToTelHref } from '../../lib/auth'
 import DueCard from '../../components/DueCard'
 import WhatsAppBanner from '../../components/WhatsAppBanner'
 import ClassSwitcher from '../../components/ClassSwitcher'
@@ -161,12 +162,12 @@ export default function Home() {
               ? 'Your class was removed. Please contact the studio to be moved to another class.'
               : 'This class is arranged directly with the studio — reach out to sort out your membership and payment.'}
           </p>
-          <a className="btn primary lg block" style={{ marginTop: 16 }} href={`tel:${BUSINESS.phones[0]}`}>
-            Call {BUSINESS.phones[0]}
+          <a className="btn primary lg block" style={{ marginTop: 16 }} href={phoneToTelHref(BUSINESS.phones[0])}>
+            Call {formatPhoneDisplay(BUSINESS.phones[0])}
           </a>
           {BUSINESS.phones[1] && (
-            <a className="btn ghost block" style={{ marginTop: 8 }} href={`tel:${BUSINESS.phones[1]}`}>
-              Call {BUSINESS.phones[1]}
+            <a className="btn ghost block" style={{ marginTop: 8 }} href={phoneToTelHref(BUSINESS.phones[1])}>
+              Call {formatPhoneDisplay(BUSINESS.phones[1])}
             </a>
           )}
         </div>
