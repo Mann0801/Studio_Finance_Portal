@@ -1,4 +1,5 @@
 import { BUSINESS } from '../../lib/business'
+import { formatPhoneDisplay, phoneToTelHref } from '../../lib/auth'
 import { WhatsAppIcon, PhoneIcon, InstagramIcon, YouTubeIcon } from '../../components/Icons'
 
 const waLink = (phone) => `https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}`
@@ -43,7 +44,7 @@ export default function StudioContact() {
             <span className="muted">Call</span>
             <span className="phone-links">
               {BUSINESS.phones.map((ph) => (
-                <a key={ph} className="li-main accent" href={`tel:+91${ph}`}>{ph}</a>
+                <a key={ph} className="li-main accent" href={phoneToTelHref(ph)}>{formatPhoneDisplay(ph)}</a>
               ))}
             </span>
           </div>
@@ -80,7 +81,7 @@ export default function StudioContact() {
             <YouTubeIcon width={18} height={18} /> Subscribe on YouTube
           </a>
         )}
-        <a className="btn primary block" href={`tel:+91${BUSINESS.phones[0]}`}>
+        <a className="btn primary block" href={phoneToTelHref(BUSINESS.phones[0])}>
           <PhoneIcon width={18} height={18} /> Call the studio
         </a>
       </div>

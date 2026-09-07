@@ -1,5 +1,6 @@
 import LegalPage from './LegalPage'
 import { BUSINESS } from '../../lib/business'
+import { phoneToTelHref } from '../../lib/auth'
 
 export default function Contact() {
   return (
@@ -30,7 +31,7 @@ export default function Contact() {
             {BUSINESS.phones.map((p, i) => (
               <span key={p}>
                 {i > 0 && ', '}
-                <a href={`tel:+91${p}`}>+91 {p}</a>
+                <a href={phoneToTelHref(p)}>+91 {p}</a>
               </span>
             ))}
           </span>

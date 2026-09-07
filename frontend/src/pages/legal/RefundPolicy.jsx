@@ -1,5 +1,6 @@
 import LegalPage from './LegalPage'
 import { BUSINESS } from '../../lib/business'
+import { phoneToTelHref } from '../../lib/auth'
 
 export default function RefundPolicy() {
   return (
@@ -43,7 +44,7 @@ export default function RefundPolicy() {
       <p>
         For any cancellation or refund request, email{' '}
         <a href={`mailto:${BUSINESS.email}`}>{BUSINESS.email}</a> or call{' '}
-        <a href={`tel:+91${BUSINESS.phones[0]}`}>+91 {BUSINESS.phones[0]}</a>. Please include the
+        <a href={phoneToTelHref(BUSINESS.phones[0])}>+91 {BUSINESS.phones[0]}</a>. Please include the
         name and phone number on your membership so we can locate your payment quickly.
       </p>
     </LegalPage>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
-import { formatPhoneDisplay } from '../../lib/auth'
+import { formatPhoneDisplay, phoneToTelHref } from '../../lib/auth'
 import { rupees } from '../../lib/batches'
 import { useClasses } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
@@ -123,7 +123,7 @@ export default function AdminStudentDetail() {
 
           {/* Info */}
           <div className="card flush list" style={{ marginTop: 16 }}>
-            <a className="list-item link-row" href={`tel:${data.phone}`}>
+            <a className="list-item link-row" href={phoneToTelHref(data.phone)}>
               <span className="muted">Phone</span>
               <span className="li-main accent">{formatPhoneDisplay(data.phone)}</span>
             </a>
