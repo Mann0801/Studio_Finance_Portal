@@ -24,9 +24,9 @@ function EnrollmentRow({ en, onOpen }) {
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(en.batch)}
     >
       <span className="data-name">{en.batch_label}</span>
-      <span className="data-sub">
-        {en.slot_label}
-        {en.batch_deleted ? (en.slot_label ? ' · ' : '') + 'Batch Deleted' : ''}
+      <span className="data-sub data-sub-2line">
+        {en.slot_label && <span>{en.slot_label}</span>}
+        {en.batch_deleted && <span className="data-sub-timing">Batch Deleted</span>}
       </span>
       <div className="data-end">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>

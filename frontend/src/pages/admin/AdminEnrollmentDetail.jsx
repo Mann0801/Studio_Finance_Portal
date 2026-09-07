@@ -278,10 +278,14 @@ export default function AdminEnrollmentDetail() {
                     {en.outstanding.map((p) => (
                       <div className="data-row static" key={p.period}>
                         <span className="data-name">{periodLabel(p.period)}</span>
-                        <span className="data-sub">
-                          {p.is_prorata ? 'Pro-rated · ' : ''}
-                          {rupees(p.amount_paise)}
-                          {p.paid_paise > 0 ? ` · ${rupees(p.paid_paise)} paid` : ''}
+                        <span className="data-sub data-sub-2line">
+                          <span>
+                            {p.is_prorata ? 'Pro-rated · ' : ''}
+                            {rupees(p.amount_paise)}
+                          </span>
+                          {p.paid_paise > 0 && (
+                            <span className="data-sub-timing">{rupees(p.paid_paise)} paid</span>
+                          )}
                         </span>
                         <div className="data-end">
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -382,10 +386,12 @@ export default function AdminEnrollmentDetail() {
                       ) : (
                         <div className="data-row static" key={i}>
                           <span className="data-name">{periodLabel(p.period)}</span>
-                          <span className="data-sub">
-                            {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
-                            {p.method}
-                            {p.paid_at ? ` · ${fmtDateTime(p.paid_at)}` : ''}
+                          <span className="data-sub data-sub-2line">
+                            <span>
+                              {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
+                              {p.method}
+                            </span>
+                            {p.paid_at && <span className="data-sub-timing">{fmtDateTime(p.paid_at)}</span>}
                           </span>
                           <div className="data-end">
                             <div
