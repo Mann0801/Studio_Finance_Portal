@@ -269,24 +269,29 @@ export default function AdminEnrollmentDetail() {
               {en.outstanding.length > 0 && (
                 <>
                   <div className="muted small" style={{ marginTop: 14 }}>Earlier months due</div>
-                  <div className="card flush list" style={{ marginTop: 6 }}>
+                  <div className="card flush" style={{ marginTop: 6 }}>
+                    <div className="data-row head">
+                      <span>Month</span>
+                      <span>Balance</span>
+                      <span></span>
+                    </div>
                     {en.outstanding.map((p) => (
-                      <div className="list-item" key={p.period}>
-                        <div>
-                          <div className="li-main">{periodLabel(p.period)}</div>
-                          <div className="muted small">
-                            {p.is_prorata ? 'Pro-rated · ' : ''}
-                            {rupees(p.amount_paise)} balance
-                            {p.paid_paise > 0 ? ` · ${rupees(p.paid_paise)} paid` : ''}
+                      <div className="data-row static" key={p.period}>
+                        <span className="data-name">{periodLabel(p.period)}</span>
+                        <span className="data-sub">
+                          {p.is_prorata ? 'Pro-rated · ' : ''}
+                          {rupees(p.amount_paise)}
+                          {p.paid_paise > 0 ? ` · ${rupees(p.paid_paise)} paid` : ''}
+                        </span>
+                        <div className="data-end">
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button className="btn primary sm" onClick={() => goRecord(p.period)} disabled={busy}>
+                              Record
+                            </button>
+                            <button className="btn ghost sm" onClick={() => onWaive(p.period)} disabled={busy}>
+                              Waive
+                            </button>
                           </div>
-                        </div>
-                        <div className="s-right" style={{ gap: 6 }}>
-                          <button className="btn primary sm" onClick={() => goRecord(p.period)} disabled={busy}>
-                            Record
-                          </button>
-                          <button className="btn ghost sm" onClick={() => onWaive(p.period)} disabled={busy}>
-                            Waive
-                          </button>
                         </div>
                       </div>
                     ))}
@@ -312,7 +317,12 @@ export default function AdminEnrollmentDetail() {
               {en.payments.length > 0 && (
                 <>
                   <div className="muted small" style={{ marginTop: 14 }}>Payment history</div>
-                  <div className="card flush list" style={{ marginTop: 6 }}>
+                  <div className="card flush" style={{ marginTop: 6 }}>
+                    <div className="data-row head">
+                      <span>Month</span>
+                      <span>Paid via</span>
+                      <span style={{ textAlign: 'right' }}>Amount</span>
+                    </div>
                     {en.payments.map((p, i) =>
                       removePaymentConfirm === p.period ? (
                         <div className="list-item" key={i} style={{ display: 'block' }}>
@@ -370,24 +380,27 @@ export default function AdminEnrollmentDetail() {
                           </div>
                         </div>
                       ) : (
-                        <div className="list-item" key={i}>
-                          <div className="li-main">
-                            <div>{periodLabel(p.period)}</div>
-                            <div className="muted small">
-                              {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
-                              {p.method}
-                              {p.paid_at ? ` · ${fmtDateTime(p.paid_at)}` : ''}
-                              {p.status !== 'paid' ? ' · partial' : ''}
-                            </div>
-                          </div>
-                          <div className="s-right" style={{ alignItems: 'flex-end', gap: 4 }}>
-                            <span
-                              className="li-main"
-                              style={{ color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)' }}
+                        <div className="data-row static" key={i}>
+                          <span className="data-name">{periodLabel(p.period)}</span>
+                          <span className="data-sub">
+                            {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
+                            {p.method}
+                            {p.paid_at ? ` · ${fmtDateTime(p.paid_at)}` : ''}
+                          </span>
+                          <div className="data-end">
+                            <div
+                              style={{
+                                color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)',
+                                fontWeight: 700,
+                                fontSize: 16,
+                              }}
                             >
                               {rupees(p.paid_paise)}
-                            </span>
-                            <div style={{ display: 'flex', gap: 8 }}>
+                            </div>
+                            {p.status !== 'paid' && (
+                              <div style={{ color: 'var(--warn)', fontWeight: 700, marginTop: 2 }}>partial</div>
+                            )}
+                            <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
                                 className="btn ghost sm"
