@@ -29,8 +29,8 @@ function EnrollmentRow({ en, onOpen }) {
         {en.batch_deleted && <span className="data-sub-timing">Batch Deleted</span>}
       </span>
       <div className="data-end">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-          <span className={`s-amount ${en.status}`} style={{ fontSize: 14 }}>{rupees(en.amount_paise)}</span>
+        <div className={`s-amount ${en.status}`} style={{ fontSize: 15 }}>{rupees(en.amount_paise)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
           <StatusBadge status={en.status} />
           <ChevronRightIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
         </div>
