@@ -14,20 +14,27 @@ const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** A tappable summary row for one enrollment — full detail lives on its own
  * page (AdminEnrollmentDetail) so this profile stays short. */
-function EnrollmentRow({ en, onOpen }) {
+function EnrollmentRow({ en, onOpen, showTiming }) {
   return (
     <div
-      className="data-row"
+      className={`data-row${showTiming ? '' : ' no-timing'}`}
       role="button"
       tabIndex={0}
       onClick={() => onOpen(en.batch)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(en.batch)}
     >
-      <span className="data-name">{en.batch_label}</span>
-      <span className="data-sub data-sub-2line">
-        {en.slot_label && <span>{en.slot_label}</span>}
-        {en.batch_deleted && <span className="data-sub-timing">Batch Deleted</span>}
+      <span className="data-name">
+        {en.batch_label}
+        {en.batch_deleted && !showTiming && (
+          <span className="badge deleted" style={{ marginLeft: 6 }}>Batch Deleted</span>
+        )}
       </span>
+      {showTiming && (
+        <span className="data-sub data-sub-2line">
+          {en.slot_label && <span>{en.slot_label}</span>}
+          {en.batch_deleted && <span className="data-sub-timing">Batch Deleted</span>}
+        </span>
+      )}
       <div className="data-end">
         <div className={`s-amount ${en.status}`} style={{ fontSize: 15 }}>{rupees(en.amount_paise)}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
@@ -61,6 +68,7 @@ export default function AdminStudentDetail() {
 
   const back = () => navigate(-1)
 
+  const showTiming = useMemo(() => (data?.enrollments ?? []).some((e) => e.slot_label), [data])
   const enrolledIds = useMemo(() => new Set((data?.enrollments ?? []).map((e) => e.batch)), [data])
   const hasAvailableClasses = useMemo(
     () => (classes ?? []).some((c) => !enrolledIds.has(c.id)),
@@ -142,15 +150,16 @@ export default function AdminStudentDetail() {
             <h2>Classes</h2>
           </div>
           <div className="card flush" style={{ marginTop: 8 }}>
-            <div className="data-row head">
+            <div className={`data-row head${showTiming ? '' : ' no-timing'}`}>
               <span>Class</span>
-              <span>Timing</span>
+              {showTiming && <span>Timing</span>}
               <span style={{ textAlign: 'right' }}>Status</span>
             </div>
             {data.enrollments.map((en) => (
               <EnrollmentRow
                 key={en.batch}
                 en={en}
+                showTiming={showTiming}
                 onOpen={(batch) => navigate(`/admin/students/${id}/classes/${batch}`)}
               />
             ))}

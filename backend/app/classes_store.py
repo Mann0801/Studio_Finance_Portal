@@ -84,9 +84,19 @@ def slot_time(s: dict) -> str:
 
 
 def slot_label_of(cls: Optional[dict], slot_key: Optional[str]) -> Optional[str]:
-    """Human label (time range) for a class's timing slot, or None."""
-    s = slot_by_key(cls, slot_key)
-    return slot_time(s) if s else None
+    """Human label (time range) for a class's timing — the student's chosen
+    slot if the class has multiple timing slots, else the class's own single
+    fixed schedule (e.g. Senior Citizens Yoga has no slots but does have a
+    start_time/end_time), or None if the class truly has no timing defined."""
+    if not cls:
+        return None
+    if cls.get("slots"):
+        s = slot_by_key(cls, slot_key)
+        return slot_time(s) if s else None
+    start, end = cls.get("start_time"), cls.get("end_time")
+    if start and end:
+        return f"{start} – {end}"
+    return start or end or None
 
 
 def class_label(cls: Optional[dict]) -> str:

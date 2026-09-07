@@ -1359,6 +1359,12 @@ button.menu-item {
      should wrap instead of overflowing the column on a phone. */
   overflow-wrap: break-word;
 }
+/* When none of the rows in a table have a middle column value worth showing
+   (e.g. a student whose classes have no fixed timing at all), drop that
+   column instead of a heading with nothing under it. */
+.data-row.no-timing {
+  grid-template-columns: 1fr auto;
+}
 /* A data-row whose actions live inline (buttons/links inside the row)
    rather than the whole row navigating somewhere on tap. */
 .data-row.static {
