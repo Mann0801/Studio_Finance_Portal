@@ -13,28 +13,36 @@ from supabase import Client, create_client
 from .config import get_settings
 
 # Errors that mean the request never reached the server (or it dropped the
-# connection without responding) — safe to retry once on a fresh connection.
+# connection without responding) — safe to retry on a fresh connection.
 # These happen when a pooled keep-alive connection to Supabase goes stale after
-# the backend sits idle, and the next call reuses the now-dead socket.
+# the backend sits idle, and the next call reuses the now-dead socket. The pool
+# can hold more than one idle connection at once, so a single retry can still
+# grab a second dead one right after the first — retry a few times so we only
+# give up once we've actually forced a brand-new connection.
 _RETRIABLE = (httpx.RemoteProtocolError, httpx.ConnectError, httpx.PoolTimeout)
+_MAX_ATTEMPTS = 4
 
 
 def _install_retry(session: httpx.Client) -> None:
-    """Wrap an httpx client's send() so a stale-connection failure retries once.
-    httpcore discards the dead connection on the first error, so the retry opens
-    a fresh one and succeeds — instead of surfacing a 500 to the user."""
+    """Wrap an httpx client's send() so a stale-connection failure retries.
+    httpcore discards the dead connection on each error, so each retry opens a
+    fresh one — instead of surfacing a 500 to the user."""
     original_send = session.send
 
     def send_with_retry(request, **kwargs):
-        try:
-            return original_send(request, **kwargs)
-        except _RETRIABLE:
-            logging.getLogger("uvicorn.error").warning(
-                "Supabase connection dropped on %s %s — retrying once",
-                request.method,
-                request.url.path,
-            )
-            return original_send(request, **kwargs)
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            try:
+                return original_send(request, **kwargs)
+            except _RETRIABLE:
+                if attempt == _MAX_ATTEMPTS:
+                    raise
+                logging.getLogger("uvicorn.error").warning(
+                    "Supabase connection dropped on %s %s — retrying (attempt %d/%d)",
+                    request.method,
+                    request.url.path,
+                    attempt,
+                    _MAX_ATTEMPTS,
+                )
 
     session.send = send_with_retry
 
