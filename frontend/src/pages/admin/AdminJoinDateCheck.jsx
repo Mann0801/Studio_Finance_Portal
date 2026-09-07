@@ -23,12 +23,20 @@ export default function AdminJoinDateCheck() {
   // (see the signup notice) — anything else is worth a human glance, since
   // an old real join date silently makes the app think they owe back-months
   // of dues from before they were ever in the system.
+  //
+  // Scoped to THIS calendar month's signups only — otherwise old testers from
+  // prior months (deliberately left with a real historical join date, already
+  // reviewed once) pile up here forever alongside genuinely new cases, since
+  // nothing here ever gets marked "reviewed."
+  const thisMonthFirst = useMemo(() => expectedJoinDate(new Date().toISOString()), [])
+
   const mismatched = useMemo(() => {
     if (!students) return null
     return students
+      .filter((s) => expectedJoinDate(s.signed_up_at) === thisMonthFirst)
       .filter((s) => s.join_date !== expectedJoinDate(s.signed_up_at))
       .sort((a, b) => a.join_date.localeCompare(b.join_date))
-  }, [students])
+  }, [students, thisMonthFirst])
 
   return (
     <>
@@ -39,8 +47,9 @@ export default function AdminJoinDateCheck() {
       </div>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
         Existing members should have their join date set to the 1st of the month they signed up
-        in. These don't match that — tap one to review or correct it. If they've already paid,
-        that amount was pro-rated off the wrong date, so it's worth double-checking.
+        in. These signed up this month but don't match that — tap one to review or correct it. If
+        they've already paid, that amount was pro-rated off the wrong date, so it's worth
+        double-checking.
       </p>
 
       {mismatched === null ? (
