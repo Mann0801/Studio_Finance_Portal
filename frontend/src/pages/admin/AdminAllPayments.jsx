@@ -34,13 +34,9 @@ export default function AdminAllPayments() {
     () => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'),
     [rows],
   )
-  const collected = useMemo(
-    () =>
-      rows
-        .filter((r) => r.paid_paise > 0)
-        .sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || '')),
-    [rows],
-  )
+  // Every individual payment received this month — already sorted most
+  // recent first by the backend.
+  const collected = useMemo(() => month?.transactions ?? [], [month])
   const byBatch = useMemo(() => groupByBatch(rows), [rows])
 
   return (
@@ -89,11 +85,11 @@ export default function AdminAllPayments() {
                   {collected.map((p) => (
                     <div
                       className="data-row"
-                      key={`${p.id}-${p.batch}`}
+                      key={p.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`/admin/students/${p.id}`)}
-                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.id}`)}
+                      onClick={() => navigate(`/admin/students/${p.student_id}`)}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.student_id}`)}
                     >
                       <span className="data-name">{p.name}</span>
                       <span className="data-sub data-sub-2line">
@@ -101,10 +97,10 @@ export default function AdminAllPayments() {
                         {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
                       </span>
                       <div className="data-end">
-                        <div style={{ color: p.status === 'partial' ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
-                          {rupees(p.paid_paise)}
+                        <div style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
+                          {rupees(p.amount_paise)}
                         </div>
-                        {p.status === 'partial' && (
+                        {p.is_partial && (
                           <div style={{ color: 'var(--warn)', fontWeight: 700 }}>partial</div>
                         )}
                         {p.method && p.method !== 'Online' && p.method !== 'Cash' && (

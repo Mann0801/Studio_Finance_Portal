@@ -212,7 +212,8 @@ class AdminActivity(BaseModel):
 
 
 class AdminPaymentRow(BaseModel):
-    id: str
+    id: str                    # this transaction's own id
+    student_id: str
     name: str
     batch: str
     batch_label: str
@@ -249,6 +250,9 @@ class AdminMonthView(BaseModel):
     paid_count: int
     unpaid_count: int          # not fully paid (includes partial)
     rows: list[AdminMonthRow]
+    # Individual payments received this month — a partial and its later
+    # remainder are two separate entries, not merged into one figure.
+    transactions: list[AdminPaymentRow] = []
 
 
 class StudentPaymentRow(BaseModel):

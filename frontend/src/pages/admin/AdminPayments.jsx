@@ -66,12 +66,10 @@ export default function AdminPayments() {
   const loading = !month || month.period !== period
   const rows = useMemo(() => (loading ? [] : month.rows), [loading, month])
 
-  // Collected: anyone with money in this month (full or partial cash),
-  // most recent payment first.
-  const collected = useMemo(
-    () => rows.filter((r) => r.paid_paise > 0).sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || '')),
-    [rows],
-  )
+  // Collected: every individual payment received this month (a partial and
+  // its later remainder each their own row), most recent first — already
+  // sorted that way by the backend.
+  const collected = useMemo(() => (loading ? [] : month.transactions), [loading, month])
   // Pending: not fully paid — a partial payer shows in both lists (paid some,
   // owes some). A waived month is settled, not pending.
   const pending = useMemo(() => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'), [rows])
@@ -104,7 +102,7 @@ export default function AdminPayments() {
       p.batch_label,
       p.slot_label || '',
       periodLabel(period),
-      (p.paid_paise / 100).toFixed(2),
+      (p.amount_paise / 100).toFixed(2),
       p.method || '',
       p.paid_at ? dateLabel(p.paid_at) : '',
     ])
@@ -238,11 +236,11 @@ export default function AdminPayments() {
                 {visibleCollected.map((p) => (
                   <div
                     className="data-row"
-                    key={`${p.id}-${p.batch}`}
+                    key={p.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => navigate(`/admin/students/${p.id}`)}
-                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.id}`)}
+                    onClick={() => navigate(`/admin/students/${p.student_id}`)}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.student_id}`)}
                   >
                     <span className="data-name">{p.name}</span>
                     <span className="data-sub data-sub-2line">
@@ -250,10 +248,10 @@ export default function AdminPayments() {
                       {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
                     </span>
                     <div className="data-end">
-                      <div style={{ color: p.status === 'partial' ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
-                        {rupees(p.paid_paise)}
+                      <div style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
+                        {rupees(p.amount_paise)}
                       </div>
-                      {p.status === 'partial' && (
+                      {p.is_partial && (
                         <div style={{ color: 'var(--warn)', fontWeight: 700 }}>partial</div>
                       )}
                       {p.method && p.method !== 'Online' && p.method !== 'Cash' && (
