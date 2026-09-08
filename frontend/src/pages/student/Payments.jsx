@@ -115,7 +115,7 @@ export default function Payments() {
                 <span style={{ textAlign: 'right' }}>Amount</span>
               </div>
               {historyRows.map((p) => (
-                <div className="data-row static" key={p.period}>
+                <div className="data-row static" key={p.id}>
                   <span className="data-name">{periodLabel(p.period)}</span>
                   <span className="data-sub data-sub-2line">
                     <span>
@@ -142,7 +142,7 @@ export default function Payments() {
                         type="button"
                         className="link-btn receipt-link"
                         style={{ marginTop: 4 }}
-                        onClick={() => navigate(`/receipt/${en.batch}/${p.period}`)}
+                        onClick={() => navigate(`/receipt/${en.batch}/${p.id}`)}
                       >
                         <DownloadIcon width={14} height={14} /> Receipt
                       </button>

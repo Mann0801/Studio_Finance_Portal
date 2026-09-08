@@ -23,7 +23,7 @@ from ..enrollments_store import (
     set_whatsapp_joined,
 )
 from ..fees import compute_due, current_period, is_settled, now_local, period_of, previous_period
-from ..payments_store import payment_method_label
+from ..payments_store import build_history, list_transactions
 from ..schemas import (
     AddClassRequest,
     ClassChoice,
@@ -88,7 +88,9 @@ def _payments_by_class(student_id: str) -> dict[str, list[dict]]:
     return grouped
 
 
-def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> EnrollmentOut:
+def _enrollment_out(
+    enr: dict, cmap: dict[str, dict], payments: list[dict], transactions: list[dict]
+) -> EnrollmentOut:
     class_id = enr["class_id"]
     cls = cmap.get(class_id)
     # Deleted class → no fee computation (0 due) until reassigned.
@@ -141,21 +143,10 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
                 )
         p = previous_period(p)
 
-    # History = every month money was actually received for this class (fully
-    # paid OR partial cash). Abandoned/pending orders with nothing paid are left out.
-    history = [
-        PaymentOut(
-            period=p["period"],
-            amount_paise=p["amount_paise"],
-            is_prorata=p["is_prorata"],
-            status=p["status"],
-            paid_at=p.get("paid_at"),
-            paid_paise=(p.get("paid_paise") or 0),
-            method=payment_method_label(p),
-        )
-        for p in payments
-        if p["status"] == "paid" or (p.get("paid_paise") or 0) > 0
-    ]
+    # History = every individual payment received for this class — a partial
+    # payment and its later remainder each show (and can be receipted)
+    # separately, instead of being merged into one row per month.
+    history = [PaymentOut(**h) for h in build_history(payments, transactions)]
 
     slot = enr.get("batch_slot")
     return EnrollmentOut(
@@ -176,14 +167,23 @@ def _enrollment_out(enr: dict, cmap: dict[str, dict], payments: list[dict]) -> E
     )
 
 
+def _transactions_by_class(student_id: str) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for t in list_transactions(student_id):
+        grouped.setdefault(t["class_id"], []).append(t)
+    return grouped
+
+
 def _dashboard_for(student_row: dict) -> DashboardOut:
     enrollments = list_enrollments(student_row["id"])
     cmap = class_map()
     payments = _payments_by_class(student_row["id"])
+    transactions = _transactions_by_class(student_row["id"])
     return DashboardOut(
         student=_student_profile(student_row),
         enrollments=[
-            _enrollment_out(e, cmap, payments.get(e["class_id"], [])) for e in enrollments
+            _enrollment_out(e, cmap, payments.get(e["class_id"], []), transactions.get(e["class_id"], []))
+            for e in enrollments
         ],
     )
 

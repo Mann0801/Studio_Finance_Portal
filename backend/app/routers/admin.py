@@ -48,9 +48,11 @@ from ..fees import (
 )
 from ..payments_store import (
     amount_paid_for,
+    build_history,
     delete_payment,
     get_payment_by_period,
     is_period_waived,
+    list_transactions,
     move_payment,
     payment_method_label,
     record_cash_payment,
@@ -820,8 +822,15 @@ def _payments_by_class(student_id: str) -> dict[str, list[dict]]:
     return grouped
 
 
+def _transactions_by_class(student_id: str) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for t in list_transactions(student_id):
+        grouped.setdefault(t["class_id"], []).append(t)
+    return grouped
+
+
 def _build_enrollment_detail(
-    enr: dict, s: dict, cmap: dict[str, dict], payments: list[dict]
+    enr: dict, s: dict, cmap: dict[str, dict], payments: list[dict], transactions: list[dict]
 ) -> AdminEnrollmentDetail:
     class_id = enr["class_id"]
     cls = cmap.get(class_id)
@@ -830,10 +839,12 @@ def _build_enrollment_detail(
     period = current_period()
     due = compute_due(_fee_cls(cls), join_date, period)
 
-    paid_rows = [p for p in payments if p["status"] == "paid"]
     # Total received includes partial cash on months not yet fully paid.
     total_paid = sum((p.get("paid_paise") or 0) for p in payments)
-    last = max(paid_rows, key=lambda p: p.get("paid_at") or "", default=None)
+    # Most recent individual transaction, whether it fully cleared its month
+    # or was only a partial — a fresh partial should still show as "last
+    # payment", not get hidden behind an older fully-paid month.
+    last = max(transactions, key=lambda t: t.get("paid_at") or "", default=None)
     paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in payments}
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
@@ -865,19 +876,10 @@ def _build_enrollment_detail(
                 )
         p = previous_period(p)
 
-    # Show every month money was received for this class — fully paid or partial cash.
-    history = [
-        StudentPaymentRow(
-            period=p["period"],
-            amount_paise=p["amount_paise"],
-            paid_at=p.get("paid_at"),
-            method=payment_method_label(p),
-            status=p["status"],
-            paid_paise=(p.get("paid_paise") or 0),
-        )
-        for p in payments
-        if p["status"] == "paid" or (p.get("paid_paise") or 0) > 0
-    ]
+    # Show every individual payment received for this class — a partial
+    # payment and its later remainder each show (and can be moved/removed/
+    # receipted) separately, instead of being merged into one row per month.
+    history = [StudentPaymentRow(**h) for h in build_history(payments, transactions)]
 
     this_sofar = paid_so_far.get(period, 0)
     this_settled = not this_waived and is_settled(due.amount_paise, this_sofar)
@@ -915,8 +917,11 @@ def _build_student_detail(s: dict) -> AdminStudentDetail:
     cmap = class_map()
     enrolls = list_enrollments(s["id"])
     payments_by_class = _payments_by_class(s["id"])
+    transactions_by_class = _transactions_by_class(s["id"])
     details = [
-        _build_enrollment_detail(e, s, cmap, payments_by_class.get(e["class_id"], []))
+        _build_enrollment_detail(
+            e, s, cmap, payments_by_class.get(e["class_id"], []), transactions_by_class.get(e["class_id"], [])
+        )
         for e in enrolls
     ]
     return AdminStudentDetail(

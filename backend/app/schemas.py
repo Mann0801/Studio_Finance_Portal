@@ -49,13 +49,16 @@ class StudentProfile(BaseModel):
 
 
 class PaymentOut(BaseModel):
+    """One individual money-in transaction — a partial payment and its later
+    remainder are two separate entries, each with its own id/amount/receipt."""
+    id: str                    # payment_transactions row id
     period: str
-    amount_paise: int          # full fee for the month
+    amount_paise: int          # this transaction's own amount
     is_prorata: bool
     status: str
     paid_at: Optional[datetime] = None
-    paid_paise: int = 0        # amount actually received (partial or full)
-    method: str = "Online"     # 'Cash' | 'Online'
+    paid_paise: int = 0        # same as amount_paise — this transaction's amount
+    method: str = "Online"     # 'Cash' | 'Online' | free-text label
 
 
 class CurrentDue(BaseModel):
@@ -249,12 +252,15 @@ class AdminMonthView(BaseModel):
 
 
 class StudentPaymentRow(BaseModel):
+    """One individual money-in transaction, from the admin's point of view —
+    a partial payment and its later remainder are two separate entries."""
+    id: str                    # payment_transactions row id
     period: str
-    amount_paise: int          # full fee for the month
+    amount_paise: int          # this transaction's own amount
     paid_at: Optional[datetime] = None
     method: str = "Online"
-    status: str  # 'created' | 'paid' | 'failed'
-    paid_paise: int = 0        # amount actually received (partial or full)
+    status: str  # 'paid' — every entry here is a completed transaction
+    paid_paise: int = 0        # same as amount_paise — this transaction's amount
 
 
 class AdminEnrollmentDetail(BaseModel):
