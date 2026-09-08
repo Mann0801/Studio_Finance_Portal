@@ -7,6 +7,8 @@ import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
 import { toCsv, downloadCsv } from '../../lib/csv'
 import { currentPeriod, shiftPeriod, periodLabel } from '../../lib/periods'
+import { groupByBatch } from '../../lib/paymentGroups'
+import BatchBreakdownList from '../../components/BatchBreakdownList'
 
 function pct(n) {
   const sign = n > 0 ? '+' : ''
@@ -37,6 +39,10 @@ const TABS = [
   { id: 'batch', label: 'By batch' },
 ]
 
+// The Collected tab defaults to a short "recent" preview — the full list
+// (plus Unpaid, grouped above it) lives on the "All payments" page.
+const RECENT_LIMIT = 10
+
 export default function AdminPayments() {
   const navigate = useNavigate()
   const { stats, guard } = useAdmin()
@@ -60,15 +66,22 @@ export default function AdminPayments() {
   const loading = !month || month.period !== period
   const rows = useMemo(() => (loading ? [] : month.rows), [loading, month])
 
-  // Collected: anyone with money in this month (full or partial cash).
-  const collected = useMemo(() => rows.filter((r) => r.paid_paise > 0), [rows])
+  // Collected: anyone with money in this month (full or partial cash),
+  // most recent payment first.
+  const collected = useMemo(
+    () => rows.filter((r) => r.paid_paise > 0).sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || '')),
+    [rows],
+  )
   // Pending: not fully paid — a partial payer shows in both lists (paid some,
   // owes some). A waived month is settled, not pending.
   const pending = useMemo(() => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'), [rows])
 
+  // While searching, show every match — the recent-only cap only applies to
+  // the default unfiltered preview.
   const visibleCollected = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return q ? collected.filter((p) => p.name.toLowerCase().includes(q)) : collected
+    if (q) return collected.filter((p) => p.name.toLowerCase().includes(q))
+    return collected.slice(0, RECENT_LIMIT)
   }, [collected, search])
 
   const pendingTotal = useMemo(
@@ -81,34 +94,7 @@ export default function AdminPayments() {
     : Math.min(Math.round((month.collected_paise / month.expected_paise) * 100), 100)
 
   // By batch: collapse the roster into per-class collection, with slot breakdown.
-  const byBatch = useMemo(() => {
-    const map = new Map()
-    for (const r of rows) {
-      let g = map.get(r.batch)
-      if (!g) {
-        g = { batch: r.batch, batch_label: r.batch_label, total: 0, paid: 0, collected: 0, expected: 0, slots: new Map() }
-        map.set(r.batch, g)
-      }
-      g.total += 1
-      if (r.status === 'paid') g.paid += 1
-      g.collected += r.paid_paise
-      g.expected += r.due_paise
-      if (r.slot_label) {
-        let sg = g.slots.get(r.slot_label)
-        if (!sg) { sg = { label: r.slot_label, total: 0, paid: 0, collected: 0, expected: 0 }; g.slots.set(r.slot_label, sg) }
-        sg.total += 1
-        if (r.status === 'paid') sg.paid += 1
-        sg.collected += r.paid_paise
-        sg.expected += r.due_paise
-      }
-    }
-    const rate = (c, e) => (e > 0 ? Math.round((c / e) * 1000) / 10 : 0)
-    return [...map.values()].map((g) => ({
-      ...g,
-      rate: rate(g.collected, g.expected),
-      slots: [...g.slots.values()].map((s) => ({ ...s })),
-    }))
-  }, [rows])
+  const byBatch = useMemo(() => groupByBatch(rows), [rows])
 
   const exportCsv = () => {
     if (collected.length === 0) return
@@ -220,6 +206,11 @@ export default function AdminPayments() {
               </button>
             )}
           </div>
+          {!search && collected.length > RECENT_LIMIT && (
+            <p className="muted small" style={{ margin: '0 0 8px' }}>
+              Showing the {RECENT_LIMIT} most recent.
+            </p>
+          )}
           <div className="search">
             <SearchIcon width={18} height={18} />
             <input
@@ -247,7 +238,7 @@ export default function AdminPayments() {
                 {visibleCollected.map((p) => (
                   <div
                     className="data-row"
-                    key={p.id}
+                    key={`${p.id}-${p.batch}`}
                     role="button"
                     tabIndex={0}
                     onClick={() => navigate(`/admin/students/${p.id}`)}
@@ -273,6 +264,16 @@ export default function AdminPayments() {
                 ))}
               </div>
             </div>
+          )}
+          {!search && collected.length > RECENT_LIMIT && (
+            <button
+              type="button"
+              className="btn ghost block show-all-cta"
+              style={{ marginTop: 10 }}
+              onClick={() => navigate(`/admin/payments/${period}/all`)}
+            >
+              Show all payment details
+            </button>
           )}
         </>
       )}
@@ -344,39 +345,7 @@ export default function AdminPayments() {
       {/* ── By batch: collection breakdown for the selected month ── */}
       {tab === 'batch' && (
         <div style={{ marginTop: 16 }}>
-          {loading ? (
-            <ListSkeleton rows={4} />
-          ) : byBatch.length === 0 ? (
-            <div className="card empty">No students due this month.</div>
-          ) : (
-            <div className="stack" style={{ gap: 10 }}>
-              {byBatch.map((b) => (
-                <div className="card" key={b.batch}>
-                  <div className="between">
-                    <strong>{b.batch_label}</strong>
-                    <span className="muted small">{b.paid}/{b.total} paid · {b.rate}%</span>
-                  </div>
-                  <div className="between" style={{ marginTop: 4 }}>
-                    <span className="muted small">{rupees(b.collected)} of {rupees(b.expected)}</span>
-                  </div>
-                  <div className="bar"><span style={{ width: `${Math.min(b.rate, 100)}%` }} /></div>
-
-                  {b.slots.length > 0 && (
-                    <div className="slot-breakdown">
-                      {b.slots.map((s) => (
-                        <div key={s.label} className="between slot-row">
-                          <span className="muted small">{s.label}</span>
-                          <span className="muted small">
-                            {rupees(s.collected)} / {rupees(s.expected)} · {s.paid}/{s.total}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          {loading ? <ListSkeleton rows={4} /> : <BatchBreakdownList byBatch={byBatch} />}
         </div>
       )}
 
