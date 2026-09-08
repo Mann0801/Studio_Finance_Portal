@@ -705,6 +705,7 @@ def payment_history(limit: int = 100):
         rows.append(
             AdminPaymentRow(
                 id=p["id"],
+                student_id=s["id"],
                 name=s["name"],
                 batch=p["class_id"],
                 batch_label=class_label(cls),
@@ -744,6 +745,7 @@ def month_view(period: str):
     pmap = {(p["student_id"], p["class_id"]): p for p in pays}
 
     rows: list[AdminMonthRow] = []
+    due_by_key: dict[tuple[str, str], int] = {}
     collected = expected = paid_count = unpaid_count = 0
     for e in enrolls:
         s = smap.get(e["student_id"])
@@ -763,6 +765,7 @@ def month_view(period: str):
         # a waived month is shown so it doesn't look like a missing row.
         if due_paise <= 0 and paid_paise <= 0 and not is_waived:
             continue
+        due_by_key[(e["student_id"], e["class_id"])] = due_paise
         # A fresh amount-vs-due comparison, not the stored status flag — a
         # join-date edit can raise what's owed for a month already marked paid.
         is_paid = (not is_waived) and is_settled(due_paise, paid_paise)
@@ -796,6 +799,55 @@ def month_view(period: str):
             unpaid_count += 1
 
     rows.sort(key=lambda r: r.name)
+
+    # Individual payments received this month — a partial and its later
+    # remainder each get their own row (own date/method) instead of being
+    # merged into that student's one combined figure above.
+    slots = {(e["student_id"], e["class_id"]): e.get("batch_slot") for e in enrolls}
+    txns = (
+        sb.table("payment_transactions")
+        .select("id, student_id, class_id, amount_paise, method, razorpay_payment_id, paid_at")
+        .eq("period", period)
+        .order("paid_at")
+        .execute()
+    ).data
+    txns_by_key: dict[tuple[str, str], list[dict]] = {}
+    for t in txns:
+        txns_by_key.setdefault((t["student_id"], t["class_id"]), []).append(t)
+
+    dated: list[tuple[str, AdminPaymentRow]] = []
+    for (student_id, class_id), group in txns_by_key.items():
+        s = smap.get(student_id)
+        if not s:
+            continue
+        cls = cmap.get(class_id)
+        due_paise = due_by_key.get((student_id, class_id), sum(t["amount_paise"] for t in group))
+        cumulative = 0
+        for t in group:
+            cumulative += t["amount_paise"]
+            dated.append(
+                (
+                    t.get("paid_at") or "",
+                    AdminPaymentRow(
+                        id=t["id"],
+                        student_id=student_id,
+                        name=s["name"],
+                        batch=class_id,
+                        batch_label=class_label(cls),
+                        slot_label=slot_label_of(cls, slots.get((student_id, class_id))),
+                        amount_paise=t["amount_paise"],
+                        period=period,
+                        paid_at=t.get("paid_at"),
+                        method=payment_method_label(t),
+                        # Didn't by itself clear the month — later payment(s)
+                        # made up the rest, e.g. a partial cash top-up before
+                        # an online payment covered the remainder.
+                        is_partial=cumulative < due_paise,
+                    ),
+                )
+            )
+    transactions = [row for _, row in sorted(dated, key=lambda x: x[0], reverse=True)]
+
     return AdminMonthView(
         period=period,
         is_current=(period == cur),
@@ -804,6 +856,7 @@ def month_view(period: str):
         paid_count=paid_count,
         unpaid_count=unpaid_count,
         rows=rows,
+        transactions=transactions,
     )
 
 
