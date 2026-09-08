@@ -18,6 +18,85 @@ def payment_method_label(row: dict) -> str:
     return "Online" if row.get("razorpay_payment_id") else "Cash"
 
 
+def _record_transaction(
+    student_id: str,
+    class_id: str,
+    period: str,
+    amount_paise: int,
+    method: Optional[str],
+    razorpay_payment_id: Optional[str],
+    paid_at: str,
+) -> None:
+    """Log one individual money-in event to the payment_transactions ledger.
+    ``payments`` stays the single source of truth for what's owed/settled this
+    month; this table exists purely so a partial payment and its later
+    remainder each keep their own date/method/amount instead of one
+    overwriting the other — and so each gets its own receipt."""
+    if amount_paise <= 0:
+        return
+    get_supabase().table("payment_transactions").insert(
+        {
+            "student_id": student_id,
+            "class_id": class_id,
+            "period": period,
+            "amount_paise": amount_paise,
+            "method": (method or "").strip() or None,
+            "razorpay_payment_id": razorpay_payment_id,
+            "paid_at": paid_at,
+        }
+    ).execute()
+
+
+def build_history(payments: list[dict], transactions: list[dict]) -> list[dict]:
+    """Merge a class's payment rows (due/status per month) with its individual
+    transactions into one history list — one entry per real money-in event,
+    not per month, so a partial payment and its remainder show (and can be
+    receipted) separately. Shared by the student dashboard and admin views so
+    both stay in sync.
+
+    Each entry: id, period, amount_paise, paid_paise (both = this
+    transaction's own amount), is_prorata (from the month's payments row),
+    paid_at, method, status ('paid' — every transaction here is completed,
+    real money received)."""
+    due_by_period = {p["period"]: p for p in payments}
+    by_period: dict[str, list[dict]] = {}
+    for t in transactions:
+        by_period.setdefault(t["period"], []).append(t)
+
+    history: list[dict] = []
+    for period, txns in by_period.items():
+        due_row = due_by_period.get(period)
+        is_prorata = bool(due_row["is_prorata"]) if due_row else False
+        for t in txns:
+            history.append(
+                {
+                    "id": t["id"],
+                    "period": period,
+                    "amount_paise": t["amount_paise"],
+                    "paid_paise": t["amount_paise"],
+                    "is_prorata": is_prorata,
+                    "status": "paid",
+                    "paid_at": t.get("paid_at"),
+                    "method": payment_method_label(t),
+                }
+            )
+    history.sort(key=lambda h: h["paid_at"] or "", reverse=True)
+    return history
+
+
+def list_transactions(student_id: str) -> list[dict]:
+    """Every individual payment transaction for a student, across all their
+    classes, newest first."""
+    return (
+        get_supabase()
+        .table("payment_transactions")
+        .select("*")
+        .eq("student_id", student_id)
+        .order("paid_at", desc=True)
+        .execute()
+    ).data
+
+
 def upsert_created_order(
     student_id: str,
     class_id: str,
@@ -87,12 +166,15 @@ def record_cash_payment(
     on top of anything already paid; the month flips to 'paid' only once the
     full fee is covered. No Razorpay payment id — that's how a manual entry is
     distinguished from an online payment. ``method`` is a free-text label
-    (e.g. "GPay") shown in payment history; it reflects only the most recent
-    entry, same as ``paid_at``, since a period is one accumulating row rather
-    than a ledger of every partial contribution."""
+    (e.g. "GPay") shown in payment history. ``amount_now_paise`` is also
+    logged as its own row in payment_transactions — a partial payment and a
+    later remainder each keep their own receipt instead of one overwriting
+    the other."""
     prev = amount_paid_for(student_id, class_id, period)
-    new_paid = min(prev + max(amount_now_paise, 0), due_paise)
+    applied = max(min(amount_now_paise, due_paise - prev), 0)
+    new_paid = prev + applied
     fully = new_paid >= due_paise
+    paid_at = now_local().isoformat()
     get_supabase().table("payments").upsert(
         {
             "student_id": student_id,
@@ -107,10 +189,11 @@ def record_cash_payment(
             "method": (method or "").strip() or None,
             # Stamp the time cash was last received (even for a partial) so it
             # shows dated in the payment history.
-            "paid_at": now_local().isoformat(),
+            "paid_at": paid_at,
         },
         on_conflict="student_id,class_id,period",
     ).execute()
+    _record_transaction(student_id, class_id, period, applied, method, None, paid_at)
 
 
 def get_payment_by_order(order_id: str) -> Optional[dict]:
@@ -137,15 +220,36 @@ def mark_paid(order_id: str, payment_id: str) -> bool:
     if existing["status"] == "paid":
         return True
     # An online payment covers the remaining balance, so the month is now fully
-    # settled — bring paid_paise up to the full fee.
-    sb.table("payments").update(
-        {
-            "status": "paid",
-            "paid_paise": existing["amount_paise"],
-            "razorpay_payment_id": payment_id,
-            "paid_at": now_local().isoformat(),
-        }
-    ).eq("razorpay_order_id", order_id).neq("status", "paid").execute()
+    # settled — bring paid_paise up to the full fee. Whatever gap this payment
+    # actually closed (full fee minus any partial already recorded) is what
+    # gets logged as its own transaction — the partial (if any) keeps its own
+    # earlier entry rather than being folded into this one.
+    covered = existing["amount_paise"] - (existing.get("paid_paise") or 0)
+    paid_at = now_local().isoformat()
+    res = (
+        sb.table("payments")
+        .update(
+            {
+                "status": "paid",
+                "paid_paise": existing["amount_paise"],
+                "razorpay_payment_id": payment_id,
+                "paid_at": paid_at,
+            }
+        )
+        .eq("razorpay_order_id", order_id)
+        .neq("status", "paid")
+        .execute()
+    )
+    # Both the browser's instant callback and Razorpay's webhook call this for
+    # the same payment (by design — the webhook is the backstop if the
+    # callback fails). The .neq() guard above means only whichever call wins
+    # the race actually flips the row — res.data is empty for the loser, so
+    # only the winner logs a transaction. Without this check both would log
+    # one, double-counting the payment in history.
+    if res.data:
+        _record_transaction(
+            existing["student_id"], existing["class_id"], existing["period"], covered, None, payment_id, paid_at
+        )
     return True
 
 
@@ -178,16 +282,21 @@ def waive_period(student_id: str, class_id: str, period: str, due_paise: int, is
 def delete_payment(student_id: str, class_id: str, period: str) -> bool:
     """Reverse a (student, class, period) payment entirely — a mistaken cash
     entry, a duplicate, or an un-waive. Returns True if a row existed to remove.
-    The month goes back to however it would look with no payment at all."""
+    The month goes back to however it would look with no payment at all. Also
+    clears any transactions logged for that month (a waived month never has
+    any, so this is a no-op there)."""
+    sb = get_supabase()
     res = (
-        get_supabase()
-        .table("payments")
+        sb.table("payments")
         .delete()
         .eq("student_id", student_id)
         .eq("class_id", class_id)
         .eq("period", period)
         .execute()
     )
+    sb.table("payment_transactions").delete().eq("student_id", student_id).eq(
+        "class_id", class_id
+    ).eq("period", period).execute()
     return bool(res.data)
 
 
@@ -207,7 +316,8 @@ def move_payment(
     row = get_payment_by_period(student_id, class_id, from_period)
     paid_paise = (row.get("paid_paise") or 0) if row else 0
     fully = due_paise > 0 and paid_paise >= due_paise
-    get_supabase().table("payments").update(
+    sb = get_supabase()
+    sb.table("payments").update(
         {
             "period": to_period,
             "amount_paise": due_paise,
@@ -215,3 +325,8 @@ def move_payment(
             "status": "paid" if fully else "created",
         }
     ).eq("student_id", student_id).eq("class_id", class_id).eq("period", from_period).execute()
+    # Individual transactions move with it, so their receipts reflect the
+    # corrected month too.
+    sb.table("payment_transactions").update({"period": to_period}).eq(
+        "student_id", student_id
+    ).eq("class_id", class_id).eq("period", from_period).execute()

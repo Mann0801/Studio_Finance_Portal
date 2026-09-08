@@ -327,12 +327,21 @@ export default function AdminEnrollmentDetail() {
                       <span>Paid via</span>
                       <span style={{ textAlign: 'right' }}>Amount</span>
                     </div>
-                    {en.payments.map((p, i) =>
-                      removePaymentConfirm === p.period ? (
-                        <div className="list-item" key={i} style={{ display: 'block' }}>
+                    {en.payments.map((p) => {
+                      // A month can now have more than one entry (a partial
+                      // payment and its later remainder, each its own
+                      // transaction) — Move/Remove still act on the whole
+                      // month, so make that plain when there's more than one.
+                      const samePeriod = en.payments.filter((x) => x.period === p.period)
+                      const groupNote =
+                        samePeriod.length > 1
+                          ? ` This month has ${samePeriod.length} separate payments — all of them move/go together.`
+                          : ''
+                      return removePaymentConfirm === p.id ? (
+                        <div className="list-item" key={p.id} style={{ display: 'block' }}>
                           <p className="muted small" style={{ margin: '0 0 8px' }}>
                             Remove the {periodLabel(p.period)} payment ({rupees(p.paid_paise)})? The month
-                            goes back to unpaid.
+                            goes back to unpaid.{groupNote}
                           </p>
                           <div className="stack" style={{ gap: 8 }}>
                             <button
@@ -350,10 +359,11 @@ export default function AdminEnrollmentDetail() {
                             </button>
                           </div>
                         </div>
-                      ) : moveTarget === p.period ? (
-                        <div className="list-item" key={i} style={{ display: 'block' }}>
+                      ) : moveTarget === p.id ? (
+                        <div className="list-item" key={p.id} style={{ display: 'block' }}>
                           <p className="muted small" style={{ margin: '0 0 8px' }}>
-                            Move the {periodLabel(p.period)} payment ({rupees(p.paid_paise)}) to which month?
+                            Move the {periodLabel(p.period)} payment ({rupees(p.paid_paise)}) to which
+                            month?{groupNote}
                           </p>
                           <input
                             type="month"
@@ -384,7 +394,7 @@ export default function AdminEnrollmentDetail() {
                           </div>
                         </div>
                       ) : (
-                        <div className="data-row static" key={i}>
+                        <div className="data-row static" key={p.id}>
                           <span className="data-name">{periodLabel(p.period)}</span>
                           <span className="data-sub data-sub-2line">
                             <span>
@@ -394,24 +404,15 @@ export default function AdminEnrollmentDetail() {
                             {p.paid_at && <span className="data-sub-timing">{fmtDateTime(p.paid_at)}</span>}
                           </span>
                           <div className="data-end">
-                            <div
-                              style={{
-                                color: p.status === 'paid' ? 'var(--paid)' : 'var(--warn)',
-                                fontWeight: 700,
-                                fontSize: 16,
-                              }}
-                            >
+                            <div style={{ color: 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
                               {rupees(p.paid_paise)}
                             </div>
-                            {p.status !== 'paid' && (
-                              <div style={{ color: 'var(--warn)', fontWeight: 700, marginTop: 2 }}>partial</div>
-                            )}
                             <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
                                 className="btn ghost sm"
                                 onClick={() => {
-                                  setMoveTarget(p.period)
+                                  setMoveTarget(p.id)
                                   setMoveTo('')
                                   setMoveErr('')
                                 }}
@@ -421,15 +422,15 @@ export default function AdminEnrollmentDetail() {
                               <button
                                 type="button"
                                 className="btn ghost sm danger-text"
-                                onClick={() => setRemovePaymentConfirm(p.period)}
+                                onClick={() => setRemovePaymentConfirm(p.id)}
                               >
                                 Remove
                               </button>
                             </div>
                           </div>
                         </div>
-                      ),
-                    )}
+                      )
+                    })}
                   </div>
                 </>
               )}

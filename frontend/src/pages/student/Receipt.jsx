@@ -31,13 +31,13 @@ const fmtDateTime = (iso) => {
 }
 
 export default function Receipt() {
-  const { batch, period } = useParams()
+  const { batch, paymentId } = useParams()
   const navigate = useNavigate()
   const { data, loading } = useDashboard()
   const [downloading, setDownloading] = useState(false)
 
   const enrollment = data?.enrollments?.find((e) => e.batch === batch)
-  const payment = enrollment?.history?.find((p) => p.period === period && p.status === 'paid')
+  const payment = enrollment?.history?.find((p) => p.id === paymentId)
 
   // Renders the on-screen receipt to an image, then wraps that image in a
   // one-page PDF and saves it directly — skips the browser's print dialog,

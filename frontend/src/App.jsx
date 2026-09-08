@@ -103,7 +103,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/add-class" element={<AddClass />} />
-              <Route path="/receipt/:batch/:period" element={<Receipt />} />
+              <Route path="/receipt/:batch/:paymentId" element={<Receipt />} />
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/whatsapp-group" element={<WhatsAppGroup />} />
               <Route path="/contact" element={<StudioContact />} />
