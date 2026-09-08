@@ -930,6 +930,17 @@ button.menu-item {
     animation: none;
   }
 }
+.btn.show-all-cta {
+  animation: menu-pulse 2.6s ease-in-out infinite;
+}
+.btn.show-all-cta:active {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn.show-all-cta {
+    animation: none;
+  }
+}
 
 /* ── Batch picker (signup) ── */
 .batch-list {

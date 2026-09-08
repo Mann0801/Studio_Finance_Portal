@@ -30,6 +30,7 @@ import AdminJoinDateCheck from './pages/admin/AdminJoinDateCheck'
 import AdminSignups from './pages/admin/AdminSignups'
 import AdminRecordCash from './pages/admin/AdminRecordCash'
 import AdminPayments from './pages/admin/AdminPayments'
+import AdminAllPayments from './pages/admin/AdminAllPayments'
 import AdminClasses from './pages/admin/AdminClasses'
 import AdminClassForm from './pages/admin/AdminClassForm'
 import AdminClassDetail from './pages/admin/AdminClassDetail'
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
             <Route path="/admin/classes/:id/edit" element={<AdminClassForm />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/payments/:period/all" element={<AdminAllPayments />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
