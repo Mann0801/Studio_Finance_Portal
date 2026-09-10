@@ -45,17 +45,6 @@ class UpdateProfileRequest(BaseModel):
     phone: str = Field(min_length=6, max_length=20)
 
 
-class ForgotPasswordRequest(BaseModel):
-    # Self-serve password reset, step 1: student enters just their phone
-    # number (unauthenticated — that's the whole point).
-    phone: str = Field(min_length=6, max_length=20)
-
-
-class ForgotPasswordResponse(BaseModel):
-    sent: bool           # a code was actually emailed
-    message: str         # honest, specific reason — see [[feedback-honest-placeholders]]
-
-
 class UpdateEmailRequest(BaseModel):
     # Adds/updates a student's recovery email from an already-logged-in
     # state — used by the persistent "add your email" banner for anyone who

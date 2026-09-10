@@ -5,7 +5,6 @@ import AdminRoute from './components/AdminRoute'
 import StudentLayout from './components/StudentLayout'
 import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
-import ForgotPassword from './pages/ForgotPassword'
 import Signup from './pages/Signup'
 import ProfileSetup from './pages/ProfileSetup'
 import PaymentSuccess from './pages/PaymentSuccess'
@@ -62,7 +61,6 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/terms" element={<Terms />} />
