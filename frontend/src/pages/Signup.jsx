@@ -10,7 +10,8 @@ import JoinDateNoticeModal from '../components/JoinDateNoticeModal'
 import { InfoIcon } from '../components/Icons'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, FIRST_OF_THIS_MONTH_LABEL, joinDateError } from '../lib/joinDate'
 
-const FIELD_ORDER = ['name', 'phone', 'password', 'confirm', 'classes', 'join_date']
+const FIELD_ORDER = ['name', 'phone', 'email', 'password', 'confirm', 'classes', 'join_date']
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 function scrollToFirstError(errs) {
   const first = FIELD_ORDER.find((k) => errs[k])
@@ -23,6 +24,8 @@ function validate(form, classes) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
+  if (!form.email.trim()) errors.email = 'Please enter an email'
+  else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   if (!form.password) errors.password = 'Set a password'
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.confirm !== form.password) errors.confirm = 'Passwords do not match'
@@ -40,6 +43,7 @@ export default function Signup() {
   const [form, setForm] = useState({
     name: '',
     phone: '',
+    email: '',
     password: '',
     confirm: '',
     classes: [], // [{ batch, batch_slot }]
@@ -116,6 +120,7 @@ export default function Signup() {
         body: {
           name: form.name.trim(),
           phone: form.phone.replace(/\D/g, ''),
+          email: form.email.trim(),
           classes: form.classes,
           join_date: form.join_date,
         },
@@ -162,6 +167,21 @@ export default function Signup() {
             />
           </div>
           {errors.phone && <span className="field-error">{errors.phone}</span>}
+        </label>
+
+        <label id="f-email">
+          Email
+          <input
+            type="email"
+            inputMode="email"
+            value={form.email}
+            onChange={set('email')}
+            className={errors.email ? 'invalid' : ''}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+          <span className="field-hint">Used only for password recovery.</span>
+          {errors.email && <span className="field-error">{errors.email}</span>}
         </label>
 
         <label id="f-password">

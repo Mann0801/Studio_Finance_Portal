@@ -13,11 +13,14 @@ class ClassChoice(BaseModel):
 
 
 class SignupRequest(BaseModel):
-    # The account (email + password) is created on the frontend via Supabase Auth;
-    # this call attaches the profile to the verified user: display name, phone and
-    # the chosen class(es). Email is read server-side from the verified token.
+    # The LOGIN account (a synthetic phone-based email + password) is created
+    # on the frontend via Supabase Auth. This call attaches the profile to the
+    # verified user: display name, phone, a real recovery email (for
+    # self-serve "forgot password" — separate from the login identity), and
+    # the chosen class(es).
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
+    email: str = Field(min_length=3, max_length=254)
     classes: list[ClassChoice] = Field(min_length=1, max_length=10)
     # The date the student actually started attending the studio (student-picked),
     # NOT the app signup date. Shared by every class chosen at signup; drives
@@ -33,11 +36,31 @@ class AddClassRequest(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    # Self-service profile edit from the student Profile tab. Username and email
-    # (the login identity) are not editable here. Class changes happen via the
-    # "Add a class" flow (adding) or the admin (editing/removing), not here.
+    # Self-service profile edit from the student Profile tab. The LOGIN
+    # identity (synthetic phone-based email) is not editable here; the
+    # recovery email has its own endpoint (UpdateEmailRequest). Class changes
+    # happen via the "Add a class" flow (adding) or the admin (editing/
+    # removing), not here.
     name: str = Field(min_length=1, max_length=120)
     phone: str = Field(min_length=6, max_length=20)
+
+
+class ForgotPasswordRequest(BaseModel):
+    # Self-serve password reset, step 1: student enters just their phone
+    # number (unauthenticated — that's the whole point).
+    phone: str = Field(min_length=6, max_length=20)
+
+
+class ForgotPasswordResponse(BaseModel):
+    sent: bool           # a code was actually emailed
+    message: str         # honest, specific reason — see [[feedback-honest-placeholders]]
+
+
+class UpdateEmailRequest(BaseModel):
+    # Adds/updates a student's recovery email from an already-logged-in
+    # state — used by the persistent "add your email" banner for anyone who
+    # signed up before this was collected at signup.
+    email: str = Field(min_length=3, max_length=254)
 
 
 class StudentProfile(BaseModel):
@@ -136,7 +159,7 @@ class AdminLoginResponse(BaseModel):
 class AdminStudentRow(BaseModel):
     id: str
     name: str
-    email: Optional[str] = None    # phone-login students have no email
+    email: Optional[str] = None    # recovery email; None until they add one
     phone: str
     batch: str
     batch_label: str = ""

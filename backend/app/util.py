@@ -19,6 +19,18 @@ def normalize_phone(raw: str, default_country_code: str = "91") -> str:
     return digits
 
 
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def normalize_email(raw: str) -> str:
+    """Lowercase + loosely validate a recovery email. Raises ValueError if it
+    doesn't look like a plausible address."""
+    email = (raw or "").strip().lower()
+    if not _EMAIL_RE.match(email):
+        raise ValueError("invalid email address")
+    return email
+
+
 # Students log in with phone + password. Supabase auth is email-based, so the
 # phone maps to a synthetic internal email (never shown). MUST match the frontend
 # (lib/auth.js phoneToEmail): the last 10 digits @ this domain.

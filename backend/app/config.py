@@ -32,9 +32,18 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
 
-    # Email (Resend) — empty api key disables sending
+    # Email (Resend) — empty api key disables sending. Unused (kept for
+    # compatibility); the "forgot password" email actually sends via Gmail
+    # SMTP below, since it avoids needing a verified sending domain.
     resend_api_key: str = ""
     reminder_from_email: str = ""
+
+    # Gmail SMTP — sends the "forgot password" reset-code email. A dedicated
+    # Gmail account + an App Password (not the account's real login
+    # password), generated from Google Account > Security > App Passwords
+    # with 2-Step Verification on. Empty = sending disabled.
+    gmail_smtp_user: str = ""
+    gmail_smtp_app_password: str = ""
 
     # Sentry error monitoring — empty DSN disables it (e.g. local dev)
     sentry_dsn: str = ""
@@ -46,6 +55,10 @@ class Settings(BaseSettings):
     @property
     def email_enabled(self) -> bool:
         return bool(self.resend_api_key and self.reminder_from_email)
+
+    @property
+    def gmail_smtp_enabled(self) -> bool:
+        return bool(self.gmail_smtp_user and self.gmail_smtp_app_password)
 
 
 @lru_cache

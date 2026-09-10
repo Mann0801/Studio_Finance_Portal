@@ -5,6 +5,7 @@ import AdminRoute from './components/AdminRoute'
 import StudentLayout from './components/StudentLayout'
 import InstallPrompt from './components/InstallPrompt'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
 import Signup from './pages/Signup'
 import ProfileSetup from './pages/ProfileSetup'
 import PaymentSuccess from './pages/PaymentSuccess'
@@ -27,6 +28,7 @@ import AdminEditStudent from './pages/admin/AdminEditStudent'
 import AdminAddEnrollment from './pages/admin/AdminAddEnrollment'
 import AdminResetPassword from './pages/admin/AdminResetPassword'
 import AdminJoinDateCheck from './pages/admin/AdminJoinDateCheck'
+import AdminMissingEmailCheck from './pages/admin/AdminMissingEmailCheck'
 import AdminSignups from './pages/admin/AdminSignups'
 import AdminRecordCash from './pages/admin/AdminRecordCash'
 import AdminPayments from './pages/admin/AdminPayments'
@@ -60,6 +62,7 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/terms" element={<Terms />} />
@@ -83,6 +86,7 @@ export default function App() {
             <Route path="/admin/students/:id/reset-password" element={<AdminResetPassword />} />
             <Route path="/admin/students/:id/classes/:batch" element={<AdminEnrollmentDetail />} />
             <Route path="/admin/join-dates" element={<AdminJoinDateCheck />} />
+            <Route path="/admin/missing-emails" element={<AdminMissingEmailCheck />} />
             <Route path="/admin/signups" element={<AdminSignups />} />
             <Route path="/admin/students/:id/record-cash/:batch/:period" element={<AdminRecordCash />} />
             <Route path="/admin/classes" element={<AdminClasses />} />
