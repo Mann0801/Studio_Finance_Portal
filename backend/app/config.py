@@ -38,10 +38,13 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     reminder_from_email: str = ""
 
-    # Gmail SMTP — sends the "forgot password" reset-code email. A dedicated
-    # Gmail account + an App Password (not the account's real login
-    # password), generated from Google Account > Security > App Passwords
-    # with 2-Step Verification on. Empty = sending disabled.
+    # Gmail SMTP — for a self-serve "forgot password" reset-code email
+    # (dedicated Gmail account + an App Password). Built 2026-09-10 then
+    # PAUSED: Render's free tier blocks outbound SMTP entirely, so sending
+    # hangs/fails there even with valid credentials — needs either a paid
+    # Render plan or an HTTP-based email API (e.g. Resend, needs a verified
+    # domain) before this can go live. The values stay here unused so
+    # re-enabling later is just re-adding the router, not re-doing setup.
     gmail_smtp_user: str = ""
     gmail_smtp_app_password: str = ""
 

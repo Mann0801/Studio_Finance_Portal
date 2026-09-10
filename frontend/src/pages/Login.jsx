@@ -69,9 +69,6 @@ export default function Login() {
             required
           />
         </label>
-        <Link to="/forgot-password" className="field-hint" style={{ display: 'inline-block' }}>
-          Forgot password?
-        </Link>
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn primary lg block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}

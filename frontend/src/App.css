@@ -218,40 +218,6 @@ button.menu-item {
   margin-top: 4px;
 }
 
-/* Smooth transition between the phone / code / password steps on the
-   forgot-password screen — reuses the same entrance used by cards elsewhere. */
-.auth-step-in {
-  animation: card-in 0.32s ease both;
-}
-
-/* ── OTP code entry: one box per digit, auto-advances as you type ── */
-.otp-input {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 8px 0 4px;
-}
-.otp-input input {
-  width: 36px;
-  height: 46px;
-  padding: 0;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text);
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-}
-.otp-input input:focus {
-  border-color: var(--accent);
-  outline: none;
-}
-.otp-input input:disabled {
-  opacity: 0.6;
-}
-
 /* ── Segmented control (email / phone) ── */
 .seg {
   display: flex;
@@ -276,15 +242,6 @@ button.menu-item {
 .seg-opt.active {
   background: var(--accent);
   color: #fff;
-}
-
-/* ── OTP code input ── */
-.otp-input {
-  text-align: center;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 0.4em;
-  padding-left: 0.4em; /* offset the trailing letter-spacing so it looks centered */
 }
 
 /* ── Top bar / greeting ── */
