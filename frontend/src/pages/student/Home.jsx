@@ -9,6 +9,7 @@ import { BUSINESS } from '../../lib/business'
 import { formatPhoneDisplay, phoneToTelHref } from '../../lib/auth'
 import DueCard from '../../components/DueCard'
 import WhatsAppBanner from '../../components/WhatsAppBanner'
+import EmailBanner from '../../components/EmailBanner'
 import ClassSwitcher from '../../components/ClassSwitcher'
 import { CheckIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
@@ -63,7 +64,7 @@ function nextClassLabel(scheduleDays, startMinutes) {
 }
 
 export default function Home() {
-  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId } = useDashboard()
+  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId, reload } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
   const { classes } = useClasses()
   const { state } = useLocation()
@@ -237,7 +238,8 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
+      {/* Non-blocking reminders, in the flow at the bottom so they cover nothing. */}
+      {!student.email && <EmailBanner onSaved={reload} />}
       {showWhatsApp && (
         <WhatsAppBanner
           link={waLink}

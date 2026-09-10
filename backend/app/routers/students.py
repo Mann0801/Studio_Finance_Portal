@@ -33,9 +33,10 @@ from ..schemas import (
     PaymentOut,
     SignupRequest,
     StudentProfile,
+    UpdateEmailRequest,
     UpdateProfileRequest,
 )
-from ..util import normalize_phone
+from ..util import normalize_email, normalize_phone
 
 router = APIRouter(prefix="/api", tags=["students"])
 
@@ -206,6 +207,10 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
         phone = normalize_phone(body.phone)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
+    try:
+        email = normalize_email(body.email)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid email address")
 
     seen: set[str] = set()
     resolved: list[tuple[ClassChoice, dict, str | None]] = []
@@ -223,9 +228,10 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     row = {
         "id": student["id"],
         "name": body.name.strip(),
-        # Login identity is the phone (via a synthetic auth email); no real email
-        # is collected, so the students.email column stays null.
-        "email": None,
+        # Login identity is the phone (via a synthetic auth email) — this
+        # column holds a REAL recovery email instead, used only for
+        # self-serve "forgot password".
+        "email": email,
         "phone": phone,
         "batch": first_cls["id"],
         "batch_slot": first_slot,
@@ -270,6 +276,25 @@ def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_st
 
     updates = {"name": body.name.strip(), "phone": phone}
     updated = sb.table("students").update(updates).eq("id", student["id"]).execute()
+    return _student_profile(updated.data[0])
+
+
+@router.patch("/me/email", response_model=StudentProfile)
+def update_my_email(body: UpdateEmailRequest, student=Depends(get_current_student)):
+    """Add/update the recovery email used for self-serve "forgot password" —
+    for students who signed up before this was collected at signup. Not the
+    login identity; changing it doesn't touch how they log in."""
+    sb = get_supabase()
+    res = sb.table("students").select("*").eq("id", student["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+
+    try:
+        email = normalize_email(body.email)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid email address")
+
+    updated = sb.table("students").update({"email": email}).eq("id", student["id"]).execute()
     return _student_profile(updated.data[0])
 
 

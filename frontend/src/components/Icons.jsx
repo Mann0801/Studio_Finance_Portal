@@ -160,6 +160,13 @@ export const CashIcon = (p) => (
   </svg>
 )
 
+export const MailIcon = (p) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m4 7 8 6 8-6" />
+  </svg>
+)
+
 export const InfoIcon = (p) => (
   <svg {...base} {...p}>
     <circle cx="12" cy="12" r="9" />
