@@ -22,7 +22,7 @@ const TABS = [
   { to: '/admin/classes', label: 'Classes', Icon: ClassIcon },
   { to: '/admin/payments', label: 'Payments', Icon: PaymentIcon },
   { to: '/admin/join-dates', label: 'Join Date Check', Icon: InfoIcon },
-  { to: '/admin/missing-emails', label: 'Missing Recovery Email', Icon: MailIcon },
+  { to: '/admin/missing-emails', label: 'Recovery Email', Icon: MailIcon },
   { to: '/admin/announcements', label: 'Announcements', Icon: MegaphoneIcon },
   { to: '/admin/settings', label: 'Settings', Icon: SettingsIcon },
 ]
