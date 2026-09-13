@@ -88,9 +88,9 @@ export default function Profile() {
           phone: form.phone.replace(/\D/g, ''),
         },
       })
-      if (form.email.trim()) {
-        await api('/api/me/email', { method: 'PATCH', body: { email: form.email.trim() } })
-      }
+      // Sent unconditionally, including empty — clearing it here brings
+      // back the Home banner since the student no longer has one on file.
+      await api('/api/me/email', { method: 'PATCH', body: { email: form.email.trim() } })
       await reload()
       setEditing(false)
       setForm(null)

@@ -281,16 +281,22 @@ def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_st
 
 @router.patch("/me/email", response_model=StudentProfile)
 def update_my_email(body: UpdateEmailRequest, student=Depends(get_current_student)):
-    """Add/update the recovery email used for self-serve "forgot password" —
-    for students who signed up before this was collected at signup. Not the
-    login identity; changing it doesn't touch how they log in."""
+    """Add/update/clear the recovery email used for self-serve "forgot
+    password" — for students who signed up before this was collected at
+    signup. Not the login identity; changing it doesn't touch how they log
+    in. An empty value clears it (the Home banner reappears once it's gone)."""
     sb = get_supabase()
     res = sb.table("students").select("*").eq("id", student["id"]).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found; complete signup")
 
+    raw = (body.email or "").strip()
+    if not raw:
+        updated = sb.table("students").update({"email": None}).eq("id", student["id"]).execute()
+        return _student_profile(updated.data[0])
+
     try:
-        email = normalize_email(body.email)
+        email = normalize_email(raw)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid email address")
 
