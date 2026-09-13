@@ -6,10 +6,14 @@ import { changePassword, formatPhoneDisplay, toTenDigits } from '../../lib/auth'
 import { PlusIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
 function validate(form) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
+  // Optional — only validated if they've typed something.
+  if (form.email.trim() && !EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   // Password is optional — only validated if they typed a new one.
   if (form.newPassword) {
     if (form.newPassword.length < 8) errors.newPassword = 'At least 8 characters'
@@ -34,6 +38,7 @@ export default function Profile() {
       name: s.name,
       // Stored with country code (91…); show just the 10 digits for editing.
       phone: (s.phone || '').replace(/\D/g, '').slice(-10),
+      email: s.email || '',
       newPassword: '',
       confirmPassword: '',
     })
@@ -83,6 +88,9 @@ export default function Profile() {
           phone: form.phone.replace(/\D/g, ''),
         },
       })
+      if (form.email.trim()) {
+        await api('/api/me/email', { method: 'PATCH', body: { email: form.email.trim() } })
+      }
       await reload()
       setEditing(false)
       setForm(null)
@@ -130,6 +138,12 @@ export default function Profile() {
             <div className="list-item">
               <span className="muted">Phone</span>
               <span className="li-main" style={{ fontSize: 14 }}>{formatPhoneDisplay(data.student.phone)}</span>
+            </div>
+            <div className="list-item">
+              <span className="muted">Recovery email</span>
+              <span className="li-main" style={{ fontSize: 14 }}>
+                {data.student.email || 'Not added'}
+              </span>
             </div>
           </div>
 
@@ -194,6 +208,21 @@ export default function Profile() {
               />
             </div>
             {errors.phone && <span className="field-error">{errors.phone}</span>}
+          </label>
+
+          <label>
+            Recovery email
+            <input
+              type="email"
+              inputMode="email"
+              value={form.email}
+              onChange={set('email')}
+              className={errors.email ? 'invalid' : ''}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+            <span className="field-hint">Used only for password recovery.</span>
+            {errors.email && <span className="field-error">{errors.email}</span>}
           </label>
 
           {/* Change password (optional) */}
