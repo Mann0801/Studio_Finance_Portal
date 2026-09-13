@@ -46,10 +46,11 @@ class UpdateProfileRequest(BaseModel):
 
 
 class UpdateEmailRequest(BaseModel):
-    # Adds/updates a student's recovery email from an already-logged-in
+    # Adds/updates/clears a student's recovery email from an already-logged-in
     # state — used by the persistent "add your email" banner for anyone who
-    # signed up before this was collected at signup.
-    email: str = Field(min_length=3, max_length=254)
+    # signed up before this was collected at signup, and by the Settings
+    # edit form. Empty/null clears it (the Home banner then reappears).
+    email: Optional[str] = Field(default=None, max_length=254)
 
 
 class StudentProfile(BaseModel):
