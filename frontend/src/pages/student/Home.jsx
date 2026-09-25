@@ -151,6 +151,10 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Top priority: a student can't self-recover their password without
+          this, so it comes before everything else, not buried at the bottom. */}
+      {!student.email && <EmailBanner onSaved={reload} />}
+
       {enrollments.length > 1 && (
         <ClassSwitcher enrollments={enrollments} activeId={activeClassId} onChange={setActiveClassId} />
       )}
@@ -238,8 +242,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Non-blocking reminders, in the flow at the bottom so they cover nothing. */}
-      {!student.email && <EmailBanner onSaved={reload} />}
+      {/* Non-blocking reminder, in the flow at the bottom so it covers nothing. */}
       {showWhatsApp && (
         <WhatsAppBanner
           link={waLink}
