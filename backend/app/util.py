@@ -40,3 +40,37 @@ PHONE_LOGIN_DOMAIN = "phone.iampossiblefit.com"
 def phone_login_email(raw: str) -> str:
     digits = re.sub(r"\D", "", raw or "")[-10:]
     return f"{digits}@{PHONE_LOGIN_DOMAIN}"
+
+
+class PhoneLoginConflict(Exception):
+    """Raised when another account is already registered with the phone
+    number being switched to (its derived login email is already taken)."""
+
+
+def sync_login_email_for_phone_change(sb, user_id: str, old_phone: str, new_phone: str) -> None:
+    """If a student/admin is changing a student's phone number, move the
+    account's real Supabase Auth login email (derived from phone) to match.
+
+    Without this, changing ``students.phone`` only updates the DISPLAYED
+    number — login always re-derives the auth email from whatever phone is
+    typed at the login screen, so the account would silently stay reachable
+    only via the OLD number forever. A no-op when the phone isn't actually
+    changing.
+
+    Raises ``PhoneLoginConflict`` if another account already has that phone.
+    Checked against our own ``students`` table rather than by inspecting the
+    Supabase Auth API's error on a rejected update — verified live that a
+    duplicate-email rejection there comes back as a generic
+    ``AuthApiError("Error updating user")`` with no distinguishing code, so
+    a message-based check can't reliably tell a conflict apart from any
+    other failure.
+    """
+    if new_phone == old_phone:
+        return
+    conflict = (
+        sb.table("students").select("id").eq("phone", new_phone).neq("id", user_id).limit(1).execute()
+    )
+    if conflict.data:
+        raise PhoneLoginConflict
+    new_login_email = phone_login_email(new_phone)
+    sb.auth.admin.update_user_by_id(user_id, {"email": new_login_email})
