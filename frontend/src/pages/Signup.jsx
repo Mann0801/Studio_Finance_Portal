@@ -10,36 +10,55 @@ import JoinDateNoticeModal from '../components/JoinDateNoticeModal'
 import { InfoIcon } from '../components/Icons'
 import { MIN_JOIN_DATE, MAX_JOIN_DATE, FIRST_OF_THIS_MONTH_LABEL, joinDateError } from '../lib/joinDate'
 
-const FIELD_ORDER = ['name', 'phone', 'email', 'password', 'confirm', 'classes', 'join_date']
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+const STEPS = ['Your details', 'Account security', 'Choose a class', 'Join date']
+const TOTAL_STEPS = STEPS.length
 
-function scrollToFirstError(errs) {
-  const first = FIELD_ORDER.find((k) => errs[k])
-  if (first) {
-    document.getElementById(`f-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-}
-
-function validate(form, classes) {
+function validateStep1(form) {
   const errors = {}
   if (!form.name.trim()) errors.name = 'Please enter your full name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
+  return errors
+}
+
+function validateStep2(form) {
+  const errors = {}
   if (!form.email.trim()) errors.email = 'Please enter an email'
   else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address'
   if (!form.password) errors.password = 'Set a password'
   else if (form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.confirm !== form.password) errors.confirm = 'Passwords do not match'
+  return errors
+}
+
+function validateStep3(form, classes) {
+  const errors = {}
   if (form.classes.length === 0) errors.classes = 'Please select at least one class'
   else if (form.classes.some((c) => hasSlots(classById(classes, c.batch)) && !c.batch_slot))
     errors.classes = 'Please choose a timing for every selected class'
+  return errors
+}
+
+function validateStep4(form) {
+  const errors = {}
   const jd = joinDateError(form.join_date)
   if (jd) errors.join_date = jd
   return errors
 }
 
+function validateAll(form, classes) {
+  return {
+    ...validateStep1(form),
+    ...validateStep2(form),
+    ...validateStep3(form, classes),
+    ...validateStep4(form),
+  }
+}
+
 export default function Signup() {
   const navigate = useNavigate()
   const { classes } = useClasses()
+  const [step, setStep] = useState(1)
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -50,7 +69,6 @@ export default function Signup() {
     join_date: '',
   })
   const [errors, setErrors] = useState({})
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -69,7 +87,7 @@ export default function Signup() {
   const set = (k) => (e) => {
     const value = e?.target ? e.target.value : e
     setForm((f) => ({ ...f, [k]: value }))
-    if (submitted) setErrors((prev) => ({ ...prev, [k]: undefined }))
+    setErrors((prev) => ({ ...prev, [k]: undefined }))
   }
 
   const toggleClass = (batch) => {
@@ -80,7 +98,7 @@ export default function Signup() {
         : [...f.classes, { batch, batch_slot: null }]
       return { ...f, classes: nextClasses }
     })
-    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
+    setErrors((prev) => ({ ...prev, classes: undefined }))
   }
 
   const selectSlot = (batch, slot) => {
@@ -88,7 +106,7 @@ export default function Signup() {
       ...f,
       classes: f.classes.map((c) => (c.batch === batch ? { ...c, batch_slot: slot } : c)),
     }))
-    if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
+    setErrors((prev) => ({ ...prev, classes: undefined }))
   }
 
   // Live confirm-password state (updates as they type).
@@ -98,14 +116,33 @@ export default function Signup() {
       ? 'match'
       : 'mismatch'
 
+  function goNext() {
+    setError('')
+    const stepErrors =
+      step === 1 ? validateStep1(form) : step === 2 ? validateStep2(form) : validateStep3(form, classes)
+    setErrors(stepErrors)
+    if (Object.keys(stepErrors).length > 0) return
+    setStep((s) => s + 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function goBack() {
+    setError('')
+    setStep((s) => s - 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   async function onSubmit(e) {
     e.preventDefault()
     setError('')
-    setSubmitted(true)
-    const fieldErrors = validate(form, classes)
-    setErrors(fieldErrors)
-    if (Object.keys(fieldErrors).length > 0) {
-      scrollToFirstError(fieldErrors)
+    const step4Errors = validateStep4(form)
+    setErrors(step4Errors)
+    if (Object.keys(step4Errors).length > 0) return
+    // Defensive final check in case something upstream got out of sync.
+    const allErrors = validateAll(form, classes)
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors)
+      setStep(1)
       return
     }
 
@@ -145,139 +182,197 @@ export default function Signup() {
         <p className="auth-sub">A few details and you’re in.</p>
       </div>
 
+      <div className="signup-progress">
+        <div className="signup-progress-label">
+          <span>{STEPS[step - 1]}</span>
+          <span className="muted small">Step {step} of {TOTAL_STEPS}</span>
+        </div>
+        <div className="bar">
+          <span style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+        </div>
+      </div>
+
       <form onSubmit={onSubmit} className="form" noValidate>
-        <label id="f-name">
-          Full name
-          <input value={form.name} onChange={set('name')} className={errors.name ? 'invalid' : ''} autoComplete="name" />
-          {errors.name && <span className="field-error">{errors.name}</span>}
-        </label>
-
-        <label id="f-phone">
-          Phone number
-          <div className={`phone-field ${errors.phone ? 'invalid' : ''}`}>
-            <span className="phone-cc">+91</span>
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={form.phone}
-              onChange={(e) => set('phone')(toTenDigits(e.target.value))}
-              className={errors.phone ? 'invalid' : ''}
-              placeholder="10-digit mobile number"
-              autoComplete="tel"
-            />
-          </div>
-          {errors.phone && <span className="field-error">{errors.phone}</span>}
-        </label>
-
-        <label id="f-email">
-          Email
-          <input
-            type="email"
-            inputMode="email"
-            value={form.email}
-            onChange={set('email')}
-            className={errors.email ? 'invalid' : ''}
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-          <span className="field-hint">Used only for password recovery.</span>
-          {errors.email && <span className="field-error">{errors.email}</span>}
-        </label>
-
-        <label id="f-password">
-          Password
-          <input
-            type="password"
-            value={form.password}
-            onChange={set('password')}
-            className={errors.password ? 'invalid' : ''}
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-          />
-          {errors.password && <span className="field-error">{errors.password}</span>}
-        </label>
-
-        <label id="f-confirm">
-          Confirm password
-          <input
-            type="password"
-            value={form.confirm}
-            onChange={set('confirm')}
-            className={errors.confirm ? 'invalid' : confirmState === 'match' ? 'valid' : ''}
-            autoComplete="new-password"
-            placeholder="Re-enter your password"
-          />
-          {errors.confirm ? (
-            <span className="field-error">{errors.confirm}</span>
-          ) : confirmState === 'match' ? (
-            <span className="field-ok">Passwords match ✓</span>
-          ) : confirmState === 'mismatch' ? (
-            <span className="field-hint">Passwords don’t match yet</span>
-          ) : null}
-        </label>
-
-        <div id="f-classes">
-          <BatchPicker
-            classes={classes}
-            multiple
-            selected={form.classes}
-            error={errors.classes}
-            onToggle={toggleClass}
-            onSlotSelect={selectSlot}
-          />
-        </div>
-
-        <div className="card notice-card">
-          <InfoIcon className="notice-icon" width={22} height={22} />
-          <div>
-            <strong>Already a member of the studio?</strong>
-            <p>
-              As your payments and records move onto the app, please set your join date to{' '}
-              <strong>{FIRST_OF_THIS_MONTH_LABEL}</strong> so this month is billed in full rather
-              than as a partial amount.
-            </p>
-            <p>
-              <strong>New to the studio?</strong> Please choose the date you actually started
-              attending classes, not the date you're signing up for this app.
-            </p>
-          </div>
-        </div>
-
-        <label id="f-join_date">
-          Studio join date
-          <div className="date-field-wrap">
-            <input
-              ref={joinDateRef}
-              type="date"
-              value={form.join_date}
-              onChange={set('join_date')}
-              min={MIN_JOIN_DATE}
-              max={MAX_JOIN_DATE}
-              className={errors.join_date ? 'invalid' : ''}
-              readOnly={!joinDateAcked}
-              onFocus={() => !joinDateAcked && setShowJoinDateNotice(true)}
-            />
-            {!joinDateAcked && (
-              <div
-                className="date-field-shield"
-                onClick={() => setShowJoinDateNotice(true)}
+        {step === 1 && (
+          <div key="step1" className="auth-step-in">
+            <label>
+              Full name
+              <input
+                value={form.name}
+                onChange={set('name')}
+                className={errors.name ? 'invalid' : ''}
+                autoComplete="name"
+                autoFocus
               />
-            )}
-          </div>
-          {form.classes.length > 1 && (
-            <span className="field-hint">It applies to every class you selected above.</span>
-          )}
-          {errors.join_date && <span className="field-error">{errors.join_date}</span>}
-        </label>
+              {errors.name && <span className="field-error">{errors.name}</span>}
+            </label>
 
-        {error && <p className="error">{error}</p>}
-        <button type="submit" className="btn primary lg block" disabled={busy}>
-          {busy ? 'Creating account…' : 'Create account'}
-        </button>
-        <p className="consent-note">
-          By creating an account you agree to our <Link to="/terms">Terms</Link> and{' '}
-          <Link to="/privacy">Privacy Policy</Link>.
-        </p>
+            <label>
+              Phone number
+              <div className={`phone-field ${errors.phone ? 'invalid' : ''}`}>
+                <span className="phone-cc">+91</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={form.phone}
+                  onChange={(e) => set('phone')(toTenDigits(e.target.value))}
+                  className={errors.phone ? 'invalid' : ''}
+                  placeholder="10-digit mobile number"
+                  autoComplete="tel"
+                />
+              </div>
+              {errors.phone && <span className="field-error">{errors.phone}</span>}
+            </label>
+
+            <button type="button" className="btn primary lg block" onClick={goNext}>
+              Continue
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div key="step2" className="auth-step-in">
+            <label>
+              Email
+              <input
+                type="email"
+                inputMode="email"
+                value={form.email}
+                onChange={set('email')}
+                className={errors.email ? 'invalid' : ''}
+                placeholder="you@example.com"
+                autoComplete="email"
+                autoFocus
+              />
+              <span className="field-hint">Used only for password recovery.</span>
+              {errors.email && <span className="field-error">{errors.email}</span>}
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                className={errors.password ? 'invalid' : ''}
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+              />
+              {errors.password && <span className="field-error">{errors.password}</span>}
+            </label>
+
+            <label>
+              Confirm password
+              <input
+                type="password"
+                value={form.confirm}
+                onChange={set('confirm')}
+                className={errors.confirm ? 'invalid' : confirmState === 'match' ? 'valid' : ''}
+                autoComplete="new-password"
+                placeholder="Re-enter your password"
+              />
+              {errors.confirm ? (
+                <span className="field-error">{errors.confirm}</span>
+              ) : confirmState === 'match' ? (
+                <span className="field-ok">Passwords match ✓</span>
+              ) : confirmState === 'mismatch' ? (
+                <span className="field-hint">Passwords don’t match yet</span>
+              ) : null}
+            </label>
+
+            <div className="stack" style={{ gap: 10 }}>
+              <button type="button" className="btn primary lg block" onClick={goNext}>
+                Continue
+              </button>
+              <button type="button" className="btn ghost block" onClick={goBack}>
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div key="step3" className="auth-step-in">
+            <BatchPicker
+              classes={classes}
+              multiple
+              selected={form.classes}
+              error={errors.classes}
+              onToggle={toggleClass}
+              onSlotSelect={selectSlot}
+            />
+
+            <div className="stack" style={{ gap: 10, marginTop: 16 }}>
+              <button type="button" className="btn primary lg block" onClick={goNext}>
+                Continue
+              </button>
+              <button type="button" className="btn ghost block" onClick={goBack}>
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div key="step4" className="auth-step-in">
+            <div className="card notice-card">
+              <InfoIcon className="notice-icon" width={22} height={22} />
+              <div>
+                <strong>Already a member of the studio?</strong>
+                <p>
+                  As your payments and records move onto the app, please set your join date to{' '}
+                  <strong>{FIRST_OF_THIS_MONTH_LABEL}</strong> so this month is billed in full rather
+                  than as a partial amount.
+                </p>
+                <p>
+                  <strong>New to the studio?</strong> Please choose the date you actually started
+                  attending classes, not the date you're signing up for this app.
+                </p>
+              </div>
+            </div>
+
+            <label>
+              Studio join date
+              <div className="date-field-wrap">
+                <input
+                  ref={joinDateRef}
+                  type="date"
+                  value={form.join_date}
+                  onChange={set('join_date')}
+                  min={MIN_JOIN_DATE}
+                  max={MAX_JOIN_DATE}
+                  className={errors.join_date ? 'invalid' : ''}
+                  readOnly={!joinDateAcked}
+                  onFocus={() => !joinDateAcked && setShowJoinDateNotice(true)}
+                />
+                {!joinDateAcked && (
+                  <div
+                    className="date-field-shield"
+                    onClick={() => setShowJoinDateNotice(true)}
+                  />
+                )}
+              </div>
+              {form.classes.length > 1 && (
+                <span className="field-hint">It applies to every class you selected above.</span>
+              )}
+              {errors.join_date && <span className="field-error">{errors.join_date}</span>}
+            </label>
+
+            {error && <p className="error">{error}</p>}
+            <div className="stack" style={{ gap: 10 }}>
+              <button type="submit" className="btn primary lg block" disabled={busy}>
+                {busy ? 'Creating account…' : 'Create account'}
+              </button>
+              <button type="button" className="btn ghost block" onClick={goBack} disabled={busy}>
+                Back
+              </button>
+            </div>
+            <p className="consent-note">
+              By creating an account you agree to our <Link to="/terms">Terms</Link> and{' '}
+              <Link to="/privacy">Privacy Policy</Link>.
+            </p>
+          </div>
+        )}
       </form>
 
       <p className="auth-foot">
