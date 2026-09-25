@@ -12,6 +12,11 @@ import Home from './pages/student/Home'
 import Payments from './pages/student/Payments'
 import AddClass from './pages/student/AddClass'
 import Profile from './pages/student/Profile'
+import EditProfile from './pages/student/EditProfile'
+import EditName from './pages/student/EditName'
+import EditPhone from './pages/student/EditPhone'
+import EditEmail from './pages/student/EditEmail'
+import ChangePassword from './pages/student/ChangePassword'
 import StudioContact from './pages/student/StudioContact'
 import WhatsAppGroup from './pages/student/WhatsAppGroup'
 import Announcements from './pages/student/Announcements'
@@ -110,6 +115,11 @@ export default function App() {
               <Route path="/whatsapp-group" element={<WhatsAppGroup />} />
               <Route path="/contact" element={<StudioContact />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/edit" element={<EditProfile />} />
+              <Route path="/profile/edit/name" element={<EditName />} />
+              <Route path="/profile/edit/phone" element={<EditPhone />} />
+              <Route path="/profile/edit/email" element={<EditEmail />} />
+              <Route path="/profile/edit/password" element={<ChangePassword />} />
             </Route>
           </Route>
 
