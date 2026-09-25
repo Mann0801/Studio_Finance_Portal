@@ -11,6 +11,26 @@ It's two apps on a single API. Members get a phone-first PWA that installs to th
 home screen and opens like a native app. The owner gets an admin dashboard for
 collections, rosters, the class catalogue, and cash. It's live and in real use.
 
+## Screenshots
+
+Member names and phone numbers are blurred.
+
+**Member app**
+
+<p>
+  <img src="docs/screenshots/login.png" alt="Member login" width="280">
+  &nbsp;
+  <img src="docs/screenshots/member-home.png" alt="Member home: payment status and next class" width="280">
+</p>
+
+**Admin dashboard**
+
+<p>
+  <img src="docs/screenshots/admin-dashboard.png" alt="Admin overview: students, collections, new signups" width="280">
+  &nbsp;
+  <img src="docs/screenshots/admin-payments.png" alt="Admin payments: collected vs pending for the month" width="280">
+</p>
+
 ## Stack
 
 - **Backend:** FastAPI (Python), deployed on Render
