@@ -6,7 +6,7 @@ import { formatPhoneDisplay, phoneToTelHref } from '../../lib/auth'
 import { rupees } from '../../lib/batches'
 import { useClasses } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
-import { ArrowLeftIcon, EditIcon, PlusIcon, ChevronRightIcon } from '../../components/Icons'
+import { ArrowLeftIcon, EditIcon, KeyIcon, PlusIcon, ChevronRightIcon } from '../../components/Icons'
 import { CardSkeleton, Skeleton } from '../../components/Skeleton'
 
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
@@ -175,39 +175,65 @@ export default function AdminStudentDetail() {
             </button>
           )}
 
-          {/* Actions */}
-          <div className="stack" style={{ marginTop: 20, gap: 10 }}>
-            <button className="btn ghost block" onClick={() => navigate(`/admin/students/${id}/edit`)}>
-              <EditIcon width={16} height={16} /> Edit name / phone
-            </button>
-            <button
-              className="btn ghost block"
-              onClick={() => navigate(`/admin/students/${id}/reset-password`)}
-            >
-              Reset password
-            </button>
-
-            {confirmRemove ? (
-              <div className="card" style={{ borderColor: 'var(--unpaid)' }}>
-                <p style={{ marginTop: 0 }}>
-                  Remove <strong>{data.name}</strong>? This deletes their account and
-                  payment history permanently, across every class.
-                </p>
-                <div className="stack" style={{ gap: 8 }}>
-                  <button className="btn danger block" onClick={remove} disabled={busy}>
-                    {busy ? 'Removing…' : 'Yes, remove student'}
-                  </button>
-                  <button className="btn ghost block" onClick={() => setConfirmRemove(false)} disabled={busy}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button className="btn ghost block danger-text" onClick={() => setConfirmRemove(true)}>
-                Remove student
-              </button>
-            )}
+          {/* Manage */}
+          <div className="section-h" style={{ marginTop: 20, marginBottom: 0 }}>
+            <h2>Manage</h2>
           </div>
+          <div className="card flush list" style={{ marginTop: 8 }}>
+            <div
+              className="list-item link-row"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/admin/students/${id}/edit`)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${id}/edit`)}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <EditIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
+                Edit name / phone
+              </span>
+              <ChevronRightIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
+            </div>
+            <div
+              className="list-item link-row"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/admin/students/${id}/reset-password`)}
+              onKeyDown={(e) =>
+                (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${id}/reset-password`)
+              }
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <KeyIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
+                Reset password
+              </span>
+              <ChevronRightIcon width={16} height={16} style={{ color: 'var(--muted)' }} />
+            </div>
+          </div>
+
+          {confirmRemove ? (
+            <div className="card" style={{ marginTop: 12, borderColor: 'var(--unpaid)' }}>
+              <p style={{ marginTop: 0 }}>
+                Remove <strong>{data.name}</strong>? This deletes their account and
+                payment history permanently, across every class.
+              </p>
+              <div className="stack" style={{ gap: 8 }}>
+                <button className="btn danger block" onClick={remove} disabled={busy}>
+                  {busy ? 'Removing…' : 'Yes, remove student'}
+                </button>
+                <button className="btn ghost block" onClick={() => setConfirmRemove(false)} disabled={busy}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="btn ghost block danger-text"
+              style={{ marginTop: 12 }}
+              onClick={() => setConfirmRemove(true)}
+            >
+              Remove student
+            </button>
+          )}
 
           <div style={{ height: 28 }} />
         </>

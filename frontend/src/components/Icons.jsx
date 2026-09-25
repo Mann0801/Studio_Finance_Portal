@@ -51,6 +51,15 @@ export const EditIcon = (p) => (
   </svg>
 )
 
+export const KeyIcon = (p) => (
+  <svg {...base} {...p}>
+    <circle cx="7.5" cy="15.5" r="4.5" />
+    <path d="m10.5 12.5 8-8" />
+    <path d="M16 7l3 3" />
+    <path d="M19 4l1 1" />
+  </svg>
+)
+
 export const ArrowLeftIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M15 5l-7 7 7 7" />
