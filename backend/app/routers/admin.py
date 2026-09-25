@@ -90,7 +90,12 @@ from ..schemas import (
     WhatsAppLinkRequest,
 )
 from ..services.whatsapp import reminder_link
-from ..util import normalize_phone, phone_login_email
+from ..util import (
+    PhoneLoginConflict,
+    normalize_phone,
+    phone_login_email,
+    sync_login_email_for_phone_change,
+)
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -1098,15 +1103,25 @@ def create_student(body: AdminCreateStudentRequest):
     dependencies=[Depends(require_admin)],
 )
 def update_student(student_id: str, body: AdminUpdateStudentRequest):
-    """Edit a member's name and phone. Email is not editable here. Class
-    membership is managed via the enrollment endpoints below."""
+    """Edit a member's name and phone. Changing the phone also moves their
+    actual login credential to match (see sync_login_email_for_phone_change)
+    — otherwise they'd need their OLD number to log in forever. Recovery
+    email is not editable here. Class membership is managed via the
+    enrollment endpoints below."""
     sb = get_supabase()
-    _load_student_or_404(student_id)
+    existing = _load_student_or_404(student_id)
 
     try:
         phone = normalize_phone(body.phone)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    try:
+        sync_login_email_for_phone_change(sb, student_id, existing["phone"], phone)
+    except PhoneLoginConflict:
+        raise HTTPException(status_code=409, detail="That phone number is already registered to another account")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not update their phone number")
 
     updates = {"name": body.name.strip(), "phone": phone}
     updated = sb.table("students").update(updates).eq("id", student_id).execute()

@@ -36,7 +36,7 @@ from ..schemas import (
     UpdateEmailRequest,
     UpdateProfileRequest,
 )
-from ..util import normalize_email, normalize_phone
+from ..util import PhoneLoginConflict, normalize_email, normalize_phone, sync_login_email_for_phone_change
 
 router = APIRouter(prefix="/api", tags=["students"])
 
@@ -259,20 +259,32 @@ def my_profile(student=Depends(get_current_student)):
 
 @router.patch("/me/profile", response_model=StudentProfile)
 def update_my_profile(body: UpdateProfileRequest, student=Depends(get_current_student)):
-    """Let a student edit their own display name and phone.
+    """Let a student edit their own display name and phone. Changing the
+    phone also moves their actual login credential to match (see
+    sync_login_email_for_phone_change) — otherwise they'd need their OLD
+    number to log in forever.
 
-    Email (the login identity) is not editable here. Class membership is
-    managed via "Add a class" (adding) or the admin (editing/removing).
+    Recovery email has its own endpoint (UpdateEmailRequest). Class
+    membership is managed via "Add a class" (adding) or the admin
+    (editing/removing).
     """
     sb = get_supabase()
     res = sb.table("students").select("*").eq("id", student["id"]).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+    existing = res.data[0]
 
     try:
         phone = normalize_phone(body.phone)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid phone number")
+
+    try:
+        sync_login_email_for_phone_change(sb, student["id"], existing["phone"], phone)
+    except PhoneLoginConflict:
+        raise HTTPException(status_code=409, detail="That phone number is already registered to another account")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not update your phone number")
 
     updates = {"name": body.name.strip(), "phone": phone}
     updated = sb.table("students").update(updates).eq("id", student["id"]).execute()
