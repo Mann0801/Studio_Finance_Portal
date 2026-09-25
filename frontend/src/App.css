@@ -2706,13 +2706,13 @@ button.menu-item {
 .email-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   margin-top: 4px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--card);
-  border: 1.5px solid var(--accent-bright);
+  padding: 16px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--card) 60%);
+  border: 1px solid var(--accent-ring);
   color: var(--text);
   font: inherit;
   text-align: left;
@@ -2741,11 +2741,11 @@ button.menu-item {
 }
 .email-banner-icon {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-bright);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
