@@ -1,5 +1,6 @@
 # Studio Finance — Fitness Studio Management
 
+
 A mobile-first web platform that runs the membership and payments side of a
 fitness studio. It replaces the usual paper-and-WhatsApp routine — fees tracked
 by hand, reminders forgotten, no real view of who owes what — with one system:
