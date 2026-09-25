@@ -32,9 +32,28 @@ createRoot(document.getElementById('root')).render(
 // Fade out and remove the splash screen once the app has mounted.
 requestAnimationFrame(() => {
   const splash = document.getElementById('splash')
-  if (!splash) return
-  splash.classList.add('hide')
-  setTimeout(() => splash.remove(), 450)
+  if (splash) {
+    splash.classList.add('hide')
+    setTimeout(() => splash.remove(), 450)
+  }
+  // The app booted fine this time (whether this is the first load or a
+  // reload triggered by the stale-chunk handler below) — clear the guard so
+  // a LATER deploy's staleness can still trigger one more reload if needed.
+  sessionStorage.removeItem('vitePreloadErrorReloaded')
+})
+
+// A new deploy ships chunk files with different hashed names — if a tab was
+// left open from before that deploy (e.g. someone's PWA, or just an old tab)
+// and it tries a lazy import (like the Receipt page's html2canvas/jspdf
+// load), the browser asks for a file that no longer exists on the server:
+// "Failed to fetch dynamically imported module". Vite fires this event for
+// exactly that case; reloading picks up the current build's real references.
+// Guarded to at most once per tab so a genuinely broken deploy can't loop.
+window.addEventListener('vite:preloadError', () => {
+  const key = 'vitePreloadErrorReloaded'
+  if (sessionStorage.getItem(key)) return
+  sessionStorage.setItem(key, '1')
+  window.location.reload()
 })
 
 // Register the PWA service worker (production builds; harmless if it 404s in dev).
