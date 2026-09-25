@@ -64,7 +64,7 @@ function nextClassLabel(scheduleDays, startMinutes) {
 }
 
 export default function Home() {
-  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId, reload } = useDashboard()
+  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
   const { classes } = useClasses()
   const { state } = useLocation()
@@ -153,7 +153,7 @@ export default function Home() {
 
       {/* Top priority: a student can't self-recover their password without
           this, so it comes before everything else, not buried at the bottom. */}
-      {!student.email && <EmailBanner onSaved={reload} />}
+      {!student.email && <EmailBanner />}
 
       {enrollments.length > 1 && (
         <ClassSwitcher enrollments={enrollments} activeId={activeClassId} onChange={setActiveClassId} />
