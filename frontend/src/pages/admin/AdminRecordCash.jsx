@@ -21,6 +21,7 @@ export default function AdminRecordCash() {
   const [busy, setBusy] = useState(false)
   const [custom, setCustom] = useState('')
   const [methodNote, setMethodNote] = useState('')
+  const [comment, setComment] = useState('')
 
   const load = useCallback(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -50,6 +51,7 @@ export default function AdminRecordCash() {
       const body = { batch, period }
       if (amountPaise != null) body.amount_paise = amountPaise
       if (methodNote.trim()) body.method = methodNote.trim()
+      if (comment.trim()) body.note = comment.trim()
       await adminApi(`/api/admin/students/${id}/mark-paid`, { method: 'POST', body })
       reloadStats()
       navigate(`/admin/students/${id}`, { replace: true })
@@ -107,6 +109,16 @@ export default function AdminRecordCash() {
                     onChange={(e) => setMethodNote(e.target.value)}
                     placeholder="Cash"
                     maxLength={40}
+                  />
+                </label>
+                <label>
+                  Note <span className="muted small">(optional — what this payment covers, e.g. "3-month package")</span>
+                  <input
+                    type="text"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="e.g. covers Sept–Nov"
+                    maxLength={300}
                   />
                 </label>
               </div>

@@ -23,6 +23,11 @@
 .admin-sidebar {
   display: none;
 }
+/* Column headings for a StudentCard list — only meaningful once StudentCard
+   itself becomes a table row on a wide screen (see the bottom of this file). */
+.student-table-head {
+  display: none;
+}
 
 /* ── Admin hamburger menu ── */
 .menu-btn {
@@ -1382,6 +1387,55 @@ button.menu-item {
      wrap at anyway, but a free-typed payment-method note can be long and
      should wrap instead of overflowing the column on a phone. */
   overflow-wrap: break-word;
+}
+/* A data-row with a trailing action button (WhatsApp remind) as its own grid
+   item, not stacked inside .data-end — it sits under the amount on phone
+   (there's no 4th column), and gets one on a wide screen (see the bottom of
+   this file). */
+.data-row.with-action .wa-btn {
+  grid-column: 3;
+  justify-self: end;
+  margin-top: 4px;
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+/* The head row's blank 4th cell above that action column — only relevant once
+   there IS a 4th column, on a wide screen. */
+.head-action-col {
+  display: none;
+}
+/* A payment row's phone number and note — extra grid items (not nested inside
+   .data-sub/.data-end) so they can become their own columns on a wide screen.
+   On phone there's no room for that: phone sits under the name, and a note (if
+   any) becomes a full-width line under the whole row. */
+.pay-phone {
+  grid-column: 1;
+  display: block;
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.pay-note {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-soft);
+  font-size: 12.5px;
+  overflow-wrap: break-word;
+}
+.pay-partial-tag {
+  color: var(--warn);
+  font-weight: 700;
+  font-size: 11px;
+  margin-left: 6px;
+}
+.pay-method {
+  margin-top: 2px;
+}
+/* Column headings that only make sense once a payment row has its extra
+   columns — phone, method, note — on a wide screen. */
+.head-extra-col {
+  display: none;
 }
 /* When none of the rows in a table have a middle column value worth showing
    (e.g. a student whose classes have no fixed timing at all), drop that
@@ -2971,5 +3025,147 @@ button.menu-item {
   }
   .class-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ── Student rosters (AdminStudents) become a real table: avatar / name /
+     phone-or-class / amount / status / whatsapp each in their own column,
+     instead of the phone card's stacked fields. The wrapper divs that do the
+     mobile stacking are unwrapped via display:contents rather than touching
+     the JSX — same markup, two different layouts. ── */
+  .student-table-head,
+  .student-card {
+    grid-template-columns: 40px minmax(140px, 1.4fr) minmax(130px, 1fr) 100px 120px 150px;
+  }
+  .student-table-head {
+    display: grid;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 18px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .student-card {
+    display: grid;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 18px;
+  }
+  .student-card .s-info,
+  .student-card .s-right,
+  .student-card .s-status-row {
+    display: contents;
+  }
+  .student-card .avatar {
+    grid-column: 1;
+  }
+  .student-card .s-name {
+    grid-column: 2;
+  }
+  .student-card .s-sub {
+    grid-column: 3;
+    margin-top: 0;
+  }
+  .student-card .s-amount {
+    grid-column: 4;
+    text-align: right;
+    font-size: 14px;
+  }
+  .student-card .badge {
+    grid-column: 5;
+    justify-self: start;
+  }
+  .student-card .wa-btn {
+    grid-column: 6;
+    justify-self: end;
+  }
+
+  /* ── Payments Pending/Unpaid rows: Name / Phone / Class / Due / WhatsApp,
+     each a fixed-width column of its own — long content wraps within its
+     column instead of growing the column or spilling into the next. ── */
+  .data-row.with-action {
+    grid-template-columns: 170px 130px minmax(150px, 1fr) 110px 150px;
+    align-items: center;
+  }
+  .data-row.with-action .data-name {
+    grid-column: 1;
+  }
+  .data-row.with-action .pay-phone {
+    grid-column: 2;
+    margin-top: 0;
+  }
+  .data-row.with-action .data-sub {
+    grid-column: 3;
+  }
+  .data-row.with-action .data-end {
+    grid-column: 4;
+  }
+  .data-row.with-action .wa-btn {
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: end;
+    margin-top: 0;
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+  .data-row.with-action .head-action-col {
+    display: block;
+    grid-column: 5;
+  }
+  .data-row.with-action .head-extra-col {
+    display: block;
+  }
+
+  /* ── Payments Collected/Paid rows: Name / Phone / Class / Amount / Method /
+     Note, each its own fixed-width column. The note (the field that used to
+     get crammed into the amount column as an overloaded "method") gets real
+     room and wraps within its own column instead of distorting the row. ── */
+  .data-row.payment-row {
+    grid-template-columns: 160px 120px minmax(140px, 1fr) 100px 100px minmax(180px, 1fr);
+    align-items: start;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .data-row.payment-row .data-end {
+    display: contents;
+  }
+  .data-row.payment-row .data-name {
+    grid-column: 1;
+    align-self: center;
+  }
+  .data-row.payment-row .pay-phone {
+    grid-column: 2;
+    margin-top: 0;
+    align-self: center;
+  }
+  .data-row.payment-row .data-sub {
+    grid-column: 3;
+    align-self: center;
+  }
+  .data-row.payment-row .pay-amount {
+    grid-column: 4;
+    text-align: right;
+    align-self: center;
+  }
+  .data-row.payment-row .pay-method {
+    grid-column: 5;
+    text-align: right;
+    margin-top: 0;
+    align-self: center;
+  }
+  .data-row.payment-row .pay-note {
+    grid-column: 6;
+    grid-row: 1;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    text-align: left;
+    align-self: center;
+  }
+  .data-row.payment-row .head-extra-col {
+    display: block;
   }
 }

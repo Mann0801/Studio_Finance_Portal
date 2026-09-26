@@ -26,6 +26,7 @@ def _record_transaction(
     method: Optional[str],
     razorpay_payment_id: Optional[str],
     paid_at: str,
+    note: Optional[str] = None,
 ) -> None:
     """Log one individual money-in event to the payment_transactions ledger.
     ``payments`` stays the single source of truth for what's owed/settled this
@@ -41,6 +42,7 @@ def _record_transaction(
             "period": period,
             "amount_paise": amount_paise,
             "method": (method or "").strip() or None,
+            "note": (note or "").strip() or None,
             "razorpay_payment_id": razorpay_payment_id,
             "paid_at": paid_at,
         }
@@ -56,8 +58,8 @@ def build_history(payments: list[dict], transactions: list[dict]) -> list[dict]:
 
     Each entry: id, period, amount_paise, paid_paise (both = this
     transaction's own amount), is_prorata (from the month's payments row),
-    paid_at, method, status ('paid' — every transaction here is completed,
-    real money received)."""
+    paid_at, method, note, status ('paid' — every transaction here is
+    completed, real money received)."""
     due_by_period = {p["period"]: p for p in payments}
     by_period: dict[str, list[dict]] = {}
     for t in transactions:
@@ -78,6 +80,7 @@ def build_history(payments: list[dict], transactions: list[dict]) -> list[dict]:
                     "status": "paid",
                     "paid_at": t.get("paid_at"),
                     "method": payment_method_label(t),
+                    "note": t.get("note"),
                 }
             )
     history.sort(key=lambda h: h["paid_at"] or "", reverse=True)
@@ -160,16 +163,19 @@ def record_cash_payment(
     due_paise: int,
     is_prorata: bool,
     method: Optional[str] = None,
+    note: Optional[str] = None,
 ) -> None:
     """Add a manually-recorded amount toward a (student, class, period) —
     cash, GPay, netbanking, or anything else paid outside the app. Accumulates
     on top of anything already paid; the month flips to 'paid' only once the
     full fee is covered. No Razorpay payment id — that's how a manual entry is
     distinguished from an online payment. ``method`` is a free-text label
-    (e.g. "GPay") shown in payment history. ``amount_now_paise`` is also
-    logged as its own row in payment_transactions — a partial payment and a
-    later remainder each keep their own receipt instead of one overwriting
-    the other."""
+    (e.g. "GPay") shown in payment history; ``note`` is a separate free-text
+    comment (e.g. "covers the 3-month package through November") — kept apart
+    from method so one doesn't get overloaded with the other.
+    ``amount_now_paise`` is also logged as its own row in payment_transactions
+    — a partial payment and a later remainder each keep their own receipt
+    instead of one overwriting the other."""
     prev = amount_paid_for(student_id, class_id, period)
     applied = max(min(amount_now_paise, due_paise - prev), 0)
     new_paid = prev + applied
@@ -187,13 +193,14 @@ def record_cash_payment(
             "razorpay_order_id": f"cash-{student_id[:8]}-{class_id}-{period}",
             "razorpay_payment_id": None,
             "method": (method or "").strip() or None,
+            "note": (note or "").strip() or None,
             # Stamp the time cash was last received (even for a partial) so it
             # shows dated in the payment history.
             "paid_at": paid_at,
         },
         on_conflict="student_id,class_id,period",
     ).execute()
-    _record_transaction(student_id, class_id, period, applied, method, None, paid_at)
+    _record_transaction(student_id, class_id, period, applied, method, None, paid_at, note)
 
 
 def get_payment_by_order(order_id: str) -> Optional[dict]:

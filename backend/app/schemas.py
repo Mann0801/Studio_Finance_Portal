@@ -231,6 +231,7 @@ class AdminPaymentRow(BaseModel):
     id: str                    # this transaction's own id
     student_id: str
     name: str
+    phone: str
     batch: str
     batch_label: str
     slot_label: Optional[str] = None
@@ -238,6 +239,7 @@ class AdminPaymentRow(BaseModel):
     period: str
     paid_at: Optional[datetime] = None
     method: str = "Online"  # 'Cash' | 'Online'
+    note: Optional[str] = None  # free-text comment, separate from `method`
     is_partial: bool = False   # a partial cash payment on a not-yet-cleared month
 
 
@@ -245,6 +247,7 @@ class AdminMonthRow(BaseModel):
     """One student's status for a single month (the month-wise admin roster)."""
     id: str
     name: str
+    phone: str
     batch: str
     batch_label: str = ""
     slot_label: Optional[str] = None
@@ -279,6 +282,7 @@ class StudentPaymentRow(BaseModel):
     amount_paise: int          # this transaction's own amount
     paid_at: Optional[datetime] = None
     method: str = "Online"
+    note: Optional[str] = None  # free-text comment, separate from `method`
     status: str  # 'paid' — every entry here is a completed transaction
     paid_paise: int = 0        # same as amount_paise — this transaction's amount
 
@@ -359,9 +363,13 @@ class MarkPaidRequest(BaseModel):
     # Cash amount received (paise). None = the full remaining balance. A smaller
     # amount is recorded as a partial payment; the month stays unpaid until cleared.
     amount_paise: Optional[int] = Field(default=None, ge=1)
-    # Free-text note on how this was actually paid (e.g. "GPay", "Netbanking"),
+    # Free-text label for how this was actually paid (e.g. "GPay", "Netbanking"),
     # for a payment made outside the app. Defaults to showing as "Cash" if left blank.
     method: Optional[str] = Field(default=None, max_length=40)
+    # A separate free-text comment about the payment (e.g. "covers the 3-month
+    # package through November") — kept apart from `method` so one field
+    # doesn't end up doing both jobs.
+    note: Optional[str] = Field(default=None, max_length=300)
 
 
 class AdminCreateStudentRequest(BaseModel):

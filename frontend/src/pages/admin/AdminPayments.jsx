@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
+import { formatPhoneDisplay } from '../../lib/auth'
 import { rupees } from '../../lib/batches'
 import { SearchIcon, DownloadIcon, WhatsAppIcon } from '../../components/Icons'
 import { Skeleton, ListSkeleton } from '../../components/Skeleton'
@@ -99,14 +100,16 @@ export default function AdminPayments() {
 
   const exportCsv = () => {
     if (collected.length === 0) return
-    const headers = ['Name', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Paid on']
+    const headers = ['Name', 'Phone', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Note', 'Paid on']
     const csvRows = collected.map((p) => [
       p.name,
+      formatPhoneDisplay(p.phone),
       p.batch_label,
       p.slot_label || '',
       periodLabel(period),
       (p.amount_paise / 100).toFixed(2),
       p.method || '',
+      p.note || '',
       p.paid_at ? dateLabel(p.paid_at) : '',
     ])
     downloadCsv(`payments-${period}.csv`, toCsv(headers, csvRows))
@@ -230,15 +233,18 @@ export default function AdminPayments() {
             </div>
           ) : (
             <div className="card flush" style={{ marginTop: 12 }}>
-              <div className="data-row head">
+              <div className="data-row head payment-row">
                 <span>Name</span>
+                <span className="head-extra-col">Phone</span>
                 <span>Class</span>
                 <span style={{ textAlign: 'right' }}>Paid</span>
+                <span className="head-extra-col" style={{ textAlign: 'right' }}>Method</span>
+                <span className="head-extra-col">Note</span>
               </div>
               <div className="scroll-list scroll-tall">
                 {visibleCollected.map((p) => (
                   <div
-                    className="data-row"
+                    className="data-row payment-row"
                     key={p.id}
                     role="button"
                     tabIndex={0}
@@ -251,16 +257,14 @@ export default function AdminPayments() {
                       {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
                     </span>
                     <div className="data-end">
-                      <div style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
+                      <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
                         {rupees(p.amount_paise)}
+                        {p.is_partial && <span className="pay-partial-tag">partial</span>}
                       </div>
-                      {p.is_partial && (
-                        <div style={{ color: 'var(--warn)', fontWeight: 700 }}>partial</div>
-                      )}
-                      {p.method && p.method !== 'Online' && p.method !== 'Cash' && (
-                        <div className="muted">{p.method}</div>
-                      )}
+                      <div className="pay-method muted">{p.method}</div>
                     </div>
+                    <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
+                    {p.note && <div className="pay-note muted">{p.note}</div>}
                   </div>
                 ))}
               </div>
@@ -296,14 +300,16 @@ export default function AdminPayments() {
                 Tap Remind to open WhatsApp with a prefilled message.
               </p>
               <div className="card flush">
-                <div className="data-row head">
+                <div className="data-row head with-action">
                   <span>Name</span>
+                  <span className="head-extra-col">Phone</span>
                   <span>Class</span>
                   <span style={{ textAlign: 'right' }}>Due</span>
+                  <span className="head-action-col"></span>
                 </div>
                 {pending.map((s) => (
                   <div
-                    className="data-row"
+                    className="data-row with-action"
                     key={`${s.id}-${s.batch}`}
                     role="button"
                     tabIndex={0}
@@ -322,19 +328,19 @@ export default function AdminPayments() {
                       {s.status === 'partial' && (
                         <div style={{ color: 'var(--warn)', fontWeight: 700 }}>part-paid</div>
                       )}
-                      {s.whatsapp_url && (
-                        <a
-                          className="wa-btn"
-                          href={s.whatsapp_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ marginTop: 4, minHeight: 26, padding: '0 10px', fontSize: 12 }}
-                        >
-                          <WhatsAppIcon width={12} height={12} /> Remind
-                        </a>
-                      )}
                     </div>
+                    <span className="pay-phone muted">{formatPhoneDisplay(s.phone)}</span>
+                    {s.whatsapp_url && (
+                      <a
+                        className="wa-btn"
+                        href={s.whatsapp_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <WhatsAppIcon width={12} height={12} /> Remind
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

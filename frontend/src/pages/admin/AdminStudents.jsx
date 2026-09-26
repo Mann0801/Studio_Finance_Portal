@@ -56,6 +56,22 @@ function StudentCard({ s, onOpen, sub }) {
   )
 }
 
+/** Column headings for the student table — hidden on phone (the cards below
+ * stack their own fields), shown on a wide screen where StudentCard becomes
+ * an actual table row. */
+function StudentTableHead({ subLabel }) {
+  return (
+    <div className="student-table-head">
+      <span></span>
+      <span>Name</span>
+      <span>{subLabel}</span>
+      <span>Amount</span>
+      <span>Status</span>
+      <span></span>
+    </div>
+  )
+}
+
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'paid', label: 'Paid' },
@@ -236,6 +252,7 @@ export default function AdminStudents() {
             <div className="card empty">No students match “{globalSearch.trim()}”.</div>
           ) : (
             <div className="stack" style={{ gap: 10 }}>
+              <StudentTableHead subLabel="Class" />
               {globalResults.map((s) => (
                 <StudentCard
                   key={`${s.id}-${s.batch}`}
@@ -386,6 +403,7 @@ export default function AdminStudents() {
         </div>
       ) : (
         <div className="stack" style={{ gap: 10, marginTop: 12 }}>
+          <StudentTableHead subLabel="Phone" />
           {visible.map((s) => (
             <StudentCard
               key={s.id}
