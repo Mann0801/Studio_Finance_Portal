@@ -49,6 +49,8 @@ export const classById = (classes, id) => (classes || []).find((c) => c.id === i
 export const slotsOf = (cls) => cls?.slots || []
 export const hasSlots = (cls) => slotsOf(cls).length > 0
 export const slotByKey = (cls, key) => slotsOf(cls).find((s) => s.key === key)
+export const hasPackage = (cls) => Boolean(cls?.package_3mo_fee_paise)
+export const packagePriceLabel = (cls) => `${rupees(cls.package_3mo_fee_paise)} every 3 months`
 
 // ── Display helpers ──────────────────────────────────────────────────────────
 export const FEE_TYPE_LABELS = {

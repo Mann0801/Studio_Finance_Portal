@@ -181,7 +181,10 @@ export default function Home() {
         <div className="pay-card paid-card">
           <div className="paid-badge"><CheckIcon width={26} height={26} /></div>
           <div className="paid-title">You're all paid up</div>
-          <div className="period">{periodLabel(en.current.period)} · {rupees(en.current.amount_paise)} paid</div>
+          <div className="period">
+            {periodLabel(en.current.period)} ·{' '}
+            {en.current.status === 'package' ? 'Covered by your 3-month package' : `${rupees(en.current.amount_paise)} paid`}
+          </div>
         </div>
       ) : (
         <>

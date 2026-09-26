@@ -16,7 +16,7 @@ export default function AdminAddEnrollment() {
   const [enrolledIds, setEnrolledIds] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [form, setForm] = useState({ batch: '', batch_slot: null, join_date: '' })
+  const [form, setForm] = useState({ batch: '', batch_slot: null, plan: 'monthly', join_date: '' })
 
   useEffect(() => {
     adminApi(`/api/admin/students/${id}`)
@@ -38,7 +38,12 @@ export default function AdminAddEnrollment() {
     try {
       await adminApi(`/api/admin/students/${id}/enrollments`, {
         method: 'POST',
-        body: { batch: form.batch, batch_slot: form.batch_slot, join_date: form.join_date || null },
+        body: {
+          batch: form.batch,
+          batch_slot: form.batch_slot,
+          plan: form.plan,
+          join_date: form.join_date || null,
+        },
       })
       reloadStats()
       navigate(-1)
@@ -68,7 +73,9 @@ export default function AdminAddEnrollment() {
             classes={availableClasses}
             batch={form.batch}
             slot={form.batch_slot}
-            onSelect={(batch, slot) => setForm((f) => ({ ...f, batch, batch_slot: slot }))}
+            plan={form.plan}
+            onSelect={(batch, slot) => setForm((f) => ({ ...f, batch, batch_slot: slot, plan: 'monthly' }))}
+            onPlanSelect={(plan) => setForm((f) => ({ ...f, plan }))}
           />
           <label>
             Join date <span className="muted small">(optional — defaults to today)</span>

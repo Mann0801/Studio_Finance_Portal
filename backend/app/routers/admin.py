@@ -25,7 +25,7 @@ from ..classes_store import (
     unique_slug,
     update_class,
 )
-from ..constants import ENQUIRY, FEE_TYPES, SESSION_PACK
+from ..constants import ENQUIRY, FEE_TYPES, PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLANS, SESSION_PACK
 from ..db import get_supabase
 from ..enrollments_store import (
     all_enrollments,
@@ -131,6 +131,17 @@ def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
     return None
 
 
+def _resolve_plan(cls: dict, raw_plan: str | None) -> str:
+    """Validate the billing plan: 'package_3mo' only for a class with a package
+    price configured, else the class's normal monthly billing."""
+    plan = (raw_plan or PLAN_MONTHLY).strip() or PLAN_MONTHLY
+    if plan not in PLANS:
+        raise HTTPException(status_code=422, detail="Invalid plan")
+    if plan == PLAN_PACKAGE_3MO and not cls.get("package_3mo_fee_paise"):
+        raise HTTPException(status_code=422, detail="This class doesn't offer a 3-month package")
+    return plan
+
+
 def _received_amounts_for_period(period: str, class_id: str | None = None) -> dict[tuple[str, str], int]:
     """Map (student_id, class_id) -> total paise received for `period`, INCLUDING
     partial cash on months not yet fully paid. Used for revenue (real money in hand)."""
@@ -219,6 +230,7 @@ def _class_payload(body: ClassWriteRequest) -> dict:
         "start_time": None if slots else (body.start_time or None),
         "end_time": None if slots else (body.end_time or None),
         "description": (body.description or "").strip() or None,
+        "package_3mo_fee_paise": body.package_3mo_fee_paise or None,
     }
 
 
@@ -334,9 +346,10 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
         if not s:
             continue
         join_date = _as_date(e["join_date"])
-        due = compute_due(_fee_cls(cls), join_date, period)
+        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         key = (e["student_id"], batch)
         is_waived = key in waived
+        is_package = due.is_package_covered
         received_amt = received.get(key, 0)
         # Always compare against a fresh due, not a stored status flag — a
         # join-date edit can raise what's owed for a month already marked paid.
@@ -362,7 +375,7 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
                 period=period,
                 amount_paise=amount,
                 is_prorata=due.is_prorata,
-                status="waived" if is_waived else "paid" if is_paid else "unpaid",
+                status="waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
                 whatsapp_url=wa,
             )
         )
@@ -393,9 +406,10 @@ def all_students():
             continue
         cls = cmap.get(e["class_id"])
         join_date = _as_date(e["join_date"])
-        due = compute_due(_fee_cls(cls), join_date, period)
+        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         key = (e["student_id"], e["class_id"])
         is_waived = key in waived
+        is_package = due.is_package_covered
         received_amt = received.get(key, 0)
         is_paid = not is_waived and is_settled(due.amount_paise, received_amt)
         amount = 0 if is_waived else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
@@ -415,7 +429,7 @@ def all_students():
                 period=period,
                 amount_paise=amount,
                 is_prorata=due.is_prorata,
-                status="waived" if is_waived else "paid" if is_paid else "unpaid",
+                status="waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
                 whatsapp_url=None,
             )
         )
@@ -448,9 +462,12 @@ def stats():
             if key in waived:
                 settled_keys.append(key)
                 continue
-            due_paise = compute_due(fee_cls, _as_date(m["join_date"]), period).amount_paise
-            expected += due_paise
-            if is_settled(due_paise, received_amt):
+            due = compute_due(fee_cls, _as_date(m["join_date"]), period, m.get("plan") or PLAN_MONTHLY)
+            if due.is_package_covered:
+                settled_keys.append(key)
+                continue
+            expected += due.amount_paise
+            if is_settled(due.amount_paise, received_amt):
                 settled_keys.append(key)
         return settled_keys, revenue, expected
 
@@ -550,7 +567,7 @@ def unpaid_students():
         if not s:
             continue
         cls = cmap.get(e["class_id"])
-        due = compute_due(_fee_cls(cls), _as_date(e["join_date"]), period)
+        due = compute_due(_fee_cls(cls), _as_date(e["join_date"]), period, e.get("plan") or PLAN_MONTHLY)
         # Remind for what's still owed after any partial cash already recorded.
         remaining = due.amount_paise - received.get(key, 0)
         if remaining <= 0:
@@ -761,20 +778,28 @@ def month_view(period: str):
         if period < period_of(join_date):
             continue
         cls = cmap.get(e["class_id"])
-        due = compute_due(_fee_cls(cls), join_date, period)
+        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         pay = pmap.get((e["student_id"], e["class_id"]))
         is_waived = bool(pay and pay["status"] == "waived")
+        is_package = due.is_package_covered
         paid_paise = (pay.get("paid_paise") or 0) if pay else 0
         due_paise = 0 if is_waived else due.amount_paise
-        # Skip months with no fee and no money in (enquiry / deleted class);
-        # a waived month is shown so it doesn't look like a missing row.
-        if due_paise <= 0 and paid_paise <= 0 and not is_waived:
+        # Skip months with no fee and no money in (enquiry / deleted class); a
+        # waived or package-covered month is shown so it doesn't look like a
+        # missing row (a package's "in-between" months are genuinely 0 due,
+        # but the student is still covered, not absent).
+        if due_paise <= 0 and paid_paise <= 0 and not is_waived and not is_package:
             continue
         due_by_key[(e["student_id"], e["class_id"])] = due_paise
         # A fresh amount-vs-due comparison, not the stored status flag — a
         # join-date edit can raise what's owed for a month already marked paid.
         is_paid = (not is_waived) and is_settled(due_paise, paid_paise)
-        status = "waived" if is_waived else "paid" if is_paid else ("partial" if paid_paise > 0 else "unpaid")
+        status = (
+            "waived" if is_waived
+            else "package" if is_package
+            else "paid" if is_paid
+            else ("partial" if paid_paise > 0 else "unpaid")
+        )
         remaining = max(due_paise - paid_paise, 0)
         sl = slot_label_of(cls, e.get("batch_slot"))
         wa = None
@@ -798,7 +823,7 @@ def month_view(period: str):
         )
         collected += paid_paise
         expected += due_paise
-        if is_paid or is_waived:
+        if is_paid or is_waived or is_package:
             paid_count += 1
         else:
             unpaid_count += 1
@@ -894,8 +919,9 @@ def _build_enrollment_detail(
     cls = cmap.get(class_id)
     deleted = _deleted(cls)
     join_date = _as_date(enr["join_date"])
+    plan = enr.get("plan") or PLAN_MONTHLY
     period = current_period()
-    due = compute_due(_fee_cls(cls), join_date, period)
+    due = compute_due(_fee_cls(cls), join_date, period, plan)
 
     # Total received includes partial cash on months not yet fully paid.
     total_paid = sum((p.get("paid_paise") or 0) for p in payments)
@@ -919,7 +945,7 @@ def _build_enrollment_detail(
     p = previous_period(period)
     while p >= join_period:
         if p not in waived_periods:
-            past_due = compute_due(_fee_cls(cls), join_date, p)
+            past_due = compute_due(_fee_cls(cls), join_date, p, plan)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
             if remaining > 0:
@@ -954,13 +980,14 @@ def _build_enrollment_detail(
         batch_slot=enr.get("batch_slot"),
         slot_label=sl,
         batch_deleted=deleted,
+        plan=plan,
         join_date=join_date,
         days_member=max((now_local().date() - join_date).days, 0),
         whatsapp_joined=bool(enr.get("whatsapp_joined", False)),
         period=period,
         amount_paise=this_sofar if this_settled else this_remaining,
         is_prorata=due.is_prorata,
-        status="waived" if this_waived else "paid" if this_settled else "unpaid",
+        status="waived" if this_waived else "package" if due.is_package_covered else "paid" if this_settled else "unpaid",
         paid_paise=this_sofar,
         outstanding=outstanding,
         total_paid_paise=total_paid,
@@ -1040,14 +1067,15 @@ def create_student(body: AdminCreateStudentRequest):
     login_email = phone_login_email(body.phone)
 
     seen: set[str] = set()
-    resolved: list[tuple[dict, str | None]] = []
+    resolved: list[tuple[dict, str | None, str]] = []
     for choice in body.classes:
         if choice.batch in seen:
             raise HTTPException(status_code=422, detail="Each class can only be chosen once")
         seen.add(choice.batch)
         cls = _require_class(choice.batch)
         slot = _resolve_slot(cls, choice.batch_slot)
-        resolved.append((cls, slot))
+        plan = _resolve_plan(cls, choice.plan)
+        resolved.append((cls, slot, plan))
 
     generated = not (body.password and body.password.strip())
     password = body.password.strip() if not generated else secrets.token_urlsafe(9)
@@ -1067,7 +1095,7 @@ def create_student(body: AdminCreateStudentRequest):
         raise HTTPException(status_code=400, detail="Could not create the account")
 
     join_date = body.join_date or now_local().date()
-    first_cls, first_slot = resolved[0]
+    first_cls, first_slot, _first_plan = resolved[0]
     row = {
         "id": user_id,
         "name": body.name.strip(),
@@ -1079,8 +1107,8 @@ def create_student(body: AdminCreateStudentRequest):
     }
     try:
         inserted = sb.table("students").insert(row).execute().data[0]
-        for cls, slot in resolved:
-            create_enrollment(user_id, cls["id"], slot, join_date.isoformat())
+        for cls, slot, plan in resolved:
+            create_enrollment(user_id, cls["id"], slot, join_date.isoformat(), plan)
     except Exception:
         # Roll back the orphaned auth user (cascades to students + enrollments)
         # so a retry can reuse the phone.
@@ -1138,12 +1166,13 @@ def add_student_enrollment(student_id: str, body: AdminAddEnrollmentRequest):
     s = _load_student_or_404(student_id)
     cls = _require_class(body.batch)
     slot = _resolve_slot(cls, body.batch_slot)
+    plan = _resolve_plan(cls, body.plan)
     if get_enrollment(student_id, body.batch):
         raise HTTPException(status_code=409, detail="Already enrolled in this class")
     join_date = body.join_date or now_local().date()
     if join_date > now_local().date():
         raise HTTPException(status_code=422, detail="Join date can't be in the future")
-    create_enrollment(student_id, cls["id"], slot, join_date.isoformat())
+    create_enrollment(student_id, cls["id"], slot, join_date.isoformat(), plan)
     return _build_student_detail(s)
 
 
@@ -1161,8 +1190,9 @@ def update_student_enrollment(student_id: str, class_id: str, body: AdminUpdateE
         raise HTTPException(status_code=422, detail="Join date can't be in the future")
     cls = get_class(class_id)
     slot = _resolve_slot(cls, body.batch_slot) if cls else (body.batch_slot or None)
+    plan = _resolve_plan(cls, body.plan) if cls else (body.plan or PLAN_MONTHLY)
     update_enrollment(
-        student_id, class_id, {"batch_slot": slot, "join_date": body.join_date.isoformat()}
+        student_id, class_id, {"batch_slot": slot, "join_date": body.join_date.isoformat(), "plan": plan}
     )
     return _build_student_detail(s)
 
@@ -1212,7 +1242,7 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         raise HTTPException(
             status_code=400, detail="This month is waived — un-waive it first to record cash"
         )
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period)
+    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
     remaining = due.amount_paise - amount_paid_for(student_id, body.batch, period)
     if remaining > 0:
         # None → clear the whole remaining balance; a number → partial cash,
@@ -1242,7 +1272,7 @@ def waive_student_period(student_id: str, body: PeriodActionRequest):
     period = body.period or current_period()
     if period < period_of(join_date):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period)
+    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
     if is_settled(due.amount_paise, amount_paid_for(student_id, body.batch, period)):
         raise HTTPException(status_code=400, detail="This month is already paid — remove the payment first")
     waive_period(student_id, body.batch, period, due.amount_paise, due.is_prorata)
@@ -1316,7 +1346,9 @@ def move_student_payment(student_id: str, body: MovePaymentRequest):
             status_code=409, detail="That month already has a payment recorded — remove it first"
         )
 
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, body.to_period)
+    due = compute_due(
+        _fee_cls(get_class(body.batch)), join_date, body.to_period, enr.get("plan") or PLAN_MONTHLY
+    )
     move_payment(student_id, body.batch, body.from_period, body.to_period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)
 

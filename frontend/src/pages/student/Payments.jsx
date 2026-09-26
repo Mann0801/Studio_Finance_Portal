@@ -77,7 +77,11 @@ export default function Payments() {
           <div className="pay-card" style={overdue.length ? { marginTop: 12 } : undefined}>
             <div className="between">
               <span className="card-title">
-                {en.current.status === 'paid' ? 'Paid this month' : 'Due this month'}
+                {en.current.status === 'paid'
+                  ? 'Paid this month'
+                  : en.current.status === 'package'
+                    ? 'Covered this month'
+                    : 'Due this month'}
               </span>
               <StatusBadge status={en.current.status} />
             </div>

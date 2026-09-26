@@ -17,7 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from .config import get_settings
-from .constants import ENQUIRY, MONTHLY, PER_SESSION, SESSION_PACK
+from .constants import ENQUIRY, MONTHLY, PER_SESSION, PLAN_MONTHLY, PLAN_PACKAGE_3MO, SESSION_PACK
 
 
 def _tz() -> ZoneInfo:
@@ -97,6 +97,11 @@ class DueAmount:
     period: str
     amount_paise: int
     is_prorata: bool
+    # True for a 3-month-package month that isn't the cycle's billing month —
+    # genuinely nothing owed (already covered), as opposed to e.g. a deleted
+    # class or a period before the join month. Callers use this to show
+    # "Package" instead of treating the row as unpaid/settled-by-coincidence.
+    is_package_covered: bool = False
 
 
 def _zero(period: str) -> DueAmount:
@@ -116,7 +121,9 @@ def is_settled(due_paise: int, received_paise: int) -> bool:
     return due_paise > 0 and received_paise >= due_paise
 
 
-def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
+def compute_due(
+    cls: dict | None, join_date: date, period: str, plan: str = PLAN_MONTHLY
+) -> DueAmount:
     """How much a student in class ``cls`` owes for ``period``.
 
     ``cls`` is a row from the ``classes`` table (or None for a deleted class).
@@ -128,6 +135,12 @@ def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
                        days (capped at N).
       * PER_SESSION  — per-session price × scheduled class days in the period.
       * ENQUIRY      — nothing to pay online.
+
+    ``plan='package_3mo'`` (only when ``cls`` has a ``package_3mo_fee_paise``
+    set) overrides all of the above: the full package price is due in the
+    join month and every 3rd month after it, never pro-rated even for a
+    mid-month join; the two months in between are 0, flagged
+    ``is_package_covered`` rather than treated as owing nothing to pay.
     """
     if not cls:
         return _zero(period)
@@ -138,6 +151,14 @@ def compute_due(cls: dict | None, join_date: date, period: str) -> DueAmount:
     join_period = period_of(join_date)
     if period < join_period:
         return _zero(period)
+
+    if plan == PLAN_PACKAGE_3MO and cls.get("package_3mo_fee_paise"):
+        jyear, jmonth = parse_period(join_period)
+        pyear, pmonth = parse_period(period)
+        months_elapsed = (pyear - jyear) * 12 + (pmonth - jmonth)
+        if months_elapsed % 3 == 0:
+            return DueAmount(period, cls["package_3mo_fee_paise"], False)
+        return DueAmount(period, 0, False, is_package_covered=True)
 
     year, month = parse_period(period)
     is_join_month = period == join_period

@@ -539,6 +539,10 @@ button.menu-item {
   color: var(--accent-bright);
   background: var(--accent-soft);
 }
+.badge.package {
+  color: var(--package);
+  background: var(--package-bg);
+}
 /* "₹X already paid in cash" note under a partially-paid month's balance. */
 .part-paid {
   margin-top: 6px;
@@ -1505,6 +1509,9 @@ button.menu-item {
 }
 .s-amount.waived {
   color: var(--muted);
+}
+.s-amount.package {
+  color: var(--package);
 }
 .wa-btn {
   display: inline-flex;

@@ -1,5 +1,7 @@
 import {
+  hasPackage,
   hasSlots,
+  packagePriceLabel,
   priceLabel,
   scheduleLabel,
   slotByKey,
@@ -8,22 +10,57 @@ import {
 } from '../lib/classes'
 import { CheckIcon } from './Icons'
 
+/** The "choose your plan" sub-step for a class that offers a package — shown
+ * once a timing slot is picked (or immediately for a class with no slots).
+ * Reuses the same visual style as the timing picker just above it. */
+function PlanPicker({ cls, plan, onPick }) {
+  const current = plan || 'monthly'
+  return (
+    <div className="slot-inline">
+      <div className="slot-inline-head">Choose your plan</div>
+      <button
+        type="button"
+        className={`slot-opt ${current === 'monthly' ? 'selected' : ''}`}
+        onClick={() => onPick('monthly')}
+      >
+        <span className="slot-name">Monthly</span>
+        <span className="slot-time">{priceLabel(cls)}</span>
+        {current === 'monthly' && <span className="slot-check"><CheckIcon width={13} height={13} /></span>}
+      </button>
+      <button
+        type="button"
+        className={`slot-opt ${current === 'package_3mo' ? 'selected' : ''}`}
+        onClick={() => onPick('package_3mo')}
+      >
+        <span className="slot-name">3-month package</span>
+        <span className="slot-time">{packagePriceLabel(cls)}</span>
+        {current === 'package_3mo' && <span className="slot-check"><CheckIcon width={13} height={13} /></span>}
+      </button>
+    </div>
+  )
+}
+
 /**
  * Class selector used on signup + profile setup + admin add/edit. Fed the live
  * class list (`classes` prop). Selecting a class that has timing slots expands an
  * inline dropdown directly below its card to pick one — no bottom sheet, so it
- * never hides behind the keyboard. `onSelect(classId, slotKey|null)`.
+ * never hides behind the keyboard. `onSelect(classId, slotKey|null)`. A class
+ * with a 3-month package configured also gets a "choose your plan" sub-step,
+ * shown once its timing (if any) is picked.
  *
  * Pass `multiple` for a checkbox-style picker that lets more than one class be
  * selected at once (student signup, admin walk-in registration): `selected` is
- * `[{batch, batch_slot}]`, `onToggle(classId)` adds/removes a class, and
- * `onSlotSelect(classId, slotKey)` sets its timing.
+ * `[{batch, batch_slot, plan}]`, `onToggle(classId)` adds/removes a class,
+ * `onSlotSelect(classId, slotKey)` sets its timing, and `onPlanSelect(classId,
+ * plan)` sets its plan.
  */
 export default function BatchPicker({
   classes,
   batch,
   slot,
+  plan,
   onSelect,
+  onPlanSelect,
   error,
   multiple,
   selected,
@@ -36,6 +73,7 @@ export default function BatchPicker({
     const sel = selected || []
     const isChosen = (id) => sel.some((c) => c.batch === id)
     const slotFor = (id) => sel.find((c) => c.batch === id)?.batch_slot || null
+    const planFor = (id) => sel.find((c) => c.batch === id)?.plan || 'monthly'
 
     return (
       <div>
@@ -47,8 +85,9 @@ export default function BatchPicker({
             {list.map((c) => {
               const chosen = isChosen(c.id)
               const showSlots = hasSlots(c) && chosen
-              const sched = scheduleLabel(c)
               const chosenSlot = slotByKey(c, slotFor(c.id))
+              const showPlan = chosen && hasPackage(c) && (!hasSlots(c) || chosenSlot)
+              const sched = scheduleLabel(c)
               return (
                 <div className="batch-item" key={c.id}>
                   <button
@@ -90,6 +129,10 @@ export default function BatchPicker({
                       ))}
                     </div>
                   )}
+
+                  {showPlan && (
+                    <PlanPicker cls={c} plan={planFor(c.id)} onPick={(p) => onPlanSelect(c.id, p)} />
+                  )}
                 </div>
               )
             })}
@@ -102,6 +145,7 @@ export default function BatchPicker({
 
   const chosen = list.find((c) => c.id === batch)
   const chosenSlot = slotByKey(chosen, slot)
+  const showPlan = Boolean(chosen) && hasPackage(chosen) && (!hasSlots(chosen) || chosenSlot)
 
   const choose = (c) => onSelect(c.id, hasSlots(c) ? slot || null : null)
 
@@ -156,6 +200,10 @@ export default function BatchPicker({
                       </button>
                     ))}
                   </div>
+                )}
+
+                {selected && showPlan && (
+                  <PlanPicker cls={c} plan={plan} onPick={(p) => onPlanSelect(p)} />
                 )}
               </div>
             )

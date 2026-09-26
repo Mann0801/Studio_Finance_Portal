@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class ClassChoice(BaseModel):
     batch: str
     batch_slot: Optional[str] = None  # timing slot key, required for classes that have slots
+    plan: str = "monthly"  # 'monthly' | 'package_3mo' — only meaningful for a class with a package price
 
 
 class SignupRequest(BaseModel):
@@ -33,6 +34,7 @@ class AddClassRequest(BaseModel):
     batch: str
     batch_slot: Optional[str] = None
     join_date: date
+    plan: str = "monthly"
 
 
 class UpdateProfileRequest(BaseModel):
@@ -78,7 +80,7 @@ class CurrentDue(BaseModel):
     period: str
     amount_paise: int          # remaining balance owed (full fee minus any partial)
     is_prorata: bool
-    status: str  # 'paid' | 'unpaid'
+    status: str  # 'paid' | 'unpaid' | 'waived' | 'package'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
 
 
@@ -91,6 +93,7 @@ class EnrollmentOut(BaseModel):
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
     batch_deleted: bool = False          # true if the class was removed
+    plan: str = "monthly"                # 'monthly' | 'package_3mo'
     join_date: date
     whatsapp_joined: bool = False        # tapped "Join Group" at least once, for this class
     whatsapp_group_url: Optional[str] = None
@@ -161,7 +164,7 @@ class AdminStudentRow(BaseModel):
     period: str
     amount_paise: int
     is_prorata: bool
-    status: str  # 'paid' | 'unpaid'
+    status: str  # 'paid' | 'unpaid' | 'waived' | 'package'
     whatsapp_url: Optional[str] = None  # present only for unpaid students
 
 
@@ -247,7 +250,7 @@ class AdminMonthRow(BaseModel):
     slot_label: Optional[str] = None
     due_paise: int             # fee owed for this month
     paid_paise: int = 0        # amount received toward it (partial or full)
-    status: str                # 'paid' | 'partial' | 'unpaid'
+    status: str                # 'paid' | 'partial' | 'unpaid' | 'waived' | 'package'
     method: Optional[str] = None   # 'Cash' | 'Online' | None (nothing received yet)
     paid_at: Optional[datetime] = None
     is_prorata: bool = False
@@ -290,6 +293,7 @@ class AdminEnrollmentDetail(BaseModel):
     batch_slot: Optional[str] = None
     slot_label: Optional[str] = None
     batch_deleted: bool = False
+    plan: str = "monthly"         # 'monthly' | 'package_3mo'
     join_date: date              # studio joining date for THIS class — "Joined Studio"
     days_member: int
     whatsapp_joined: bool = False
@@ -297,7 +301,7 @@ class AdminEnrollmentDetail(BaseModel):
     period: str
     amount_paise: int          # paid amount if paid, else the remaining balance
     is_prorata: bool
-    status: str                # 'paid' | 'unpaid'
+    status: str                # 'paid' | 'unpaid' | 'waived' | 'package'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
     # Lifetime, for this class only
     # Unpaid months before the current one (join month up to last month), each
@@ -371,14 +375,16 @@ class AdminAddEnrollmentRequest(BaseModel):
     batch: str
     batch_slot: Optional[str] = None
     join_date: Optional[date] = None  # defaults to today
+    plan: str = "monthly"
 
 
 class AdminUpdateEnrollmentRequest(BaseModel):
-    # Admin corrects one class's timing/joining date. Editing join_date
+    # Admin corrects one class's timing/joining date/plan. Editing join_date
     # re-computes pro-rata for every unpaid month in THIS class live (already-paid
     # months keep their recorded amount). Only a future date is rejected.
     batch_slot: Optional[str] = None
     join_date: date
+    plan: str = "monthly"
 
 
 class AdminCreateStudentResponse(BaseModel):
@@ -429,6 +435,9 @@ class ClassOut(BaseModel):
     end_time: Optional[str] = None
     description: Optional[str] = None
     whatsapp_group_url: Optional[str] = None   # class WhatsApp group invite
+    # Optional 3-month package price — set only for a class that offers it
+    # (e.g. Traditional Yoga's ₹7,000/3mo alongside its normal monthly fee).
+    package_3mo_fee_paise: Optional[int] = None
 
 
 class AdminClassRow(ClassOut):
@@ -452,6 +461,7 @@ class ClassWriteRequest(BaseModel):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     description: Optional[str] = Field(default=None, max_length=500)
+    package_3mo_fee_paise: Optional[int] = Field(default=None, ge=1)
 
 
 class ClassDeleteResponse(BaseModel):

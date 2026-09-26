@@ -308,7 +308,7 @@ export default function AdminStudents() {
   const st = activeSlot ? activeBatch.slots.find((s) => s.slot === activeSlot) : activeBatch
   // Counts reflect the SELECTED month (derived from the fetched roster).
   const total = students?.length ?? 0
-  const paidN = students ? students.filter((s) => s.status === 'paid').length : 0
+  const paidN = students ? students.filter((s) => s.status === 'paid' || s.status === 'package').length : 0
   const unpaidN = total - paidN
   const subtitle = activeSlot ? st?.slot_label ?? '' : cls ? scheduleLabel(cls) : ''
   const backToLevel1 = () => setView(activeBatch.slots?.length ? 'slots' : 'batches')

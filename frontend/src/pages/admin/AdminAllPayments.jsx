@@ -31,7 +31,7 @@ export default function AdminAllPayments() {
 
   const rows = useMemo(() => month?.rows ?? [], [month])
   const pending = useMemo(
-    () => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'),
+    () => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived' && r.status !== 'package'),
     [rows],
   )
   // Every individual payment received this month — already sorted most

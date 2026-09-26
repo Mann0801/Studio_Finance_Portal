@@ -36,6 +36,7 @@ const emptyForm = () => ({
   end_time: '',
   slots: [],
   description: '',
+  package_fee_rupees: '',
 })
 
 const formFromClass = (c) => ({
@@ -55,6 +56,7 @@ const formFromClass = (c) => ({
     end: s.end || '',
   })),
   description: c.description || '',
+  package_fee_rupees: c.package_3mo_fee_paise ? String(c.package_3mo_fee_paise / 100) : '',
 })
 
 const feeLabel = (t) =>
@@ -159,6 +161,10 @@ function ClassForm({ id, initial }) {
       start_time: !form.has_slots ? form.start_time || null : null,
       end_time: !form.has_slots ? form.end_time || null : null,
       description: form.description.trim() || null,
+      package_3mo_fee_paise:
+        form.fee_type === 'monthly' && Number(form.package_fee_rupees) > 0
+          ? Math.round(Number(form.package_fee_rupees) * 100)
+          : null,
     }
 
     setBusy(true)
@@ -215,6 +221,24 @@ function ClassForm({ id, initial }) {
             onChange={(e) => patch({ fee_rupees: e.target.value })}
             placeholder="e.g. 2000"
           />
+        </label>
+      )}
+
+      {form.fee_type === 'monthly' && (
+        <label>
+          3-month package price (₹) <span className="muted small">(optional)</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={form.package_fee_rupees}
+            onChange={(e) => patch({ package_fee_rupees: e.target.value })}
+            placeholder="e.g. 7000"
+          />
+          <span className="field-hint">
+            Lets students pay once for 3 months instead of monthly — billed in full every 3rd
+            month from when they join, with the two months between free.
+          </span>
         </label>
       )}
 

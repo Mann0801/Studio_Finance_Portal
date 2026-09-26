@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
 from ..classes_store import class_label, class_map, get_class, slot_by_key, slot_label_of
+from ..constants import PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLANS
 from ..db import get_supabase
 from ..enrollments_store import (
     create_enrollment,
@@ -59,6 +60,17 @@ def _resolve_slot(cls: dict, raw_slot: str | None) -> str | None:
     return None
 
 
+def _resolve_plan(cls: dict, raw_plan: str | None) -> str:
+    """Validate the billing plan: 'package_3mo' only for a class with a package
+    price configured, else the class's normal monthly billing."""
+    plan = (raw_plan or PLAN_MONTHLY).strip() or PLAN_MONTHLY
+    if plan not in PLANS:
+        raise HTTPException(status_code=422, detail="Invalid plan")
+    if plan == PLAN_PACKAGE_3MO and not cls.get("package_3mo_fee_paise"):
+        raise HTTPException(status_code=422, detail="This class doesn't offer a 3-month package")
+    return plan
+
+
 def _check_join_date(join_date: _date) -> None:
     # Not in the future, and no more than ~2 years back (the frontend enforces
     # the same window; this guards direct API calls). Slightly lenient on the
@@ -100,8 +112,9 @@ def _enrollment_out(
     if isinstance(join_date, str):
         join_date = _date.fromisoformat(join_date)
 
+    plan = enr.get("plan") or PLAN_MONTHLY
     period = current_period()
-    due = compute_due(fee_cls, join_date, period)
+    due = compute_due(fee_cls, join_date, period, plan)
 
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
@@ -110,6 +123,8 @@ def _enrollment_out(
     this_sofar = paid_so_far.get(period, 0)
     if period in waived_periods:
         current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="waived", paid_paise=0)
+    elif due.is_package_covered:
+        current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="package", paid_paise=this_sofar)
     else:
         # Always compare what's been received against a FRESH due, not a stored
         # status flag — a join-date edit can raise what's actually owed for a
@@ -129,7 +144,7 @@ def _enrollment_out(
     p = previous_period(period)
     while p >= join_period:
         if p not in waived_periods:
-            past_due = compute_due(fee_cls, join_date, p)
+            past_due = compute_due(fee_cls, join_date, p, plan)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
             if remaining > 0:
@@ -157,6 +172,7 @@ def _enrollment_out(
         batch_slot=slot,
         slot_label=slot_label_of(cls, slot),
         batch_deleted=cls is None or not cls.get("active", True),
+        plan=plan,
         join_date=join_date,
         whatsapp_joined=bool(enr.get("whatsapp_joined", False)),
         whatsapp_group_url=cls.get("whatsapp_group_url") if cls else None,
@@ -213,18 +229,19 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
         raise HTTPException(status_code=422, detail="Invalid email address")
 
     seen: set[str] = set()
-    resolved: list[tuple[ClassChoice, dict, str | None]] = []
+    resolved: list[tuple[ClassChoice, dict, str | None, str]] = []
     for choice in body.classes:
         if choice.batch in seen:
             raise HTTPException(status_code=422, detail="Each class can only be chosen once")
         seen.add(choice.batch)
         cls = _require_class(choice.batch)
         slot = _resolve_slot(cls, choice.batch_slot)
-        resolved.append((choice, cls, slot))
+        plan = _resolve_plan(cls, choice.plan)
+        resolved.append((choice, cls, slot, plan))
 
     _check_join_date(body.join_date)
 
-    first_choice, first_cls, first_slot = resolved[0]
+    first_choice, first_cls, first_slot, _first_plan = resolved[0]
     row = {
         "id": student["id"],
         "name": body.name.strip(),
@@ -241,8 +258,8 @@ def signup(body: SignupRequest, student=Depends(get_current_student)):
     }
     inserted = sb.table("students").insert(row).execute().data[0]
 
-    for choice, cls, slot in resolved:
-        create_enrollment(student["id"], cls["id"], slot, body.join_date.isoformat())
+    for choice, cls, slot, plan in resolved:
+        create_enrollment(student["id"], cls["id"], slot, body.join_date.isoformat(), plan)
 
     return _dashboard_for(inserted)
 
@@ -338,11 +355,12 @@ def add_class(body: AddClassRequest, student=Depends(get_current_student)):
 
     cls = _require_class(body.batch)
     slot = _resolve_slot(cls, body.batch_slot)
+    plan = _resolve_plan(cls, body.plan)
     if get_enrollment(student["id"], body.batch):
         raise HTTPException(status_code=409, detail="You're already in this class")
     _check_join_date(body.join_date)
 
-    create_enrollment(student["id"], cls["id"], slot, body.join_date.isoformat())
+    create_enrollment(student["id"], cls["id"], slot, body.join_date.isoformat(), plan)
     return _dashboard_for(res.data[0])
 
 

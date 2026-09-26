@@ -49,7 +49,7 @@ export default function AddStudent() {
       const exists = f.classes.some((c) => c.batch === batch)
       const nextClasses = exists
         ? f.classes.filter((c) => c.batch !== batch)
-        : [...f.classes, { batch, batch_slot: null }]
+        : [...f.classes, { batch, batch_slot: null, plan: 'monthly' }]
       return { ...f, classes: nextClasses }
     })
     if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
@@ -61,6 +61,13 @@ export default function AddStudent() {
       classes: f.classes.map((c) => (c.batch === batch ? { ...c, batch_slot: slot } : c)),
     }))
     if (submitted) setErrors((prev) => ({ ...prev, classes: undefined }))
+  }
+
+  const selectPlan = (batch, plan) => {
+    setForm((f) => ({
+      ...f,
+      classes: f.classes.map((c) => (c.batch === batch ? { ...c, plan } : c)),
+    }))
   }
 
   async function onSubmit(e) {
@@ -210,6 +217,7 @@ export default function AddStudent() {
           error={errors.classes}
           onToggle={toggleClass}
           onSlotSelect={selectSlot}
+          onPlanSelect={selectPlan}
         />
 
         <label>

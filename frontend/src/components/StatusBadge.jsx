@@ -1,4 +1,4 @@
-const LABELS = { paid: 'Paid', overdue: 'Overdue', waived: 'Waived' }
+const LABELS = { paid: 'Paid', overdue: 'Overdue', waived: 'Waived', package: 'Package' }
 
 export default function StatusBadge({ status, big = false }) {
   const cls = status in LABELS ? status : 'unpaid'

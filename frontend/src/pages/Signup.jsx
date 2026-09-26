@@ -95,7 +95,7 @@ export default function Signup() {
       const exists = f.classes.some((c) => c.batch === batch)
       const nextClasses = exists
         ? f.classes.filter((c) => c.batch !== batch)
-        : [...f.classes, { batch, batch_slot: null }]
+        : [...f.classes, { batch, batch_slot: null, plan: 'monthly' }]
       return { ...f, classes: nextClasses }
     })
     setErrors((prev) => ({ ...prev, classes: undefined }))
@@ -107,6 +107,13 @@ export default function Signup() {
       classes: f.classes.map((c) => (c.batch === batch ? { ...c, batch_slot: slot } : c)),
     }))
     setErrors((prev) => ({ ...prev, classes: undefined }))
+  }
+
+  const selectPlan = (batch, plan) => {
+    setForm((f) => ({
+      ...f,
+      classes: f.classes.map((c) => (c.batch === batch ? { ...c, plan } : c)),
+    }))
   }
 
   // Live confirm-password state (updates as they type).
@@ -300,6 +307,7 @@ export default function Signup() {
               error={errors.classes}
               onToggle={toggleClass}
               onSlotSelect={selectSlot}
+              onPlanSelect={selectPlan}
             />
 
             <div className="stack" style={{ gap: 10, marginTop: 16 }}>

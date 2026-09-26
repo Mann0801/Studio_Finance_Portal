@@ -24,7 +24,7 @@ export default function AddClass() {
   const navigate = useNavigate()
   const { data, loading, reload, setActiveClassId } = useDashboard()
   const { classes } = useClasses()
-  const [form, setForm] = useState({ batch: '', batch_slot: null, join_date: '' })
+  const [form, setForm] = useState({ batch: '', batch_slot: null, plan: 'monthly', join_date: '' })
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -60,6 +60,7 @@ export default function AddClass() {
         body: {
           batch: form.batch,
           batch_slot: form.batch_slot,
+          plan: form.plan,
           join_date: form.join_date,
         },
       })
@@ -96,11 +97,13 @@ export default function AddClass() {
             classes={available}
             batch={form.batch}
             slot={form.batch_slot}
+            plan={form.plan}
             error={errors.batch}
             onSelect={(batch, slot) => {
-              setForm((f) => ({ ...f, batch, batch_slot: slot }))
+              setForm((f) => ({ ...f, batch, batch_slot: slot, plan: 'monthly' }))
               if (submitted) setErrors((prev) => ({ ...prev, batch: undefined }))
             }}
+            onPlanSelect={(plan) => setForm((f) => ({ ...f, plan }))}
           />
 
           <label>

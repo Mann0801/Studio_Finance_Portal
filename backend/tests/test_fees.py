@@ -37,6 +37,8 @@ PRENATAL = per_session(1000_00, (5, 6))         # Sat & Sun
 TEST_COURSE = session_pack(10_00, 1, (0, 1, 2, 3, 4, 5, 6))
 ENQUIRY = {"fee_type": "enquiry", "fee_paise": 0}
 
+TRADITIONAL_WITH_PACKAGE = {**TRADITIONAL, "package_3mo_fee_paise": 7000_00}
+
 
 # ── Monthly billing ────────────────────────────────────────────────────────────
 def test_full_fee_for_month_after_join():
@@ -188,3 +190,48 @@ def test_zero_due_is_never_settled_with_nothing_received():
     # Matches existing behavior: a genuinely $0-due period with no money in
     # isn't reported as "paid" just because there's nothing owed.
     assert is_settled(0, 0) is False
+
+
+# ── 3-month package plan ────────────────────────────────────────────────────────
+def test_package_full_price_in_join_month_even_mid_month():
+    # No proration, ever — joining on the 16th still owes the full package.
+    due = compute_due(TRADITIONAL_WITH_PACKAGE, date(2026, 4, 16), "2026-04", plan="package_3mo")
+    assert due.amount_paise == 7000_00
+    assert due.is_prorata is False
+    assert due.is_package_covered is False
+
+
+def test_package_covers_the_next_two_months():
+    join = date(2026, 4, 16)
+    for period in ("2026-05", "2026-06"):
+        due = compute_due(TRADITIONAL_WITH_PACKAGE, join, period, plan="package_3mo")
+        assert due.amount_paise == 0
+        assert due.is_package_covered is True
+
+
+def test_package_bills_again_on_the_4th_month():
+    due = compute_due(TRADITIONAL_WITH_PACKAGE, date(2026, 4, 16), "2026-07", plan="package_3mo")
+    assert due.amount_paise == 7000_00
+    assert due.is_package_covered is False
+
+
+def test_package_before_join_is_zero_not_covered():
+    # A period before the join month is the ordinary "nothing owed yet" case,
+    # not a package-covered one.
+    due = compute_due(TRADITIONAL_WITH_PACKAGE, date(2026, 4, 16), "2026-03", plan="package_3mo")
+    assert due.amount_paise == 0
+    assert due.is_package_covered is False
+
+
+def test_package_plan_ignored_without_a_configured_price():
+    # A class with no package_3mo_fee_paise set falls back to normal monthly
+    # billing even if 'package_3mo' is passed (shouldn't normally happen).
+    due = compute_due(TRADITIONAL, date(2026, 4, 16), "2026-04", plan="package_3mo")
+    assert due.amount_paise == 1150_00
+    assert due.is_package_covered is False
+
+
+def test_default_plan_is_monthly():
+    due = compute_due(TRADITIONAL_WITH_PACKAGE, date(2026, 1, 10), "2026-04")
+    assert due.amount_paise == 2300_00
+    assert due.is_package_covered is False

@@ -43,6 +43,7 @@ export default function AdminEnrollmentDetail() {
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState(false)
   const [slot, setSlot] = useState('')
+  const [plan, setPlan] = useState('monthly')
   const [joinDate, setJoinDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [editErr, setEditErr] = useState('')
@@ -68,6 +69,7 @@ export default function AdminEnrollmentDetail() {
 
   function startEdit() {
     setSlot(en.batch_slot || '')
+    setPlan(en.plan || 'monthly')
     setJoinDate(en.join_date)
     setEditErr('')
     setEditing(true)
@@ -79,7 +81,7 @@ export default function AdminEnrollmentDetail() {
     try {
       const updated = await adminApi(`/api/admin/students/${id}/enrollments/${batch}`, {
         method: 'PATCH',
-        body: { batch_slot: slot || null, join_date: joinDate },
+        body: { batch_slot: slot || null, join_date: joinDate, plan },
       })
       setData(updated)
       reloadStats()
@@ -147,6 +149,7 @@ export default function AdminEnrollmentDetail() {
   const canRemove = data ? data.enrollments.length > 1 : false
   const paid = en?.status === 'paid'
   const waived = en?.status === 'waived'
+  const isPackage = en?.status === 'package'
 
   return (
     <>
@@ -204,6 +207,15 @@ export default function AdminEnrollmentDetail() {
                     months stay as recorded.
                   </span>
                 </label>
+                {cls?.package_3mo_fee_paise > 0 && (
+                  <label>
+                    Plan
+                    <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+                      <option value="monthly">Monthly</option>
+                      <option value="package_3mo">3-month package</option>
+                    </select>
+                  </label>
+                )}
                 {editErr && <p className="error">{editErr}</p>}
                 <div className="stack" style={{ gap: 8 }}>
                   <button type="button" className="btn primary block" onClick={saveEdit} disabled={saving}>
@@ -226,14 +238,33 @@ export default function AdminEnrollmentDetail() {
                   <span className="muted">Days as member</span>
                   <span className="li-main" style={{ fontSize: 14 }}>{en.days_member} days</span>
                 </div>
+                {en.plan === 'package_3mo' && (
+                  <div className="list-item">
+                    <span className="muted">Plan</span>
+                    <span className="li-main" style={{ fontSize: 14 }}>3-month package</span>
+                  </div>
+                )}
               </div>
 
               <div className="card" style={{ marginTop: 12 }}>
                 <div className="muted small">
-                  {periodLabel(en.period)} {waived ? '· waived' : paid ? '' : en.paid_paise > 0 ? '· balance' : '· due'}
+                  {periodLabel(en.period)}{' '}
+                  {waived
+                    ? '· waived'
+                    : isPackage
+                      ? '· covered by package'
+                      : paid
+                        ? ''
+                        : en.paid_paise > 0
+                          ? '· balance'
+                          : '· due'}
                 </div>
                 {waived ? (
                   <p className="muted" style={{ margin: '4px 0 0' }}>This month's fee was forgiven.</p>
+                ) : isPackage ? (
+                  <p className="muted" style={{ margin: '4px 0 0' }}>
+                    Covered by their 3-month package — nothing due this month.
+                  </p>
                 ) : (
                   <>
                     <div className="amount" style={{ fontSize: 26 }}>{rupees(en.amount_paise)}</div>
@@ -253,6 +284,7 @@ export default function AdminEnrollmentDetail() {
                   </button>
                 ) : (
                   !paid &&
+                  !isPackage &&
                   en.amount_paise > 0 && (
                     <div className="stack" style={{ gap: 8, marginTop: 10 }}>
                       <button className="btn primary block" onClick={() => goRecord(en.period)} disabled={busy}>

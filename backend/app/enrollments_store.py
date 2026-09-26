@@ -36,7 +36,11 @@ def get_enrollment(student_id: str, class_id: str) -> Optional[dict]:
 
 
 def create_enrollment(
-    student_id: str, class_id: str, batch_slot: Optional[str], join_date: str
+    student_id: str,
+    class_id: str,
+    batch_slot: Optional[str],
+    join_date: str,
+    plan: str = "monthly",
 ) -> dict:
     return (
         get_supabase()
@@ -47,6 +51,7 @@ def create_enrollment(
                 "class_id": class_id,
                 "batch_slot": batch_slot,
                 "join_date": join_date,
+                "plan": plan,
             }
         )
         .execute()

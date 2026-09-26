@@ -18,3 +18,13 @@ PER_SESSION = "per_session"
 ENQUIRY = "enquiry"
 
 FEE_TYPES = (MONTHLY, SESSION_PACK, PER_SESSION, ENQUIRY)
+
+# An enrollment-level billing plan, independent of the class's fee_type above.
+# 'monthly' is the class's normal fee, billed every calendar month. 'package_3mo'
+# only applies to a class with a package price configured (classes.package_3mo_fee_paise)
+# — the student pays that price once per 3-month cycle (from their join month) and
+# owes nothing the other two months.
+PLAN_MONTHLY = "monthly"
+PLAN_PACKAGE_3MO = "package_3mo"
+
+PLANS = (PLAN_MONTHLY, PLAN_PACKAGE_3MO)

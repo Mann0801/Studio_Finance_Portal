@@ -56,7 +56,7 @@ def create_order(body: OrderRequest, student=Depends(get_current_student)):
     if is_period_waived(student["id"], body.batch, period):
         raise HTTPException(status_code=409, detail="This month's fee has been waived")
 
-    due = compute_due(cls, join_date, period)
+    due = compute_due(cls, join_date, period, enr.get("plan") or "monthly")
     if due.amount_paise <= 0:
         raise HTTPException(status_code=400, detail="Nothing due for this period")
 

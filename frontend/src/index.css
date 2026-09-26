@@ -28,6 +28,10 @@
   --unpaid: #ef4444;
   --unpaid-bg: rgba(239, 68, 68, 0.16);
   --warn: #f5b740;
+  /* A 3-month-package month with nothing due — distinct from waived (forgiven)
+     even though both are "0 due, don't chase for payment". */
+  --package: #a855f7;
+  --package-bg: rgba(168, 85, 247, 0.16);
 
   /* Radii & shadows */
   --r-sm: 12px;

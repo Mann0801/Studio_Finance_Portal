@@ -71,8 +71,11 @@ export default function AdminPayments() {
   // sorted that way by the backend.
   const collected = useMemo(() => (loading ? [] : month.transactions), [loading, month])
   // Pending: not fully paid — a partial payer shows in both lists (paid some,
-  // owes some). A waived month is settled, not pending.
-  const pending = useMemo(() => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived'), [rows])
+  // owes some). A waived or package-covered month is settled, not pending.
+  const pending = useMemo(
+    () => rows.filter((r) => r.status !== 'paid' && r.status !== 'waived' && r.status !== 'package'),
+    [rows],
+  )
 
   // While searching, show every match — the recent-only cap only applies to
   // the default unfiltered preview.
