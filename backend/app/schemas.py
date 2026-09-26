@@ -73,7 +73,7 @@ class PaymentOut(BaseModel):
     status: str
     paid_at: Optional[datetime] = None
     paid_paise: int = 0        # same as amount_paise — this transaction's amount
-    method: str = "Online"     # 'Cash' | 'Online' | free-text label
+    method: str = "Online"     # 'Cash' | 'Through App' | free-text label
 
 
 class CurrentDue(BaseModel):
@@ -216,6 +216,7 @@ class ActivityPayment(BaseModel):
 class ActivitySignup(BaseModel):
     id: str  # student id — for tapping through to their profile
     name: str
+    phone: str
     batch: str
     batch_label: str
     join_date: date
@@ -238,8 +239,7 @@ class AdminPaymentRow(BaseModel):
     amount_paise: int          # amount actually received (partial or full)
     period: str
     paid_at: Optional[datetime] = None
-    method: str = "Online"  # 'Cash' | 'Online'
-    note: Optional[str] = None  # free-text comment, separate from `method`
+    method: str = "Online"  # 'Cash' | 'Through App' | a free-text type (GPay, ...)
     is_partial: bool = False   # a partial cash payment on a not-yet-cleared month
 
 
@@ -254,7 +254,7 @@ class AdminMonthRow(BaseModel):
     due_paise: int             # fee owed for this month
     paid_paise: int = 0        # amount received toward it (partial or full)
     status: str                # 'paid' | 'partial' | 'unpaid' | 'waived' | 'package' | 'paused'
-    method: Optional[str] = None   # 'Cash' | 'Online' | None (nothing received yet)
+    method: Optional[str] = None   # 'Cash' | 'Through App' | None (nothing received yet)
     paid_at: Optional[datetime] = None
     is_prorata: bool = False
     whatsapp_url: Optional[str] = None  # reminder link, present only while a balance is owed
@@ -282,7 +282,6 @@ class StudentPaymentRow(BaseModel):
     amount_paise: int          # this transaction's own amount
     paid_at: Optional[datetime] = None
     method: str = "Online"
-    note: Optional[str] = None  # free-text comment, separate from `method`
     status: str  # 'paid' — every entry here is a completed transaction
     paid_paise: int = 0        # same as amount_paise — this transaction's amount
 
@@ -366,10 +365,6 @@ class MarkPaidRequest(BaseModel):
     # Free-text label for how this was actually paid (e.g. "GPay", "Netbanking"),
     # for a payment made outside the app. Defaults to showing as "Cash" if left blank.
     method: Optional[str] = Field(default=None, max_length=40)
-    # A separate free-text comment about the payment (e.g. "covers the 3-month
-    # package through November") — kept apart from `method` so one field
-    # doesn't end up doing both jobs.
-    note: Optional[str] = Field(default=None, max_length=300)
 
 
 class AdminCreateStudentRequest(BaseModel):

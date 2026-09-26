@@ -16,22 +16,28 @@ function pct(n) {
   return `${sign}${n}%`
 }
 
-function dateLabel(iso) {
+function dateOnly(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-IN', {
+  return new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: '2-digit',
     timeZone: 'Asia/Kolkata',
   })
-  const time = d.toLocaleTimeString('en-IN', {
+}
+
+function timeOnly(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('en-IN', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kolkata',
   })
-  return `${date}, ${time}`
+}
+
+function dateLabel(iso) {
+  return iso ? `${dateOnly(iso)}, ${timeOnly(iso)}` : ''
 }
 
 const TABS = [
@@ -100,7 +106,7 @@ export default function AdminPayments() {
 
   const exportCsv = () => {
     if (collected.length === 0) return
-    const headers = ['Name', 'Phone', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Note', 'Paid on']
+    const headers = ['Name', 'Phone', 'Batch', 'Timing', 'Month', 'Amount (INR)', 'Method', 'Paid on']
     const csvRows = collected.map((p) => [
       p.name,
       formatPhoneDisplay(p.phone),
@@ -109,7 +115,6 @@ export default function AdminPayments() {
       periodLabel(period),
       (p.amount_paise / 100).toFixed(2),
       p.method || '',
-      p.note || '',
       p.paid_at ? dateLabel(p.paid_at) : '',
     ])
     downloadCsv(`payments-${period}.csv`, toCsv(headers, csvRows))
@@ -238,8 +243,9 @@ export default function AdminPayments() {
                 <span className="head-extra-col">Phone</span>
                 <span>Class</span>
                 <span style={{ textAlign: 'right' }}>Paid</span>
-                <span className="head-extra-col" style={{ textAlign: 'right' }}>Method</span>
-                <span className="head-extra-col">Note</span>
+                <span className="head-extra-col">Paid on</span>
+                <span className="head-extra-col">Time</span>
+                <span className="head-extra-col">Method</span>
               </div>
               <div className="scroll-list scroll-tall">
                 {visibleCollected.map((p) => (
@@ -252,19 +258,20 @@ export default function AdminPayments() {
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.student_id}`)}
                   >
                     <span className="data-name">{p.name}</span>
+                    <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
                     <span className="data-sub data-sub-2line">
                       <span>{p.batch_label}</span>
                       {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
                     </span>
                     <div className="data-end">
-                      <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
+                      <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)' }}>
                         {rupees(p.amount_paise)}
                         {p.is_partial && <span className="pay-partial-tag">partial</span>}
                       </div>
+                      <span className="pay-date muted">{p.paid_at ? dateOnly(p.paid_at) : '—'}</span>
+                      <span className="pay-time muted">{p.paid_at ? timeOnly(p.paid_at) : ''}</span>
                       <div className="pay-method muted">{p.method}</div>
                     </div>
-                    <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
-                    {p.note && <div className="pay-note muted">{p.note}</div>}
                   </div>
                 ))}
               </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
+import { formatPhoneDisplay } from '../../lib/auth'
 import { ArrowLeftIcon } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
 
@@ -55,14 +56,16 @@ export default function AdminSignups() {
         <div className="card empty">No signups yet.</div>
       ) : (
         <div className="card flush signup-table" style={{ marginTop: 12 }}>
-          <div className="data-row head">
+          <div className="data-row head signup-row">
             <span>Name</span>
+            <span className="head-extra-col">Phone</span>
             <span>Class</span>
-            <span style={{ textAlign: 'right' }}>Signed up</span>
+            <span className="head-extra-col">Signed up</span>
+            <span className="head-extra-col">Time</span>
           </div>
           {signups.map((s, i) => (
             <div
-              className="data-row"
+              className="data-row signup-row"
               key={`${s.id}-${s.batch}-${i}`}
               role="button"
               tabIndex={0}
@@ -70,12 +73,12 @@ export default function AdminSignups() {
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
             >
               <span className="data-name">{s.name}</span>
+              <span className="pay-phone muted">{formatPhoneDisplay(s.phone)}</span>
               <span className="data-sub">{s.batch_label}</span>
-              <span className="data-end">
-                {dateOnly(s.signed_up_at)}
-                <br />
-                {timeOnly(s.signed_up_at)}
-              </span>
+              <div className="data-end">
+                <div className="pay-date">{dateOnly(s.signed_up_at)}</div>
+                <div className="pay-time">{timeOnly(s.signed_up_at)}</div>
+              </div>
             </div>
           ))}
         </div>

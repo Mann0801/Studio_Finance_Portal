@@ -10,6 +10,26 @@ import { ArrowLeftIcon, WhatsAppIcon } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
 import BatchBreakdownList from '../../components/BatchBreakdownList'
 
+function dateOnly(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  })
+}
+
+function timeOnly(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  })
+}
+
 const TABS = [
   { id: 'paid', label: 'Paid' },
   { id: 'unpaid', label: 'Unpaid' },
@@ -83,8 +103,9 @@ export default function AdminAllPayments() {
                     <span className="head-extra-col">Phone</span>
                     <span>Class</span>
                     <span style={{ textAlign: 'right' }}>Paid</span>
-                    <span className="head-extra-col" style={{ textAlign: 'right' }}>Method</span>
-                    <span className="head-extra-col">Note</span>
+                    <span className="head-extra-col">Paid on</span>
+                    <span className="head-extra-col">Time</span>
+                    <span className="head-extra-col">Method</span>
                   </div>
                   {collected.map((p) => (
                     <div
@@ -96,19 +117,20 @@ export default function AdminAllPayments() {
                       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.student_id}`)}
                     >
                       <span className="data-name">{p.name}</span>
+                      <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
                       <span className="data-sub data-sub-2line">
                         <span>{p.batch_label}</span>
                         {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
                       </span>
                       <div className="data-end">
-                        <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)', fontWeight: 700, fontSize: 16 }}>
+                        <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)' }}>
                           {rupees(p.amount_paise)}
                           {p.is_partial && <span className="pay-partial-tag">partial</span>}
                         </div>
+                        <span className="pay-date muted">{p.paid_at ? dateOnly(p.paid_at) : '—'}</span>
+                        <span className="pay-time muted">{p.paid_at ? timeOnly(p.paid_at) : ''}</span>
                         <div className="pay-method muted">{p.method}</div>
                       </div>
-                      <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
-                      {p.note && <div className="pay-note muted">{p.note}</div>}
                     </div>
                   ))}
                 </div>

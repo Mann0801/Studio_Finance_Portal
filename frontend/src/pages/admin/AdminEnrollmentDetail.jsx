@@ -464,7 +464,7 @@ export default function AdminEnrollmentDetail() {
                           <span className="data-name">{periodLabel(p.period)}</span>
                           <span className="data-sub data-sub-2line">
                             <span>
-                              {p.method !== 'Online' && <CashIcon width={12} height={12} className="cash-ico" />}
+                              {p.method !== 'Through App' && <CashIcon width={12} height={12} className="cash-ico" />}
                               {p.method}
                             </span>
                             {p.paid_at && <span className="data-sub-timing">{fmtDateTime(p.paid_at)}</span>}

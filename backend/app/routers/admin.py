@@ -677,6 +677,7 @@ def activity():
             ActivitySignup(
                 id=s["id"],
                 name=s["name"],
+                phone=s["phone"],
                 batch=e["class_id"],
                 batch_label=class_label(cmap.get(e["class_id"])),
                 join_date=_as_date(e["join_date"]),
@@ -713,6 +714,7 @@ def all_signups():
             ActivitySignup(
                 id=s["id"],
                 name=s["name"],
+                phone=s["phone"],
                 batch=e["class_id"],
                 batch_label=class_label(cmap.get(e["class_id"])),
                 join_date=_as_date(e["join_date"]),
@@ -737,7 +739,7 @@ def payment_history(limit: int = 100):
         sb.table("payments")
         .select(
             "id, student_id, class_id, amount_paise, paid_paise, status, period, paid_at,"
-            " razorpay_payment_id, method, note"
+            " razorpay_payment_id, method"
         )
         .gt("paid_paise", 0)  # anything with money in — full or partial
         .order("paid_at", desc=True)
@@ -770,7 +772,6 @@ def payment_history(limit: int = 100):
                 period=p["period"],
                 paid_at=p.get("paid_at"),
                 method=payment_method_label(p),
-                note=p.get("note"),
                 is_partial=p["status"] != "paid",
             )
         )
@@ -875,7 +876,7 @@ def month_view(period: str):
     slots = {(e["student_id"], e["class_id"]): e.get("batch_slot") for e in enrolls}
     txns = (
         sb.table("payment_transactions")
-        .select("id, student_id, class_id, amount_paise, method, note, razorpay_payment_id, paid_at")
+        .select("id, student_id, class_id, amount_paise, method, razorpay_payment_id, paid_at")
         .eq("period", period)
         .order("paid_at")
         .execute()
@@ -909,7 +910,6 @@ def month_view(period: str):
                         period=period,
                         paid_at=t.get("paid_at"),
                         method=payment_method_label(t),
-                        note=t.get("note"),
                         # Didn't by itself clear the month — later payment(s)
                         # made up the rest, e.g. a partial cash top-up before
                         # an online payment covered the remainder.
@@ -1307,14 +1307,7 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         requested = body.amount_paise if body.amount_paise is not None else remaining
         amount = max(1, min(requested, remaining))
         record_cash_payment(
-            student_id,
-            body.batch,
-            period,
-            amount,
-            due.amount_paise,
-            due.is_prorata,
-            method=body.method,
-            note=body.note,
+            student_id, body.batch, period, amount, due.amount_paise, due.is_prorata, method=body.method
         )
     return _build_student_detail(s)
 
