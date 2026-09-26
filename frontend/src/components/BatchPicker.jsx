@@ -1,7 +1,7 @@
 import {
-  hasPackage,
+  hasAnyPlan,
   hasSlots,
-  packagePriceLabel,
+  planOptions,
   priceLabel,
   scheduleLabel,
   slotByKey,
@@ -10,32 +10,26 @@ import {
 } from '../lib/classes'
 import { CheckIcon } from './Icons'
 
-/** The "choose your plan" sub-step for a class that offers a package — shown
- * once a timing slot is picked (or immediately for a class with no slots).
- * Reuses the same visual style as the timing picker just above it. */
+/** The "choose your plan" sub-step for a class that offers more than just its
+ * default billing — shown once a timing slot is picked (or immediately for a
+ * class with no slots). Reuses the timing picker's visual style. */
 function PlanPicker({ cls, plan, onPick }) {
   const current = plan || 'monthly'
   return (
     <div className="slot-inline">
       <div className="slot-inline-head">Choose your plan</div>
-      <button
-        type="button"
-        className={`slot-opt ${current === 'monthly' ? 'selected' : ''}`}
-        onClick={() => onPick('monthly')}
-      >
-        <span className="slot-name">Monthly</span>
-        <span className="slot-time">{priceLabel(cls)}</span>
-        {current === 'monthly' && <span className="slot-check"><CheckIcon width={13} height={13} /></span>}
-      </button>
-      <button
-        type="button"
-        className={`slot-opt ${current === 'package_3mo' ? 'selected' : ''}`}
-        onClick={() => onPick('package_3mo')}
-      >
-        <span className="slot-name">3-month package</span>
-        <span className="slot-time">{packagePriceLabel(cls)}</span>
-        {current === 'package_3mo' && <span className="slot-check"><CheckIcon width={13} height={13} /></span>}
-      </button>
+      {planOptions(cls).map((o) => (
+        <button
+          type="button"
+          key={o.id}
+          className={`slot-opt ${current === o.id ? 'selected' : ''}`}
+          onClick={() => onPick(o.id)}
+        >
+          <span className="slot-name">{o.label}</span>
+          <span className="slot-time">{o.price}</span>
+          {current === o.id && <span className="slot-check"><CheckIcon width={13} height={13} /></span>}
+        </button>
+      ))}
     </div>
   )
 }
@@ -45,8 +39,8 @@ function PlanPicker({ cls, plan, onPick }) {
  * class list (`classes` prop). Selecting a class that has timing slots expands an
  * inline dropdown directly below its card to pick one — no bottom sheet, so it
  * never hides behind the keyboard. `onSelect(classId, slotKey|null)`. A class
- * with a 3-month package configured also gets a "choose your plan" sub-step,
- * shown once its timing (if any) is picked.
+ * with a package and/or alternate session tier configured also gets a
+ * "choose your plan" sub-step, shown once its timing (if any) is picked.
  *
  * Pass `multiple` for a checkbox-style picker that lets more than one class be
  * selected at once (student signup, admin walk-in registration): `selected` is
@@ -86,7 +80,7 @@ export default function BatchPicker({
               const chosen = isChosen(c.id)
               const showSlots = hasSlots(c) && chosen
               const chosenSlot = slotByKey(c, slotFor(c.id))
-              const showPlan = chosen && hasPackage(c) && (!hasSlots(c) || chosenSlot)
+              const showPlan = chosen && hasAnyPlan(c) && (!hasSlots(c) || chosenSlot)
               const sched = scheduleLabel(c)
               return (
                 <div className="batch-item" key={c.id}>
@@ -145,7 +139,7 @@ export default function BatchPicker({
 
   const chosen = list.find((c) => c.id === batch)
   const chosenSlot = slotByKey(chosen, slot)
-  const showPlan = Boolean(chosen) && hasPackage(chosen) && (!hasSlots(chosen) || chosenSlot)
+  const showPlan = Boolean(chosen) && hasAnyPlan(chosen) && (!hasSlots(chosen) || chosenSlot)
 
   const choose = (c) => onSelect(c.id, hasSlots(c) ? slot || null : null)
 

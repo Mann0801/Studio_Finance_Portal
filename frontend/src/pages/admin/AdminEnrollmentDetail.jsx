@@ -5,7 +5,7 @@ import { adminApi } from '../../lib/adminApi'
 import { MAX_JOIN_DATE } from '../../lib/joinDate'
 import { currentPeriod } from '../../lib/periods'
 import { rupees } from '../../lib/batches'
-import { useClasses, classById, hasSlots } from '../../lib/classes'
+import { useClasses, classById, hasAnyPlan, hasSlots, planOptions } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
 import { WhatsAppIcon, ArrowLeftIcon, EditIcon, CashIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
@@ -207,12 +207,13 @@ export default function AdminEnrollmentDetail() {
                     months stay as recorded.
                   </span>
                 </label>
-                {cls?.package_3mo_fee_paise > 0 && (
+                {hasAnyPlan(cls) && (
                   <label>
                     Plan
                     <select value={plan} onChange={(e) => setPlan(e.target.value)}>
-                      <option value="monthly">Monthly</option>
-                      <option value="package_3mo">3-month package</option>
+                      {planOptions(cls).map((o) => (
+                        <option key={o.id} value={o.id}>{o.label}</option>
+                      ))}
                     </select>
                   </label>
                 )}
@@ -238,10 +239,12 @@ export default function AdminEnrollmentDetail() {
                   <span className="muted">Days as member</span>
                   <span className="li-main" style={{ fontSize: 14 }}>{en.days_member} days</span>
                 </div>
-                {en.plan === 'package_3mo' && (
+                {en.plan && en.plan !== 'monthly' && cls && (
                   <div className="list-item">
                     <span className="muted">Plan</span>
-                    <span className="li-main" style={{ fontSize: 14 }}>3-month package</span>
+                    <span className="li-main" style={{ fontSize: 14 }}>
+                      {planOptions(cls).find((o) => o.id === en.plan)?.label || en.plan}
+                    </span>
                   </div>
                 )}
               </div>

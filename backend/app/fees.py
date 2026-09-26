@@ -17,7 +17,15 @@ from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from .config import get_settings
-from .constants import ENQUIRY, MONTHLY, PER_SESSION, PLAN_MONTHLY, PLAN_PACKAGE_3MO, SESSION_PACK
+from .constants import (
+    ENQUIRY,
+    MONTHLY,
+    PER_SESSION,
+    PLAN_MONTHLY,
+    PLAN_PACKAGE_3MO,
+    PLAN_SESSION_ALT,
+    SESSION_PACK,
+)
 
 
 def _tz() -> ZoneInfo:
@@ -141,6 +149,13 @@ def compute_due(
     join month and every 3rd month after it, never pro-rated even for a
     mid-month join; the two months in between are 0, flagged
     ``is_package_covered`` rather than treated as owing nothing to pay.
+
+    ``plan='session_alt'`` (only for a SESSION_PACK class with an
+    ``alt_fee_paise``/``alt_sessions_per_month`` configured) bills the same way
+    as SESSION_PACK above, but using that alternate price/session count instead
+    of the class's normal ``fee_paise``/``sessions_per_month`` — a second
+    monthly tier, not a multi-month cycle, so every month works like the
+    class's normal billing (join-month pro-rata, no free months).
     """
     if not cls:
         return _zero(period)
@@ -162,8 +177,26 @@ def compute_due(
 
     year, month = parse_period(period)
     is_join_month = period == join_period
-    fee = cls.get("fee_paise") or 0
     weekdays = tuple(cls.get("schedule_days") or ())
+
+    if (
+        plan == PLAN_SESSION_ALT
+        and fee_type == SESSION_PACK
+        and cls.get("alt_fee_paise")
+        and cls.get("alt_sessions_per_month")
+    ):
+        alt_fee = cls["alt_fee_paise"]
+        alt_spm = cls["alt_sessions_per_month"]
+        if is_join_month:
+            remaining = min(
+                _count_session_days(year, month, weekdays, from_day=join_date.day), alt_spm
+            )
+            per_session = Decimal(alt_fee) / Decimal(alt_spm)
+            amount = _round_to_rupee_paise(per_session * Decimal(remaining))
+            return DueAmount(period, amount, amount < alt_fee)
+        return DueAmount(period, alt_fee, False)
+
+    fee = cls.get("fee_paise") or 0
 
     if fee_type == MONTHLY:
         if is_join_month:

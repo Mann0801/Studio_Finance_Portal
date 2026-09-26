@@ -37,6 +37,8 @@ const emptyForm = () => ({
   slots: [],
   description: '',
   package_fee_rupees: '',
+  alt_sessions_per_month: '',
+  alt_fee_rupees: '',
 })
 
 const formFromClass = (c) => ({
@@ -57,6 +59,8 @@ const formFromClass = (c) => ({
   })),
   description: c.description || '',
   package_fee_rupees: c.package_3mo_fee_paise ? String(c.package_3mo_fee_paise / 100) : '',
+  alt_sessions_per_month: c.alt_sessions_per_month ? String(c.alt_sessions_per_month) : '',
+  alt_fee_rupees: c.alt_fee_paise ? String(c.alt_fee_paise / 100) : '',
 })
 
 const feeLabel = (t) =>
@@ -165,6 +169,14 @@ function ClassForm({ id, initial }) {
         form.fee_type === 'monthly' && Number(form.package_fee_rupees) > 0
           ? Math.round(Number(form.package_fee_rupees) * 100)
           : null,
+      alt_sessions_per_month:
+        form.fee_type === 'session_pack' && Number(form.alt_sessions_per_month) > 0
+          ? Number(form.alt_sessions_per_month)
+          : null,
+      alt_fee_paise:
+        form.fee_type === 'session_pack' && Number(form.alt_fee_rupees) > 0
+          ? Math.round(Number(form.alt_fee_rupees) * 100)
+          : null,
     }
 
     setBusy(true)
@@ -254,6 +266,42 @@ function ClassForm({ id, initial }) {
             placeholder="e.g. 8"
           />
         </label>
+      )}
+
+      {form.fee_type === 'session_pack' && (
+        <div>
+          <div className="legend" style={{ marginBottom: 8 }}>
+            Alternate plan <span className="muted small">(optional)</span>
+          </div>
+          <div className="time-row">
+            <label>
+              Sessions/month
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                value={form.alt_sessions_per_month}
+                onChange={(e) => patch({ alt_sessions_per_month: e.target.value })}
+                placeholder="e.g. 4"
+              />
+            </label>
+            <label>
+              Price (₹)
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={form.alt_fee_rupees}
+                onChange={(e) => patch({ alt_fee_rupees: e.target.value })}
+                placeholder="e.g. 1600"
+              />
+            </label>
+          </div>
+          <span className="field-hint">
+            A second monthly tier students can choose instead of the normal one above — e.g. fewer
+            sessions for a lower price. Billed every month like the normal tier.
+          </span>
+        </div>
       )}
 
       <div>

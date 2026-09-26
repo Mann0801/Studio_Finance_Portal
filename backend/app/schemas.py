@@ -438,6 +438,10 @@ class ClassOut(BaseModel):
     # Optional 3-month package price — set only for a class that offers it
     # (e.g. Traditional Yoga's ₹7,000/3mo alongside its normal monthly fee).
     package_3mo_fee_paise: Optional[int] = None
+    # Optional alternate session-pack tier — set only for a class that offers
+    # one (e.g. Gymnastics' ₹1,600/4 sessions alongside its normal ₹2,800/8).
+    alt_fee_paise: Optional[int] = None
+    alt_sessions_per_month: Optional[int] = None
 
 
 class AdminClassRow(ClassOut):
@@ -462,6 +466,8 @@ class ClassWriteRequest(BaseModel):
     end_time: Optional[str] = None
     description: Optional[str] = Field(default=None, max_length=500)
     package_3mo_fee_paise: Optional[int] = Field(default=None, ge=1)
+    alt_fee_paise: Optional[int] = Field(default=None, ge=1)
+    alt_sessions_per_month: Optional[int] = Field(default=None, ge=1, le=60)
 
 
 class ClassDeleteResponse(BaseModel):

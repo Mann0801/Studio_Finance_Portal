@@ -38,6 +38,7 @@ TEST_COURSE = session_pack(10_00, 1, (0, 1, 2, 3, 4, 5, 6))
 ENQUIRY = {"fee_type": "enquiry", "fee_paise": 0}
 
 TRADITIONAL_WITH_PACKAGE = {**TRADITIONAL, "package_3mo_fee_paise": 7000_00}
+GYMNASTICS_WITH_ALT = {**GYMNASTICS, "alt_fee_paise": 1600_00, "alt_sessions_per_month": 4}
 
 
 # ── Monthly billing ────────────────────────────────────────────────────────────
@@ -235,3 +236,37 @@ def test_default_plan_is_monthly():
     due = compute_due(TRADITIONAL_WITH_PACKAGE, date(2026, 1, 10), "2026-04")
     assert due.amount_paise == 2300_00
     assert due.is_package_covered is False
+
+
+# ── Alternate session-pack tier (session_alt) ───────────────────────────────────
+# Same June 2026 calendar as the session-pack tests above (Tue/Sun: 2,7,9,14,16,21,23,28,30).
+def test_session_alt_full_month_is_alt_price():
+    due = compute_due(GYMNASTICS_WITH_ALT, date(2026, 1, 1), "2026-06", plan="session_alt")
+    assert due.amount_paise == 1600_00
+    assert due.is_prorata is False
+
+
+def test_session_alt_prorata_by_remaining_sessions():
+    # Join June 24: Tue/Sun remaining = 28, 30 = 2. (1600/4)*2 = 800.
+    due = compute_due(GYMNASTICS_WITH_ALT, date(2026, 6, 24), "2026-06", plan="session_alt")
+    assert due.amount_paise == 800_00
+    assert due.is_prorata is True
+
+
+def test_session_alt_join_capped_at_alt_size():
+    # 5 remaining Tue/Sun sessions from the 16th, but the alt tier caps at 4 -> full 1600.
+    due = compute_due(GYMNASTICS_WITH_ALT, date(2026, 6, 16), "2026-06", plan="session_alt")
+    assert due.amount_paise == 1600_00
+    assert due.is_prorata is False
+
+
+def test_session_alt_ignored_without_a_configured_tier():
+    # A class with no alt_fee_paise/alt_sessions_per_month falls back to its
+    # normal session-pack billing even if 'session_alt' is passed.
+    due = compute_due(GYMNASTICS, date(2026, 1, 1), "2026-06", plan="session_alt")
+    assert due.amount_paise == 2800_00
+
+
+def test_default_plan_uses_the_normal_tier_even_when_alt_is_configured():
+    due = compute_due(GYMNASTICS_WITH_ALT, date(2026, 1, 1), "2026-06")
+    assert due.amount_paise == 2800_00

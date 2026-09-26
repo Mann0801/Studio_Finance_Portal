@@ -25,7 +25,15 @@ from ..classes_store import (
     unique_slug,
     update_class,
 )
-from ..constants import ENQUIRY, FEE_TYPES, PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLANS, SESSION_PACK
+from ..constants import (
+    ENQUIRY,
+    FEE_TYPES,
+    PLAN_MONTHLY,
+    PLAN_PACKAGE_3MO,
+    PLAN_SESSION_ALT,
+    PLANS,
+    SESSION_PACK,
+)
 from ..db import get_supabase
 from ..enrollments_store import (
     all_enrollments,
@@ -139,6 +147,8 @@ def _resolve_plan(cls: dict, raw_plan: str | None) -> str:
         raise HTTPException(status_code=422, detail="Invalid plan")
     if plan == PLAN_PACKAGE_3MO and not cls.get("package_3mo_fee_paise"):
         raise HTTPException(status_code=422, detail="This class doesn't offer a 3-month package")
+    if plan == PLAN_SESSION_ALT and not (cls.get("alt_fee_paise") and cls.get("alt_sessions_per_month")):
+        raise HTTPException(status_code=422, detail="This class doesn't offer that plan")
     return plan
 
 
@@ -220,6 +230,7 @@ def _class_payload(body: ClassWriteRequest) -> dict:
     if body.fee_type == SESSION_PACK and not body.sessions_per_month:
         raise HTTPException(status_code=422, detail="Sessions per month is required")
     slots = _prep_slots(body.slots)
+    has_alt = body.fee_type == SESSION_PACK and body.alt_fee_paise and body.alt_sessions_per_month
     return {
         "name": body.name.strip(),
         "fee_type": body.fee_type,
@@ -231,6 +242,8 @@ def _class_payload(body: ClassWriteRequest) -> dict:
         "end_time": None if slots else (body.end_time or None),
         "description": (body.description or "").strip() or None,
         "package_3mo_fee_paise": body.package_3mo_fee_paise or None,
+        "alt_fee_paise": body.alt_fee_paise if has_alt else None,
+        "alt_sessions_per_month": body.alt_sessions_per_month if has_alt else None,
     }
 
 

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import get_current_student
 from ..classes_store import class_label, class_map, get_class, slot_by_key, slot_label_of
-from ..constants import PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLANS
+from ..constants import PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLAN_SESSION_ALT, PLANS
 from ..db import get_supabase
 from ..enrollments_store import (
     create_enrollment,
@@ -68,6 +68,8 @@ def _resolve_plan(cls: dict, raw_plan: str | None) -> str:
         raise HTTPException(status_code=422, detail="Invalid plan")
     if plan == PLAN_PACKAGE_3MO and not cls.get("package_3mo_fee_paise"):
         raise HTTPException(status_code=422, detail="This class doesn't offer a 3-month package")
+    if plan == PLAN_SESSION_ALT and not (cls.get("alt_fee_paise") and cls.get("alt_sessions_per_month")):
+        raise HTTPException(status_code=422, detail="This class doesn't offer that plan")
     return plan
 
 

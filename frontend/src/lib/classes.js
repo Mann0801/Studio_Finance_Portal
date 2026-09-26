@@ -50,7 +50,36 @@ export const slotsOf = (cls) => cls?.slots || []
 export const hasSlots = (cls) => slotsOf(cls).length > 0
 export const slotByKey = (cls, key) => slotsOf(cls).find((s) => s.key === key)
 export const hasPackage = (cls) => Boolean(cls?.package_3mo_fee_paise)
-export const packagePriceLabel = (cls) => `${rupees(cls.package_3mo_fee_paise)} every 3 months`
+export const hasAltPlan = (cls) => Boolean(cls?.alt_fee_paise && cls?.alt_sessions_per_month)
+export const hasAnyPlan = (cls) => hasPackage(cls) || hasAltPlan(cls)
+
+/** Every billing plan a class offers — always at least its normal/default
+ * one, plus a package and/or alternate session tier when configured. Used to
+ * render the "choose your plan" step and to label a saved enrollment's plan. */
+export function planOptions(cls) {
+  const options = [
+    {
+      id: 'monthly',
+      label: cls.fee_type === 'session_pack' ? `${cls.sessions_per_month} sessions/month` : 'Monthly',
+      price: rupees(cls.fee_paise),
+    },
+  ]
+  if (hasPackage(cls)) {
+    options.push({
+      id: 'package_3mo',
+      label: '3-month package',
+      price: `${rupees(cls.package_3mo_fee_paise)} every 3 months`,
+    })
+  }
+  if (hasAltPlan(cls)) {
+    options.push({
+      id: 'session_alt',
+      label: `${cls.alt_sessions_per_month} sessions/month`,
+      price: rupees(cls.alt_fee_paise),
+    })
+  }
+  return options
+}
 
 // ── Display helpers ──────────────────────────────────────────────────────────
 export const FEE_TYPE_LABELS = {
