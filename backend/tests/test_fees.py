@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from app.fees import compute_due, is_settled, previous_period
+from app.fees import compute_due, is_settled, next_period, previous_period
 
 
 def monthly(fee_paise, days=(0, 1, 2, 3, 4)):
@@ -162,6 +162,14 @@ def test_deleted_class_none_is_zero():
 )
 def test_previous_period(period, expected):
     assert previous_period(period) == expected
+
+
+@pytest.mark.parametrize(
+    "period,expected",
+    [("2026-05", "2026-06"), ("2025-12", "2026-01"), ("2026-11", "2026-12")],
+)
+def test_next_period(period, expected):
+    assert next_period(period) == expected
 
 
 # ── is_settled: the live "paid or not" source of truth ─────────────────────────

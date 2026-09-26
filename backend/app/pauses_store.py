@@ -26,11 +26,20 @@ def get_open_pause(student_id: str, class_id: str) -> Optional[dict]:
     return res.data[0] if res.data else None
 
 
-def pause_enrollment(student_id: str, class_id: str) -> dict:
+def pause_enrollment(student_id: str, class_id: str, from_period: str | None = None) -> dict:
+    """Freeze billing from `from_period` on (defaults to the current month —
+    pass the NEXT month instead when the current one is already settled, so a
+    pause never overwrites a month that's genuinely been paid)."""
     return (
         get_supabase()
         .table("enrollment_pauses")
-        .insert({"student_id": student_id, "class_id": class_id, "from_period": current_period()})
+        .insert(
+            {
+                "student_id": student_id,
+                "class_id": class_id,
+                "from_period": from_period or current_period(),
+            }
+        )
         .execute()
         .data[0]
     )

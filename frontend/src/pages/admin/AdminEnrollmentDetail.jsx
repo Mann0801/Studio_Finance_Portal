@@ -170,6 +170,10 @@ export default function AdminEnrollmentDetail() {
   const waived = en?.status === 'waived'
   const isPackage = en?.status === 'package'
   const isPaused = en?.status === 'paused'
+  // A pause taken out while the current month is already settled starts NEXT
+  // month, so this is open (and "Resume" should show) even before `status`
+  // itself ever says 'paused'.
+  const pauseOpen = Boolean(en?.paused_from_period)
 
   return (
     <>
@@ -506,7 +510,12 @@ export default function AdminEnrollmentDetail() {
                 <button type="button" className="btn ghost block" onClick={startEdit}>
                   <EditIcon width={14} height={14} /> Edit timing / join date
                 </button>
-                {isPaused ? (
+                {pauseOpen && !isPaused && (
+                  <p className="muted small" style={{ margin: 0 }}>
+                    Paused from {periodLabel(en.paused_from_period)} — this month was already settled.
+                  </p>
+                )}
+                {pauseOpen ? (
                   <button type="button" className="btn ghost block" onClick={onResume} disabled={busy}>
                     <PlayIcon width={14} height={14} /> {busy ? 'Resuming…' : 'Resume this class'}
                   </button>

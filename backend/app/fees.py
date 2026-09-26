@@ -73,6 +73,14 @@ def previous_period(period: str) -> str:
     return f"{year:04d}-{month - 1:02d}"
 
 
+def next_period(period: str) -> str:
+    """The calendar month after ``period`` as ``YYYY-MM``."""
+    year, month = parse_period(period)
+    if month == 12:
+        return f"{year + 1:04d}-01"
+    return f"{year:04d}-{month + 1:02d}"
+
+
 def month_range(period: str) -> tuple[str, str]:
     """(first day, first day of next month) as ISO date strings — for [start, end)
     range queries over a calendar month."""

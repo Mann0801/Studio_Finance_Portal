@@ -303,6 +303,12 @@ class AdminEnrollmentDetail(BaseModel):
     is_prorata: bool
     status: str                # 'paid' | 'unpaid' | 'waived' | 'package' | 'paused'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
+    # Whether this class has an open (unresolved) pause right now — independent
+    # of `status` above, which is for THIS period specifically: a pause taken
+    # out today while this month is already paid starts next month, so it's
+    # open (and the "Resume" button should show) before `status` ever says
+    # 'paused'. Set only when true; the frontend shows the one it's paused from.
+    paused_from_period: Optional[str] = None
     # Lifetime, for this class only
     # Unpaid months before the current one (join month up to last month), each
     # with its server-computed amount — lets the admin record cash for old dues.

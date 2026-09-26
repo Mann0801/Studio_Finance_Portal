@@ -49,6 +49,7 @@ from ..fees import (
     compute_due,
     current_period,
     is_settled,
+    next_period,
     now_local,
     parse_period,
     period_of,
@@ -967,6 +968,9 @@ def _build_enrollment_detail(
     this_waived = period in waived_periods
     pause_rows = pauses_for(s["id"])
     this_paused = is_period_paused(pause_rows, class_id, period)
+    open_pause = next(
+        (r for r in pause_rows if r["class_id"] == class_id and r["until_period"] is None), None
+    )
 
     # Earlier months (join month .. last month) still owed for THIS class — so
     # the admin can record cash against an old unpaid month, not just the
@@ -1029,6 +1033,7 @@ def _build_enrollment_detail(
             else "unpaid"
         ),
         paid_paise=this_sofar,
+        paused_from_period=open_pause["from_period"] if open_pause else None,
         outstanding=outstanding,
         total_paid_paise=total_paid,
         last_payment_paise=last["amount_paise"] if last else None,
@@ -1350,13 +1355,23 @@ def unwaive_student_period(student_id: str, body: PeriodActionRequest):
 def pause_student_enrollment(student_id: str, body: PauseActionRequest):
     """Freeze billing for one class — e.g. the student is away for a while.
     Their other classes are unaffected. Frozen months are never billed, even
-    after they resume; the admin resumes it once they're back."""
+    after they resume; the admin resumes it once they're back. If the current
+    month is already paid (or waived), the freeze starts the month after —
+    pausing never overwrites a month that's genuinely been settled."""
     s = _load_student_or_404(student_id)
-    if not get_enrollment(student_id, body.batch):
+    enr = get_enrollment(student_id, body.batch)
+    if not enr:
         raise HTTPException(status_code=404, detail="Not enrolled in this class")
     if get_open_pause(student_id, body.batch):
         raise HTTPException(status_code=400, detail="Already paused")
-    pause_enrollment(student_id, body.batch)
+    period = current_period()
+    join_date = _as_date(enr["join_date"])
+    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
+    settled = is_period_waived(student_id, body.batch, period) or is_settled(
+        due.amount_paise, amount_paid_for(student_id, body.batch, period)
+    )
+    from_period = next_period(period) if settled else period
+    pause_enrollment(student_id, body.batch, from_period)
     return _build_student_detail(s)
 
 
