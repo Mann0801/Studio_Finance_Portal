@@ -54,6 +54,14 @@ from ..fees import (
     period_of,
     previous_period,
 )
+from ..pauses_store import (
+    get_open_pause,
+    is_period_paused,
+    pause_enrollment,
+    paused_keys_for_period,
+    pauses_for,
+    resume_enrollment,
+)
 from ..payments_store import (
     amount_paid_for,
     build_history,
@@ -92,6 +100,7 @@ from ..schemas import (
     CurrentDue,
     MarkPaidRequest,
     MovePaymentRequest,
+    PauseActionRequest,
     PeriodActionRequest,
     SlotStat,
     StudentPaymentRow,
@@ -352,6 +361,7 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
     smap = _students_by_id([e["student_id"] for e in enrolls])
     received = _received_amounts_for_period(period, batch)
     waived = _waived_keys_for_period(period)
+    paused = paused_keys_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
@@ -362,16 +372,17 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
         due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         key = (e["student_id"], batch)
         is_waived = key in waived
+        is_paused = key in paused
         is_package = due.is_package_covered
         received_amt = received.get(key, 0)
         # Always compare against a fresh due, not a stored status flag — a
         # join-date edit can raise what's owed for a month already marked paid.
-        is_paid = not is_waived and is_settled(due.amount_paise, received_amt)
+        is_paid = not is_waived and not is_paused and is_settled(due.amount_paise, received_amt)
         # For an unpaid student, show what's still owed (fee minus any partial cash).
-        amount = 0 if is_waived else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
+        amount = 0 if (is_waived or is_paused) else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
         sl = slot_label_of(cls, e.get("batch_slot"))
         wa = None
-        if not is_paid and not is_waived and amount > 0:
+        if not is_paid and not is_waived and not is_paused and amount > 0:
             wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), amount, period)
         rows.append(
             AdminStudentRow(
@@ -388,7 +399,7 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
                 period=period,
                 amount_paise=amount,
                 is_prorata=due.is_prorata,
-                status="waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
+                status="paused" if is_paused else "waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
                 whatsapp_url=wa,
             )
         )
@@ -411,6 +422,7 @@ def all_students():
     smap = _students_by_id([e["student_id"] for e in enrolls])
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
+    paused = paused_keys_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
@@ -422,10 +434,11 @@ def all_students():
         due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         key = (e["student_id"], e["class_id"])
         is_waived = key in waived
+        is_paused = key in paused
         is_package = due.is_package_covered
         received_amt = received.get(key, 0)
-        is_paid = not is_waived and is_settled(due.amount_paise, received_amt)
-        amount = 0 if is_waived else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
+        is_paid = not is_waived and not is_paused and is_settled(due.amount_paise, received_amt)
+        amount = 0 if (is_waived or is_paused) else received_amt if is_paid else max(due.amount_paise - received_amt, 0)
         rows.append(
             AdminStudentRow(
                 id=s["id"],
@@ -442,7 +455,7 @@ def all_students():
                 period=period,
                 amount_paise=amount,
                 is_prorata=due.is_prorata,
-                status="waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
+                status="paused" if is_paused else "waived" if is_waived else "package" if is_package else "paid" if is_paid else "unpaid",
                 whatsapp_url=None,
             )
         )
@@ -457,14 +470,16 @@ def stats():
     enrolls = all_enrollments()
     received = _received_amounts_for_period(period)      # incl. partial cash → revenue
     waived = _waived_keys_for_period(period)              # forgiven → not owed, not paid
+    paused = paused_keys_for_period(period)               # frozen → not owed, not paid
     last_month_received = _received_amounts_for_period(prev)
     classes = list_classes()
 
     def _group_stat(fee_cls: dict | None, members: list[dict]):
-        # A waived enrollment is settled (nothing owed) — counted alongside paid
-        # ones so paid_count + unpaid_count still equals total_students. "Paid"
-        # is always a fresh amount-vs-due comparison, not a stored status flag —
-        # a join-date edit can raise what's owed for a month already marked paid.
+        # A waived or paused enrollment is settled (nothing owed) — counted
+        # alongside paid ones so paid_count + unpaid_count still equals
+        # total_students. "Paid" is always a fresh amount-vs-due comparison,
+        # not a stored status flag — a join-date edit can raise what's owed
+        # for a month already marked paid.
         settled_keys = []
         revenue = 0
         expected = 0
@@ -472,7 +487,7 @@ def stats():
             key = (m["student_id"], m["class_id"])
             received_amt = received.get(key, 0)
             revenue += received_amt
-            if key in waived:
+            if key in waived or key in paused:
                 settled_keys.append(key)
                 continue
             due = compute_due(fee_cls, _as_date(m["join_date"]), period, m.get("plan") or PLAN_MONTHLY)
@@ -570,11 +585,12 @@ def unpaid_students():
     smap = _students_by_id([e["student_id"] for e in enrolls])
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
+    paused = paused_keys_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
         key = (e["student_id"], e["class_id"])
-        if key in waived:
+        if key in waived or key in paused:
             continue
         s = smap.get(e["student_id"])
         if not s:
@@ -778,6 +794,7 @@ def month_view(period: str):
         .execute()
     ).data
     pmap = {(p["student_id"], p["class_id"]): p for p in pays}
+    paused = paused_keys_for_period(period)
 
     rows: list[AdminMonthRow] = []
     due_by_key: dict[tuple[str, str], int] = {}
@@ -794,21 +811,23 @@ def month_view(period: str):
         due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
         pay = pmap.get((e["student_id"], e["class_id"]))
         is_waived = bool(pay and pay["status"] == "waived")
+        is_paused = (e["student_id"], e["class_id"]) in paused
         is_package = due.is_package_covered
         paid_paise = (pay.get("paid_paise") or 0) if pay else 0
-        due_paise = 0 if is_waived else due.amount_paise
+        due_paise = 0 if (is_waived or is_paused) else due.amount_paise
         # Skip months with no fee and no money in (enquiry / deleted class); a
-        # waived or package-covered month is shown so it doesn't look like a
-        # missing row (a package's "in-between" months are genuinely 0 due,
-        # but the student is still covered, not absent).
-        if due_paise <= 0 and paid_paise <= 0 and not is_waived and not is_package:
+        # waived, paused, or package-covered month is shown so it doesn't look
+        # like a missing row (a package's "in-between" months, and any frozen
+        # month, are genuinely 0 due, but the student is still on the roster).
+        if due_paise <= 0 and paid_paise <= 0 and not is_waived and not is_package and not is_paused:
             continue
         due_by_key[(e["student_id"], e["class_id"])] = due_paise
         # A fresh amount-vs-due comparison, not the stored status flag — a
         # join-date edit can raise what's owed for a month already marked paid.
-        is_paid = (not is_waived) and is_settled(due_paise, paid_paise)
+        is_paid = (not is_waived) and (not is_paused) and is_settled(due_paise, paid_paise)
         status = (
-            "waived" if is_waived
+            "paused" if is_paused
+            else "waived" if is_waived
             else "package" if is_package
             else "paid" if is_paid
             else ("partial" if paid_paise > 0 else "unpaid")
@@ -816,7 +835,7 @@ def month_view(period: str):
         remaining = max(due_paise - paid_paise, 0)
         sl = slot_label_of(cls, e.get("batch_slot"))
         wa = None
-        if not is_paid and not is_waived and remaining > 0:
+        if not is_paid and not is_waived and not is_paused and remaining > 0:
             wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), remaining, period)
         rows.append(
             AdminMonthRow(
@@ -836,7 +855,7 @@ def month_view(period: str):
         )
         collected += paid_paise
         expected += due_paise
-        if is_paid or is_waived or is_package:
+        if is_paid or is_waived or is_package or is_paused:
             paid_count += 1
         else:
             unpaid_count += 1
@@ -946,6 +965,8 @@ def _build_enrollment_detail(
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
     this_waived = period in waived_periods
+    pause_rows = pauses_for(s["id"])
+    this_paused = is_period_paused(pause_rows, class_id, period)
 
     # Earlier months (join month .. last month) still owed for THIS class — so
     # the admin can record cash against an old unpaid month, not just the
@@ -957,7 +978,7 @@ def _build_enrollment_detail(
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
-        if p not in waived_periods:
+        if p not in waived_periods and not is_period_paused(pause_rows, class_id, p):
             past_due = compute_due(_fee_cls(cls), join_date, p, plan)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
@@ -979,11 +1000,11 @@ def _build_enrollment_detail(
     history = [StudentPaymentRow(**h) for h in build_history(payments, transactions)]
 
     this_sofar = paid_so_far.get(period, 0)
-    this_settled = not this_waived and is_settled(due.amount_paise, this_sofar)
-    this_remaining = 0 if this_waived else max(due.amount_paise - this_sofar, 0)
+    this_settled = not this_waived and not this_paused and is_settled(due.amount_paise, this_sofar)
+    this_remaining = 0 if (this_waived or this_paused) else max(due.amount_paise - this_sofar, 0)
     sl = slot_label_of(cls, enr.get("batch_slot"))
     wa = None
-    if not this_settled and not this_waived and this_remaining > 0:
+    if not this_settled and not this_waived and not this_paused and this_remaining > 0:
         wa = reminder_link(s["phone"], s["name"], _reminder_label(cls, sl), this_remaining, period)
 
     return AdminEnrollmentDetail(
@@ -1000,7 +1021,13 @@ def _build_enrollment_detail(
         period=period,
         amount_paise=this_sofar if this_settled else this_remaining,
         is_prorata=due.is_prorata,
-        status="waived" if this_waived else "package" if due.is_package_covered else "paid" if this_settled else "unpaid",
+        status=(
+            "paused" if this_paused
+            else "waived" if this_waived
+            else "package" if due.is_package_covered
+            else "paid" if this_settled
+            else "unpaid"
+        ),
         paid_paise=this_sofar,
         outstanding=outstanding,
         total_paid_paise=total_paid,
@@ -1255,6 +1282,10 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         raise HTTPException(
             status_code=400, detail="This month is waived — un-waive it first to record cash"
         )
+    if is_period_paused(pauses_for(student_id), body.batch, period):
+        raise HTTPException(
+            status_code=400, detail="This month is paused — resume the class first to record cash"
+        )
     due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
     remaining = due.amount_paise - amount_paid_for(student_id, body.batch, period)
     if remaining > 0:
@@ -1285,6 +1316,8 @@ def waive_student_period(student_id: str, body: PeriodActionRequest):
     period = body.period or current_period()
     if period < period_of(join_date):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
+    if is_period_paused(pauses_for(student_id), body.batch, period):
+        raise HTTPException(status_code=400, detail="This month is already paused — no need to waive it")
     due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
     if is_settled(due.amount_paise, amount_paid_for(student_id, body.batch, period)):
         raise HTTPException(status_code=400, detail="This month is already paid — remove the payment first")
@@ -1306,6 +1339,41 @@ def unwaive_student_period(student_id: str, body: PeriodActionRequest):
     if not is_period_waived(student_id, body.batch, period):
         raise HTTPException(status_code=400, detail="This month isn't waived")
     delete_payment(student_id, body.batch, period)
+    return _build_student_detail(s)
+
+
+@router.post(
+    "/students/{student_id}/pause",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def pause_student_enrollment(student_id: str, body: PauseActionRequest):
+    """Freeze billing for one class — e.g. the student is away for a while.
+    Their other classes are unaffected. Frozen months are never billed, even
+    after they resume; the admin resumes it once they're back."""
+    s = _load_student_or_404(student_id)
+    if not get_enrollment(student_id, body.batch):
+        raise HTTPException(status_code=404, detail="Not enrolled in this class")
+    if get_open_pause(student_id, body.batch):
+        raise HTTPException(status_code=400, detail="Already paused")
+    pause_enrollment(student_id, body.batch)
+    return _build_student_detail(s)
+
+
+@router.post(
+    "/students/{student_id}/resume",
+    response_model=AdminStudentDetail,
+    dependencies=[Depends(require_admin)],
+)
+def resume_student_enrollment(student_id: str, body: PauseActionRequest):
+    """Resume a paused class — billing (and reminders) pick back up from the
+    current month; the frozen months in between stay forgiven."""
+    s = _load_student_or_404(student_id)
+    if not get_enrollment(student_id, body.batch):
+        raise HTTPException(status_code=404, detail="Not enrolled in this class")
+    if not get_open_pause(student_id, body.batch):
+        raise HTTPException(status_code=400, detail="Not paused")
+    resume_enrollment(student_id, body.batch)
     return _build_student_detail(s)
 
 
@@ -1348,6 +1416,8 @@ def move_student_payment(student_id: str, body: MovePaymentRequest):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
     if body.to_period > current_period():
         raise HTTPException(status_code=400, detail="That month hasn't started yet")
+    if is_period_paused(pauses_for(student_id), body.batch, body.to_period):
+        raise HTTPException(status_code=400, detail="That month is paused — pick a different one")
 
     row = get_payment_by_period(student_id, body.batch, body.from_period)
     if not row or (row.get("paid_paise") or 0) <= 0:

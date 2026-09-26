@@ -32,6 +32,10 @@
      even though both are "0 due, don't chase for payment". */
   --package: #a855f7;
   --package-bg: rgba(168, 85, 247, 0.16);
+  /* A frozen (paused) class — neutral gray so it reads as "on hold", not a
+     billing outcome like paid/unpaid/waived/package. */
+  --paused: #94a3b8;
+  --paused-bg: rgba(148, 163, 184, 0.16);
 
   /* Radii & shadows */
   --r-sm: 12px;

@@ -60,6 +60,19 @@ export const KeyIcon = (p) => (
   </svg>
 )
 
+export const PauseIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M8 5v14" />
+    <path d="M16 5v14" />
+  </svg>
+)
+
+export const PlayIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M7 4.5v15l13-7.5-13-7.5Z" />
+  </svg>
+)
+
 export const ArrowLeftIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M15 5l-7 7 7 7" />

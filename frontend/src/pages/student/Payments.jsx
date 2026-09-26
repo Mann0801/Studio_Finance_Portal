@@ -81,7 +81,9 @@ export default function Payments() {
                   ? 'Paid this month'
                   : en.current.status === 'package'
                     ? 'Covered this month'
-                    : 'Due this month'}
+                    : en.current.status === 'paused'
+                      ? 'Paused'
+                      : 'Due this month'}
               </span>
               <StatusBadge status={en.current.status} />
             </div>

@@ -80,7 +80,7 @@ class CurrentDue(BaseModel):
     period: str
     amount_paise: int          # remaining balance owed (full fee minus any partial)
     is_prorata: bool
-    status: str  # 'paid' | 'unpaid' | 'waived' | 'package'
+    status: str  # 'paid' | 'unpaid' | 'waived' | 'package' | 'paused'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
 
 
@@ -164,7 +164,7 @@ class AdminStudentRow(BaseModel):
     period: str
     amount_paise: int
     is_prorata: bool
-    status: str  # 'paid' | 'unpaid' | 'waived' | 'package'
+    status: str  # 'paid' | 'unpaid' | 'waived' | 'package' | 'paused'
     whatsapp_url: Optional[str] = None  # present only for unpaid students
 
 
@@ -250,7 +250,7 @@ class AdminMonthRow(BaseModel):
     slot_label: Optional[str] = None
     due_paise: int             # fee owed for this month
     paid_paise: int = 0        # amount received toward it (partial or full)
-    status: str                # 'paid' | 'partial' | 'unpaid' | 'waived' | 'package'
+    status: str                # 'paid' | 'partial' | 'unpaid' | 'waived' | 'package' | 'paused'
     method: Optional[str] = None   # 'Cash' | 'Online' | None (nothing received yet)
     paid_at: Optional[datetime] = None
     is_prorata: bool = False
@@ -301,7 +301,7 @@ class AdminEnrollmentDetail(BaseModel):
     period: str
     amount_paise: int          # paid amount if paid, else the remaining balance
     is_prorata: bool
-    status: str                # 'paid' | 'unpaid' | 'waived' | 'package'
+    status: str                # 'paid' | 'unpaid' | 'waived' | 'package' | 'paused'
     paid_paise: int = 0        # amount already paid toward this month (partial cash)
     # Lifetime, for this class only
     # Unpaid months before the current one (join month up to last month), each
@@ -329,6 +329,12 @@ class PeriodActionRequest(BaseModel):
     # payment) applies to; period defaults to the current calendar month.
     batch: str
     period: Optional[str] = None
+
+
+class PauseActionRequest(BaseModel):
+    # Which class to pause/resume billing for. Always takes effect from the
+    # current calendar month — there's no period to pick.
+    batch: str
 
 
 class MovePaymentRequest(BaseModel):

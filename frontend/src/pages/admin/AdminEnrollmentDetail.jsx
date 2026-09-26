@@ -7,7 +7,7 @@ import { currentPeriod } from '../../lib/periods'
 import { rupees } from '../../lib/batches'
 import { useClasses, classById, hasAnyPlan, hasSlots, planOptions } from '../../lib/classes'
 import StatusBadge from '../../components/StatusBadge'
-import { WhatsAppIcon, ArrowLeftIcon, EditIcon, CashIcon } from '../../components/Icons'
+import { WhatsAppIcon, ArrowLeftIcon, EditIcon, CashIcon, PauseIcon, PlayIcon } from '../../components/Icons'
 import { CardSkeleton } from '../../components/Skeleton'
 
 const fmtDate = (iso, opts = { day: 'numeric', month: 'long', year: 'numeric' }) =>
@@ -115,6 +115,25 @@ export default function AdminEnrollmentDetail() {
   const onUnwaive = (period) => runPeriodAction('unwaive', period)
   const onRemovePayment = (period) => runPeriodAction('remove-payment', period)
 
+  async function runEnrollmentAction(action) {
+    setBusy(true)
+    setError('')
+    try {
+      const updated = await adminApi(`/api/admin/students/${id}/${action}`, {
+        method: 'POST',
+        body: { batch },
+      })
+      setData(updated)
+      reloadStats()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const onPause = () => runEnrollmentAction('pause')
+  const onResume = () => runEnrollmentAction('resume')
+
   async function movePayment(fromPeriod, toPeriod) {
     setMoving(true)
     setMoveErr('')
@@ -150,6 +169,7 @@ export default function AdminEnrollmentDetail() {
   const paid = en?.status === 'paid'
   const waived = en?.status === 'waived'
   const isPackage = en?.status === 'package'
+  const isPaused = en?.status === 'paused'
 
   return (
     <>
@@ -252,17 +272,23 @@ export default function AdminEnrollmentDetail() {
               <div className="card" style={{ marginTop: 12 }}>
                 <div className="muted small">
                   {periodLabel(en.period)}{' '}
-                  {waived
-                    ? '· waived'
-                    : isPackage
-                      ? '· covered by package'
-                      : paid
-                        ? ''
-                        : en.paid_paise > 0
-                          ? '· balance'
-                          : '· due'}
+                  {isPaused
+                    ? '· paused'
+                    : waived
+                      ? '· waived'
+                      : isPackage
+                        ? '· covered by package'
+                        : paid
+                          ? ''
+                          : en.paid_paise > 0
+                            ? '· balance'
+                            : '· due'}
                 </div>
-                {waived ? (
+                {isPaused ? (
+                  <p className="muted" style={{ margin: '4px 0 0' }}>
+                    This class is paused — nothing due until it's resumed.
+                  </p>
+                ) : waived ? (
                   <p className="muted" style={{ margin: '4px 0 0' }}>This month's fee was forgiven.</p>
                 ) : isPackage ? (
                   <p className="muted" style={{ margin: '4px 0 0' }}>
@@ -288,6 +314,7 @@ export default function AdminEnrollmentDetail() {
                 ) : (
                   !paid &&
                   !isPackage &&
+                  !isPaused &&
                   en.amount_paise > 0 && (
                     <div className="stack" style={{ gap: 8, marginTop: 10 }}>
                       <button className="btn primary block" onClick={() => goRecord(en.period)} disabled={busy}>
@@ -479,6 +506,15 @@ export default function AdminEnrollmentDetail() {
                 <button type="button" className="btn ghost block" onClick={startEdit}>
                   <EditIcon width={14} height={14} /> Edit timing / join date
                 </button>
+                {isPaused ? (
+                  <button type="button" className="btn ghost block" onClick={onResume} disabled={busy}>
+                    <PlayIcon width={14} height={14} /> {busy ? 'Resuming…' : 'Resume this class'}
+                  </button>
+                ) : (
+                  <button type="button" className="btn ghost block" onClick={onPause} disabled={busy}>
+                    <PauseIcon width={14} height={14} /> {busy ? 'Pausing…' : 'Pause this class'}
+                  </button>
+                )}
                 {canRemove &&
                   (removeConfirm ? (
                     <div className="card" style={{ borderColor: 'var(--unpaid)' }}>

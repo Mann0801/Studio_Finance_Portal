@@ -24,6 +24,7 @@ from ..enrollments_store import (
     set_whatsapp_joined,
 )
 from ..fees import compute_due, current_period, is_settled, now_local, period_of, previous_period
+from ..pauses_store import is_period_paused, pauses_for
 from ..payments_store import build_history, list_transactions
 from ..schemas import (
     AddClassRequest,
@@ -104,7 +105,7 @@ def _payments_by_class(student_id: str) -> dict[str, list[dict]]:
 
 
 def _enrollment_out(
-    enr: dict, cmap: dict[str, dict], payments: list[dict], transactions: list[dict]
+    enr: dict, cmap: dict[str, dict], payments: list[dict], transactions: list[dict], pause_rows: list[dict]
 ) -> EnrollmentOut:
     class_id = enr["class_id"]
     cls = cmap.get(class_id)
@@ -123,7 +124,9 @@ def _enrollment_out(
     # Partial cash/online recorded per month (may or may not fully cover the due).
     paid_so_far = {p["period"]: (p.get("paid_paise") or 0) for p in payments}
     this_sofar = paid_so_far.get(period, 0)
-    if period in waived_periods:
+    if is_period_paused(pause_rows, class_id, period):
+        current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="paused", paid_paise=this_sofar)
+    elif period in waived_periods:
         current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="waived", paid_paise=0)
     elif due.is_package_covered:
         current = CurrentDue(period=period, amount_paise=0, is_prorata=False, status="package", paid_paise=this_sofar)
@@ -145,7 +148,7 @@ def _enrollment_out(
     outstanding: list[CurrentDue] = []
     p = previous_period(period)
     while p >= join_period:
-        if p not in waived_periods:
+        if p not in waived_periods and not is_period_paused(pause_rows, class_id, p):
             past_due = compute_due(fee_cls, join_date, p, plan)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
@@ -198,10 +201,13 @@ def _dashboard_for(student_row: dict) -> DashboardOut:
     cmap = class_map()
     payments = _payments_by_class(student_row["id"])
     transactions = _transactions_by_class(student_row["id"])
+    pause_rows = pauses_for(student_row["id"])
     return DashboardOut(
         student=_student_profile(student_row),
         enrollments=[
-            _enrollment_out(e, cmap, payments.get(e["class_id"], []), transactions.get(e["class_id"], []))
+            _enrollment_out(
+                e, cmap, payments.get(e["class_id"], []), transactions.get(e["class_id"], []), pause_rows
+            )
             for e in enrollments
         ],
     )
