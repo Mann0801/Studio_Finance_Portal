@@ -4,6 +4,7 @@ import { useAdmin } from '../../context/AdminContext'
 import { adminApi } from '../../lib/adminApi'
 import {
   FEE_TYPE_LABELS,
+  altPlanLabel,
   daysLabel,
   priceLabel,
   slotsOf,
@@ -117,6 +118,10 @@ export default function AdminClassDetail() {
             <div className="detail-list">
               <Row label="Fee type" value={FEE_TYPE_LABELS[cls.fee_type] || cls.fee_type} />
               <Row label="Price" value={priceLabel(cls)} />
+              <Row
+                label="Also offers"
+                value={altPlanLabel(cls) && <span className="alt-plan-hint">{altPlanLabel(cls)}</span>}
+              />
               <Row label="Schedule days" value={daysLabel(cls.schedule_days)} />
               <Row label="Timing" value={timing} />
               <Row

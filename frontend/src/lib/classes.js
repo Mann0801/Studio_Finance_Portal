@@ -132,3 +132,18 @@ export function priceLabel(cls) {
       return r
   }
 }
+
+/** A short "also offers ..." hint for a class with a package/alternate tier
+ * configured, so the option is visible next to the normal price everywhere a
+ * class is listed — not just after it's already been selected (see
+ * PlanPicker in BatchPicker.jsx, which is the full picker for that step).
+ * Null when the class has nothing beyond its normal billing. */
+export function altPlanLabel(cls) {
+  if (hasPackage(cls)) {
+    return `Also: 3-month package for ${rupees(cls.package_3mo_fee_paise)}`
+  }
+  if (hasAltPlan(cls)) {
+    return `Also: ${cls.alt_sessions_per_month} sessions/month for ${rupees(cls.alt_fee_paise)}`
+  }
+  return null
+}

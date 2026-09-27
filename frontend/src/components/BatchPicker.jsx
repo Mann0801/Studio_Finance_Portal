@@ -1,4 +1,5 @@
 import {
+  altPlanLabel,
   hasAnyPlan,
   hasSlots,
   planOptions,
@@ -94,6 +95,7 @@ export default function BatchPicker({
                     <span className="b-main">
                       <span className="b-name">{c.name}</span>
                       {sched && <span className="b-sub">{sched}</span>}
+                      {altPlanLabel(c) && <span className="alt-plan-hint">{altPlanLabel(c)}</span>}
                       {chosen && hasSlots(c) && chosenSlot && (
                         <span className="b-slot">{chosenSlot.name} · {slotTime(chosenSlot)}</span>
                       )}
@@ -166,6 +168,7 @@ export default function BatchPicker({
                   <span className="b-main">
                     <span className="b-name">{c.name}</span>
                     {sched && <span className="b-sub">{sched}</span>}
+                    {altPlanLabel(c) && <span className="alt-plan-hint">{altPlanLabel(c)}</span>}
                     {selected && hasSlots(c) && chosenSlot && (
                       <span className="b-slot">{chosenSlot.name} · {slotTime(chosenSlot)}</span>
                     )}

@@ -1027,6 +1027,24 @@ button.menu-item {
   color: var(--muted);
   font-weight: 500;
 }
+
+/* A class's package/alternate-tier hint — shown next to its normal price
+ * everywhere a class is listed (batch pickers, admin class detail, the
+ * public plans page). Purple like the "package" status badge/amount, since
+ * it's the same concept. */
+.alt-plan-hint {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--package);
+  background: var(--package-bg);
+  width: fit-content;
+}
 .batch-opt .b-slot {
   font-size: 12.5px;
   font-weight: 700;
@@ -2630,6 +2648,9 @@ button.menu-item {
   font-size: 20px;
   font-weight: 800;
   color: var(--accent-bright);
+}
+.plan-alt {
+  margin-top: 6px;
 }
 .plan-slots {
   margin: 10px 0 0;

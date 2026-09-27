@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { STUDIO_NAME } from '../lib/brand'
-import { useClasses, priceLabel, scheduleLabel, slotsOf, slotTime } from '../lib/classes'
+import { useClasses, altPlanLabel, priceLabel, scheduleLabel, slotsOf, slotTime } from '../lib/classes'
 import { BUSINESS } from '../lib/business'
 import LegalFooter from '../components/LegalFooter'
 
@@ -36,6 +36,7 @@ export default function Plans() {
             <div className="plan-name">{c.name}</div>
             {scheduleLabel(c) && <div className="plan-sched">{scheduleLabel(c)}</div>}
             <div className="plan-price">{priceLabel(c)}</div>
+            {altPlanLabel(c) && <div className="plan-alt"><span className="alt-plan-hint">{altPlanLabel(c)}</span></div>}
 
             {slotsOf(c).length > 0 && (
               <ul className="plan-slots">
