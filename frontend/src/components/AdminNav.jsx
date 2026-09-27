@@ -15,6 +15,7 @@ import {
   LogoutIcon,
   InfoIcon,
   MailIcon,
+  ProfileIcon,
 } from './Icons'
 
 const TABS = [
@@ -24,6 +25,7 @@ const TABS = [
   { to: '/admin/payments', label: 'Payments', Icon: PaymentIcon },
   { to: '/admin/join-dates', label: 'Join Date Check', Icon: InfoIcon },
   { to: '/admin/missing-emails', label: 'Recovery Email', Icon: MailIcon },
+  { to: '/admin/first-name-only', label: 'First Name Only', Icon: ProfileIcon },
   { to: '/admin/announcements', label: 'Announcements', Icon: MegaphoneIcon },
   { to: '/admin/settings', label: 'Settings', Icon: SettingsIcon },
 ]
@@ -82,12 +84,12 @@ export default function AdminNav() {
       )}
 
       {/* ── Laptop/desktop: persistent sidebar ── */}
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-brand">
+      <aside className="app-sidebar">
+        <div className="app-sidebar-brand">
           <img src={LOGO_SRC} alt="" />
           <span>{STUDIO_NAME}</span>
         </div>
-        <nav className="admin-sidebar-nav">
+        <nav className="app-sidebar-nav">
           {TABS.map(({ to, label, Icon, end }) => (
             <NavLink
               key={to}
@@ -100,7 +102,7 @@ export default function AdminNav() {
             </NavLink>
           ))}
         </nav>
-        <div className="admin-sidebar-spacer" />
+        <div className="app-sidebar-spacer" />
         <button className="menu-item danger" onClick={() => setConfirm(true)}>
           <LogoutIcon width={20} height={20} />
           Log out

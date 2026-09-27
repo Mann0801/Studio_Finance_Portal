@@ -10,7 +10,8 @@ import { FIRST_OF_THIS_MONTH_LABEL } from '../../lib/joinDate'
 
 function validate(form, classes) {
   const errors = {}
-  if (!form.name.trim()) errors.name = 'Please enter their full name'
+  if (!form.first_name.trim()) errors.first_name = 'Please enter their first name'
+  if (!form.last_name.trim()) errors.last_name = 'Please enter their last name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   if (form.password && form.password.length < 8) errors.password = 'At least 8 characters'
   if (form.classes.length === 0) errors.classes = 'Please select at least one class'
@@ -25,7 +26,8 @@ export default function AddStudent() {
   const { reloadStats, guard } = useAdmin()
   const { classes } = useClasses()
   const [form, setForm] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     phone: '',
     classes: [], // [{ batch, batch_slot }]
     join_date: '',
@@ -83,7 +85,7 @@ export default function AddStudent() {
       const res = await adminApi('/api/admin/students', {
         method: 'POST',
         body: {
-          name: form.name.trim(),
+          name: `${form.first_name.trim()} ${form.last_name.trim()}`,
           phone: form.phone.replace(/\D/g, ''),
           classes: form.classes,
           join_date: form.join_date || null,
@@ -189,9 +191,25 @@ export default function AddStudent() {
 
       <form onSubmit={onSubmit} className="form" noValidate style={{ marginTop: 8 }}>
         <label>
-          Full name
-          <input value={form.name} onChange={set('name')} className={errors.name ? 'invalid' : ''} autoComplete="off" />
-          {errors.name && <span className="field-error">{errors.name}</span>}
+          First name
+          <input
+            value={form.first_name}
+            onChange={set('first_name')}
+            className={errors.first_name ? 'invalid' : ''}
+            autoComplete="off"
+          />
+          {errors.first_name && <span className="field-error">{errors.first_name}</span>}
+        </label>
+
+        <label>
+          Last name
+          <input
+            value={form.last_name}
+            onChange={set('last_name')}
+            className={errors.last_name ? 'invalid' : ''}
+            autoComplete="off"
+          />
+          {errors.last_name && <span className="field-error">{errors.last_name}</span>}
         </label>
 
         <label>

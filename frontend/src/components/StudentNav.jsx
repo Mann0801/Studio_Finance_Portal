@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { LOGO_SRC, STUDIO_NAME } from '../lib/brand'
 import ConfirmDialog from './ConfirmDialog'
 import {
   HomeIcon,
@@ -25,8 +26,10 @@ const TABS = [
   { to: '/profile', label: 'Settings', Icon: SettingsIcon },
 ]
 
-/* Top-corner hamburger menu for the student app — replaces the bottom bar so
-   pages get the full screen height. Opens a right-side drawer of destinations. */
+/* Top-corner hamburger + drawer on phone (so pages get the full screen
+   height), and a persistent left sidebar on a wider screen (laptop/desktop)
+   — same TABS/logout for both, CSS media queries decide which is visible.
+   Mirrors AdminNav's structure exactly. */
 export default function StudentNav() {
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
@@ -73,6 +76,32 @@ export default function StudentNav() {
           </nav>
         </div>
       )}
+
+      {/* ── Laptop/desktop: persistent sidebar ── */}
+      <aside className="app-sidebar">
+        <div className="app-sidebar-brand">
+          <img src={LOGO_SRC} alt="" />
+          <span>{STUDIO_NAME}</span>
+        </div>
+        <nav className="app-sidebar-nav">
+          {TABS.map(({ to, label, Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`}
+            >
+              <Icon width={20} height={20} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="app-sidebar-spacer" />
+        <button className="menu-item danger" onClick={() => setConfirm(true)}>
+          <LogoutIcon width={20} height={20} />
+          Log out
+        </button>
+      </aside>
 
       <ConfirmDialog
         open={confirm}

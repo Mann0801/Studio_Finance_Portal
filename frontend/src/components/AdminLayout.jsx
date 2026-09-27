@@ -7,7 +7,7 @@ import { AdminProvider } from '../context/AdminContext'
 export default function AdminLayout() {
   return (
     <AdminProvider>
-      <div className="app-shell with-menu">
+      <div className="app-shell with-menu is-admin">
         <AdminNav />
         <div className="page">
           <Outlet />

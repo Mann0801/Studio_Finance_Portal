@@ -33,6 +33,7 @@ import AdminAddEnrollment from './pages/admin/AdminAddEnrollment'
 import AdminResetPassword from './pages/admin/AdminResetPassword'
 import AdminJoinDateCheck from './pages/admin/AdminJoinDateCheck'
 import AdminMissingEmailCheck from './pages/admin/AdminMissingEmailCheck'
+import AdminFirstNameOnly from './pages/admin/AdminFirstNameOnly'
 import AdminSignups from './pages/admin/AdminSignups'
 import AdminRecordCash from './pages/admin/AdminRecordCash'
 import AdminPayments from './pages/admin/AdminPayments'
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="/admin/students/:id/classes/:batch" element={<AdminEnrollmentDetail />} />
             <Route path="/admin/join-dates" element={<AdminJoinDateCheck />} />
             <Route path="/admin/missing-emails" element={<AdminMissingEmailCheck />} />
+            <Route path="/admin/first-name-only" element={<AdminFirstNameOnly />} />
             <Route path="/admin/signups" element={<AdminSignups />} />
             <Route path="/admin/students/:id/record-cash/:batch/:period" element={<AdminRecordCash />} />
             <Route path="/admin/classes" element={<AdminClasses />} />

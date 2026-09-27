@@ -16,7 +16,8 @@ const TOTAL_STEPS = STEPS.length
 
 function validateStep1(form) {
   const errors = {}
-  if (!form.name.trim()) errors.name = 'Please enter your full name'
+  if (!form.first_name.trim()) errors.first_name = 'Please enter your first name'
+  if (!form.last_name.trim()) errors.last_name = 'Please enter your last name'
   if (form.phone.replace(/\D/g, '').length !== 10) errors.phone = 'Enter exactly 10 digits'
   return errors
 }
@@ -60,7 +61,8 @@ export default function Signup() {
   const { classes } = useClasses()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     phone: '',
     email: '',
     password: '',
@@ -162,7 +164,7 @@ export default function Signup() {
       await api('/api/signup', {
         method: 'POST',
         body: {
-          name: form.name.trim(),
+          name: `${form.first_name.trim()} ${form.last_name.trim()}`,
           phone: form.phone.replace(/\D/g, ''),
           email: form.email.trim(),
           classes: form.classes,
@@ -203,15 +205,26 @@ export default function Signup() {
         {step === 1 && (
           <div key="step1" className="auth-step-in">
             <label>
-              Full name
+              First name
               <input
-                value={form.name}
-                onChange={set('name')}
-                className={errors.name ? 'invalid' : ''}
-                autoComplete="name"
+                value={form.first_name}
+                onChange={set('first_name')}
+                className={errors.first_name ? 'invalid' : ''}
+                autoComplete="given-name"
                 autoFocus
               />
-              {errors.name && <span className="field-error">{errors.name}</span>}
+              {errors.first_name && <span className="field-error">{errors.first_name}</span>}
+            </label>
+
+            <label>
+              Last name
+              <input
+                value={form.last_name}
+                onChange={set('last_name')}
+                className={errors.last_name ? 'invalid' : ''}
+                autoComplete="family-name"
+              />
+              {errors.last_name && <span className="field-error">{errors.last_name}</span>}
             </label>
 
             <label>

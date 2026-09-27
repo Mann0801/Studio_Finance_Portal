@@ -16,27 +16,36 @@ export default function AdminEditStudent() {
 
   useEffect(() => {
     adminApi(`/api/admin/students/${id}`)
-      .then((data) =>
+      .then((data) => {
+        // Only ever one field on file — split on the first space so a
+        // single-word name (what "First Name Only" flags) shows up with an
+        // empty last name for the admin to fill in.
+        const parts = (data.name || '').trim().split(/\s+/)
         setForm({
-          name: data.name,
+          first_name: parts[0] || '',
+          last_name: parts.slice(1).join(' '),
           // Stored with country code (91…); show just the 10 digits for editing.
           phone: (data.phone || '').replace(/\D/g, '').slice(-10),
-        }),
-      )
+        })
+      })
       .catch((e) => setError(e.message))
   }, [id])
 
   async function onSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!form.name.trim()) return setError('Please enter their full name')
+    if (!form.first_name.trim()) return setError('Please enter their first name')
+    if (!form.last_name.trim()) return setError('Please enter their last name')
     if (form.phone.replace(/\D/g, '').length !== 10) return setError('Phone must be 10 digits')
 
     setBusy(true)
     try {
       await adminApi(`/api/admin/students/${id}`, {
         method: 'PATCH',
-        body: { name: form.name.trim(), phone: form.phone.replace(/\D/g, '') },
+        body: {
+          name: `${form.first_name.trim()} ${form.last_name.trim()}`,
+          phone: form.phone.replace(/\D/g, ''),
+        },
       })
       reloadStats()
       navigate(-1)
@@ -63,10 +72,18 @@ export default function AdminEditStudent() {
       ) : (
         <form onSubmit={onSubmit} className="form" style={{ marginTop: 8 }}>
           <label>
-            Full name
+            First name
             <input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              value={form.first_name}
+              onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            Last name
+            <input
+              value={form.last_name}
+              onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
               autoComplete="off"
             />
           </label>

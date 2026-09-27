@@ -14,16 +14,18 @@
 .app-shell.with-nav {
   padding-bottom: calc(var(--nav-h) + 18px);
 }
-/* Admin pages use a top hamburger menu, so no bottom bar to reserve for. */
+/* Admin and student pages both use a top hamburger menu, so no bottom bar to
+   reserve for. */
 .app-shell.with-menu {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
 }
 /* The desktop sidebar (see the bottom of this file) replaces the hamburger
-   menu on a wide screen — hidden by default so it doesn't flash on phone. */
-.admin-sidebar {
+   menu on a wide screen — hidden by default so it doesn't flash on phone.
+   Shared by both AdminNav and StudentNav. */
+.app-sidebar {
   display: none;
 }
-/* ── Admin hamburger menu ── */
+/* ── Hamburger menu (admin + student) ── */
 .menu-btn {
   position: fixed;
   top: max(12px, calc(env(safe-area-inset-top, 0px) + 10px));
@@ -2902,11 +2904,11 @@ button.menu-item {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Admin desktop layout — a laptop/wide screen gets a persistent sidebar +
-   a proper wide content column instead of the phone-width app shell. The
-   student-facing app is untouched; it's always meant to be used like a
-   phone app. Placed last so it wins the cascade over the mobile-first rules
-   above without needing extra specificity.
+   Desktop layout (admin + student) — a laptop/wide screen gets a persistent
+   sidebar + a proper wide content column instead of the phone-width app
+   shell, for both AdminNav and StudentNav (same .app-shell.with-menu +
+   .app-sidebar markup). Placed last so it wins the cascade over the
+   mobile-first rules above without needing extra specificity.
    ───────────────────────────────────────────────────────────────────────── */
 @media (min-width: 900px) {
   .menu-btn {
@@ -2922,7 +2924,7 @@ button.menu-item {
     align-items: stretch;
   }
 
-  .admin-sidebar {
+  .app-sidebar {
     display: flex;
     flex-direction: column;
     flex: 0 0 236px;
@@ -2936,7 +2938,7 @@ button.menu-item {
     background: var(--surface);
     overflow-y: auto;
   }
-  .admin-sidebar-brand {
+  .app-sidebar-brand {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -2944,27 +2946,27 @@ button.menu-item {
     margin-bottom: 8px;
     border-bottom: 1px solid var(--border-soft);
   }
-  .admin-sidebar-brand img {
+  .app-sidebar-brand img {
     height: 28px;
     width: 28px;
     border-radius: 7px;
     object-fit: cover;
   }
-  .admin-sidebar-brand span {
+  .app-sidebar-brand span {
     font-weight: 800;
     font-size: 14.5px;
     line-height: 1.3;
   }
-  .admin-sidebar-nav {
+  .app-sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  .admin-sidebar .menu-item {
+  .app-sidebar .menu-item {
     padding: 11px 12px;
     font-size: 14.5px;
   }
-  .admin-sidebar-spacer {
+  .app-sidebar-spacer {
     flex: 1;
   }
 
@@ -2976,11 +2978,13 @@ button.menu-item {
     padding: 32px 40px calc(40px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Tile grids get more room to breathe instead of just stretching 2-up. */
-  .stat-grid {
+  /* Tile grids get more room to breathe instead of just stretching 2-up —
+     admin-only: student pages keep their normal 2-up stat-grid, it isn't
+     wide desktop admin content. */
+  .is-admin .stat-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  .class-grid {
+  .is-admin .class-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
