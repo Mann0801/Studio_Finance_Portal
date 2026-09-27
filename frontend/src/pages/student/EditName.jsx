@@ -8,15 +8,23 @@ import { CardSkeleton } from '../../components/Skeleton'
 // Only mounted once `student` is loaded, so its initial state is always
 // correct without needing an effect to sync it in after the fact.
 function NameForm({ student, onSaved }) {
-  const [name, setName] = useState(student.name)
+  // Only ever one field on file — split on the first space so a single-word
+  // name shows up with an empty last name for them to fill in.
+  const parts = (student.name || '').trim().split(/\s+/)
+  const [firstName, setFirstName] = useState(parts[0] || '')
+  const [lastName, setLastName] = useState(parts.slice(1).join(' '))
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function onSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!name.trim()) {
-      setError('Please enter your full name')
+    if (!firstName.trim()) {
+      setError('Please enter your first name')
+      return
+    }
+    if (!lastName.trim()) {
+      setError('Please enter your last name')
       return
     }
     setBusy(true)
@@ -24,7 +32,10 @@ function NameForm({ student, onSaved }) {
       // The backend updates name + phone together — send the phone unchanged.
       await api('/api/me/profile', {
         method: 'PATCH',
-        body: { name: name.trim(), phone: student.phone.replace(/\D/g, '') },
+        body: {
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          phone: student.phone.replace(/\D/g, ''),
+        },
       })
       await onSaved()
     } catch (err) {
@@ -37,8 +48,12 @@ function NameForm({ student, onSaved }) {
   return (
     <form onSubmit={onSubmit} className="form" style={{ marginTop: 8 }}>
       <label>
-        Full name
-        <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+        First name
+        <input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" />
+      </label>
+      <label>
+        Last name
+        <input value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" />
       </label>
       {error && <p className="error">{error}</p>}
       <button type="submit" className="btn primary lg block" disabled={busy}>
