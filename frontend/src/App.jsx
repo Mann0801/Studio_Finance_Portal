@@ -40,6 +40,7 @@ import AdminAllPayments from './pages/admin/AdminAllPayments'
 import AdminClasses from './pages/admin/AdminClasses'
 import AdminClassForm from './pages/admin/AdminClassForm'
 import AdminClassDetail from './pages/admin/AdminClassDetail'
+import AdminAttendanceLog from './pages/admin/AdminAttendanceLog'
 import AdminAnnouncements from './pages/admin/AdminAnnouncements'
 import AdminSettings from './pages/admin/AdminSettings'
 import Plans from './pages/Plans'
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/admin/classes/new" element={<AdminClassForm />} />
             <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
             <Route path="/admin/classes/:id/edit" element={<AdminClassForm />} />
+            <Route path="/admin/classes/:id/attendance" element={<AdminAttendanceLog />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/payments/:period/all" element={<AdminAllPayments />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />

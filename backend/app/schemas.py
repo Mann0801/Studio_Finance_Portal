@@ -103,6 +103,9 @@ class EnrollmentOut(BaseModel):
     # with its server-computed amount. Lets a student clear earlier dues.
     outstanding: list[CurrentDue] = []
     history: list[PaymentOut]
+    # Only meaningful for a PER_SESSION class — whether today's session has
+    # already been self-reported (drives the "Did you attend today?" prompt).
+    attended_today: bool = False
 
 
 class DashboardOut(BaseModel):
@@ -226,6 +229,15 @@ class ActivitySignup(BaseModel):
 class AdminActivity(BaseModel):
     recent_payments: list[ActivityPayment]
     recent_signups: list[ActivitySignup]
+
+
+class AdminAttendanceRow(BaseModel):
+    id: str
+    student_id: str
+    name: str
+    phone: str
+    session_date: date
+    marked_by: str  # 'student' | 'admin'
 
 
 class AdminPaymentRow(BaseModel):

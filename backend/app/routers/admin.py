@@ -12,6 +12,13 @@ from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..attendance_store import (
+    count_for_period as attendance_count_for_period,
+    counts_for_period as attendance_counts_for_period,
+    delete_attendance,
+    list_for_class as list_attendance_for_class,
+    mark_today as mark_attendance_today,
+)
 from ..auth import create_admin_token, require_admin, verify_admin_credentials
 from ..classes_store import (
     class_label,
@@ -28,6 +35,7 @@ from ..classes_store import (
 from ..constants import (
     ENQUIRY,
     FEE_TYPES,
+    PER_SESSION,
     PLAN_MONTHLY,
     PLAN_PACKAGE_3MO,
     PLAN_SESSION_ALT,
@@ -80,6 +88,7 @@ from ..schemas import (
     ActivitySignup,
     AdminActivity,
     AdminAddEnrollmentRequest,
+    AdminAttendanceRow,
     AdminClassRow,
     AdminCreateStudentRequest,
     AdminCreateStudentResponse,
@@ -131,6 +140,18 @@ def _deleted(cls: dict | None) -> bool:
 def _fee_cls(cls: dict | None) -> dict | None:
     """Class used for fee computation — None (0 due) for a deleted class."""
     return None if _deleted(cls) else cls
+
+
+def _attended_sessions(
+    fee_cls: dict | None, counts: dict[tuple[str, str], int], student_id: str, class_id: str
+) -> int | None:
+    """The ``attended_sessions`` value to pass into ``compute_due`` — a count
+    (defaulting to 0) for a PER_SESSION class, or None for every other fee
+    type so their billing is untouched. `counts` is a bulk lookup from
+    ``attendance_counts_for_period`` for one period."""
+    if fee_cls and fee_cls.get("fee_type") == PER_SESSION:
+        return counts.get((student_id, class_id), 0)
+    return None
 
 
 def _reminder_label(cls: dict | None, slot_time: str | None) -> str:
@@ -315,6 +336,65 @@ def remove_class(class_id: str):
     return ClassDeleteResponse(status="deleted", student_count=count)
 
 
+@router.get(
+    "/classes/{class_id}/attendance",
+    response_model=list[AdminAttendanceRow],
+    dependencies=[Depends(require_admin)],
+)
+def class_attendance(class_id: str, period: str | None = None):
+    """Every self-reported attendance mark for a PER_SESSION class, most recent
+    first — lets the admin review/undo a mistaken tap. Defaults to the current
+    month."""
+    period = _valid_period(period)
+    rows = list_attendance_for_class(class_id, period)
+    smap = _students_by_id([r["student_id"] for r in rows])
+    out: list[AdminAttendanceRow] = []
+    for r in rows:
+        s = smap.get(r["student_id"])
+        if not s:
+            continue
+        out.append(
+            AdminAttendanceRow(
+                id=r["id"],
+                student_id=s["id"],
+                name=s["name"],
+                phone=s["phone"],
+                session_date=r["session_date"],
+                marked_by=r["marked_by"],
+            )
+        )
+    return out
+
+
+@router.post(
+    "/classes/{class_id}/attendance/{student_id}",
+    response_model=list[AdminAttendanceRow],
+    dependencies=[Depends(require_admin)],
+)
+def admin_mark_attendance(class_id: str, student_id: str, period: str | None = None):
+    """Mark today's session attended on a student's behalf (e.g. they forgot to
+    self-report). Idempotent, same as the student-facing endpoint."""
+    cls = get_class(class_id)
+    if not cls or cls.get("fee_type") != PER_SESSION:
+        raise HTTPException(status_code=422, detail="This class doesn't use attendance tracking")
+    if not get_enrollment(student_id, class_id):
+        raise HTTPException(status_code=404, detail="Not enrolled in this class")
+    mark_attendance_today(student_id, class_id, marked_by="admin")
+    return class_attendance(class_id, period)
+
+
+@router.delete(
+    "/classes/{class_id}/attendance/{attendance_id}",
+    response_model=list[AdminAttendanceRow],
+    dependencies=[Depends(require_admin)],
+)
+def admin_undo_attendance(class_id: str, attendance_id: str, period: str | None = None):
+    """Undo a mistaken attendance mark — e.g. a student double-tapped, or
+    tapped on the wrong day."""
+    delete_attendance(attendance_id)
+    return class_attendance(class_id, period)
+
+
 # ── Students by class ─────────────────────────────────────────────────────────
 def _students_by_id(ids: list[str]) -> dict[str, dict]:
     if not ids:
@@ -363,6 +443,7 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
     received = _received_amounts_for_period(period, batch)
     waived = _waived_keys_for_period(period)
     paused = paused_keys_for_period(period)
+    attended = attendance_counts_for_period(period, batch)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
@@ -370,7 +451,14 @@ def list_batch(batch: str, slot: str | None = None, period: str | None = None):
         if not s:
             continue
         join_date = _as_date(e["join_date"])
-        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
+        fee_cls = _fee_cls(cls)
+        due = compute_due(
+            fee_cls,
+            join_date,
+            period,
+            e.get("plan") or PLAN_MONTHLY,
+            attended_sessions=_attended_sessions(fee_cls, attended, e["student_id"], batch),
+        )
         key = (e["student_id"], batch)
         is_waived = key in waived
         is_paused = key in paused
@@ -424,6 +512,7 @@ def all_students():
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
     paused = paused_keys_for_period(period)
+    attended = attendance_counts_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
@@ -432,7 +521,14 @@ def all_students():
             continue
         cls = cmap.get(e["class_id"])
         join_date = _as_date(e["join_date"])
-        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
+        fee_cls = _fee_cls(cls)
+        due = compute_due(
+            fee_cls,
+            join_date,
+            period,
+            e.get("plan") or PLAN_MONTHLY,
+            attended_sessions=_attended_sessions(fee_cls, attended, e["student_id"], e["class_id"]),
+        )
         key = (e["student_id"], e["class_id"])
         is_waived = key in waived
         is_paused = key in paused
@@ -472,6 +568,7 @@ def stats():
     received = _received_amounts_for_period(period)      # incl. partial cash → revenue
     waived = _waived_keys_for_period(period)              # forgiven → not owed, not paid
     paused = paused_keys_for_period(period)               # frozen → not owed, not paid
+    attended = attendance_counts_for_period(period)
     last_month_received = _received_amounts_for_period(prev)
     classes = list_classes()
 
@@ -491,7 +588,13 @@ def stats():
             if key in waived or key in paused:
                 settled_keys.append(key)
                 continue
-            due = compute_due(fee_cls, _as_date(m["join_date"]), period, m.get("plan") or PLAN_MONTHLY)
+            due = compute_due(
+                fee_cls,
+                _as_date(m["join_date"]),
+                period,
+                m.get("plan") or PLAN_MONTHLY,
+                attended_sessions=_attended_sessions(fee_cls, attended, m["student_id"], m["class_id"]),
+            )
             if due.is_package_covered:
                 settled_keys.append(key)
                 continue
@@ -587,6 +690,7 @@ def unpaid_students():
     received = _received_amounts_for_period(period)
     waived = _waived_keys_for_period(period)
     paused = paused_keys_for_period(period)
+    attended = attendance_counts_for_period(period)
 
     rows: list[AdminStudentRow] = []
     for e in enrolls:
@@ -597,7 +701,14 @@ def unpaid_students():
         if not s:
             continue
         cls = cmap.get(e["class_id"])
-        due = compute_due(_fee_cls(cls), _as_date(e["join_date"]), period, e.get("plan") or PLAN_MONTHLY)
+        fee_cls = _fee_cls(cls)
+        due = compute_due(
+            fee_cls,
+            _as_date(e["join_date"]),
+            period,
+            e.get("plan") or PLAN_MONTHLY,
+            attended_sessions=_attended_sessions(fee_cls, attended, e["student_id"], e["class_id"]),
+        )
         # Remind for what's still owed after any partial cash already recorded.
         remaining = due.amount_paise - received.get(key, 0)
         if remaining <= 0:
@@ -802,6 +913,7 @@ def month_view(period: str):
     ).data
     pmap = {(p["student_id"], p["class_id"]): p for p in pays}
     paused = paused_keys_for_period(period)
+    attended = attendance_counts_for_period(period)
 
     rows: list[AdminMonthRow] = []
     due_by_key: dict[tuple[str, str], int] = {}
@@ -815,7 +927,14 @@ def month_view(period: str):
         if period < period_of(join_date):
             continue
         cls = cmap.get(e["class_id"])
-        due = compute_due(_fee_cls(cls), join_date, period, e.get("plan") or PLAN_MONTHLY)
+        fee_cls = _fee_cls(cls)
+        due = compute_due(
+            fee_cls,
+            join_date,
+            period,
+            e.get("plan") or PLAN_MONTHLY,
+            attended_sessions=_attended_sessions(fee_cls, attended, e["student_id"], e["class_id"]),
+        )
         pay = pmap.get((e["student_id"], e["class_id"]))
         is_waived = bool(pay and pay["status"] == "waived")
         is_paused = (e["student_id"], e["class_id"]) in paused
@@ -962,7 +1081,10 @@ def _build_enrollment_detail(
     join_date = _as_date(enr["join_date"])
     plan = enr.get("plan") or PLAN_MONTHLY
     period = current_period()
-    due = compute_due(_fee_cls(cls), join_date, period, plan)
+    fee_cls = _fee_cls(cls)
+    is_per_session = bool(fee_cls and fee_cls.get("fee_type") == PER_SESSION)
+    attended = attendance_count_for_period(s["id"], class_id, period) if is_per_session else None
+    due = compute_due(fee_cls, join_date, period, plan, attended_sessions=attended)
 
     # Total received includes partial cash on months not yet fully paid.
     total_paid = sum((p.get("paid_paise") or 0) for p in payments)
@@ -991,7 +1113,8 @@ def _build_enrollment_detail(
     p = previous_period(period)
     while p >= join_period:
         if p not in waived_periods and not is_period_paused(pause_rows, class_id, p):
-            past_due = compute_due(_fee_cls(cls), join_date, p, plan)
+            past_attended = attendance_count_for_period(s["id"], class_id, p) if is_per_session else None
+            past_due = compute_due(fee_cls, join_date, p, plan, attended_sessions=past_attended)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
             if remaining > 0:
@@ -1299,7 +1422,13 @@ def mark_student_paid(student_id: str, body: MarkPaidRequest):
         raise HTTPException(
             status_code=400, detail="This month is paused — resume the class first to record cash"
         )
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
+    fee_cls = _fee_cls(get_class(body.batch))
+    attended = (
+        attendance_count_for_period(student_id, body.batch, period)
+        if fee_cls and fee_cls.get("fee_type") == PER_SESSION
+        else None
+    )
+    due = compute_due(fee_cls, join_date, period, enr.get("plan") or PLAN_MONTHLY, attended_sessions=attended)
     remaining = due.amount_paise - amount_paid_for(student_id, body.batch, period)
     if remaining > 0:
         # None → clear the whole remaining balance; a number → partial cash,
@@ -1331,7 +1460,13 @@ def waive_student_period(student_id: str, body: PeriodActionRequest):
         raise HTTPException(status_code=400, detail="No fee was due before they joined")
     if is_period_paused(pauses_for(student_id), body.batch, period):
         raise HTTPException(status_code=400, detail="This month is already paused — no need to waive it")
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
+    fee_cls = _fee_cls(get_class(body.batch))
+    attended = (
+        attendance_count_for_period(student_id, body.batch, period)
+        if fee_cls and fee_cls.get("fee_type") == PER_SESSION
+        else None
+    )
+    due = compute_due(fee_cls, join_date, period, enr.get("plan") or PLAN_MONTHLY, attended_sessions=attended)
     if is_settled(due.amount_paise, amount_paid_for(student_id, body.batch, period)):
         raise HTTPException(status_code=400, detail="This month is already paid — remove the payment first")
     waive_period(student_id, body.batch, period, due.amount_paise, due.is_prorata)
@@ -1374,7 +1509,13 @@ def pause_student_enrollment(student_id: str, body: PauseActionRequest):
         raise HTTPException(status_code=400, detail="Already paused")
     period = current_period()
     join_date = _as_date(enr["join_date"])
-    due = compute_due(_fee_cls(get_class(body.batch)), join_date, period, enr.get("plan") or PLAN_MONTHLY)
+    fee_cls = _fee_cls(get_class(body.batch))
+    attended = (
+        attendance_count_for_period(student_id, body.batch, period)
+        if fee_cls and fee_cls.get("fee_type") == PER_SESSION
+        else None
+    )
+    due = compute_due(fee_cls, join_date, period, enr.get("plan") or PLAN_MONTHLY, attended_sessions=attended)
     settled = is_period_waived(student_id, body.batch, period) or is_settled(
         due.amount_paise, amount_paid_for(student_id, body.batch, period)
     )
@@ -1452,8 +1593,14 @@ def move_student_payment(student_id: str, body: MovePaymentRequest):
             status_code=409, detail="That month already has a payment recorded — remove it first"
         )
 
+    fee_cls = _fee_cls(get_class(body.batch))
+    attended = (
+        attendance_count_for_period(student_id, body.batch, body.to_period)
+        if fee_cls and fee_cls.get("fee_type") == PER_SESSION
+        else None
+    )
     due = compute_due(
-        _fee_cls(get_class(body.batch)), join_date, body.to_period, enr.get("plan") or PLAN_MONTHLY
+        fee_cls, join_date, body.to_period, enr.get("plan") or PLAN_MONTHLY, attended_sessions=attended
     )
     move_payment(student_id, body.batch, body.from_period, body.to_period, due.amount_paise, due.is_prorata)
     return _build_student_detail(s)

@@ -13,9 +13,10 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from ..attendance_store import count_for_period, mark_today, marked_today
 from ..auth import get_current_student
 from ..classes_store import class_label, class_map, get_class, slot_by_key, slot_label_of
-from ..constants import PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLAN_SESSION_ALT, PLANS
+from ..constants import PER_SESSION, PLAN_MONTHLY, PLAN_PACKAGE_3MO, PLAN_SESSION_ALT, PLANS
 from ..db import get_supabase
 from ..enrollments_store import (
     create_enrollment,
@@ -117,7 +118,9 @@ def _enrollment_out(
 
     plan = enr.get("plan") or PLAN_MONTHLY
     period = current_period()
-    due = compute_due(fee_cls, join_date, period, plan)
+    is_per_session = bool(fee_cls and fee_cls.get("fee_type") == PER_SESSION)
+    attended = count_for_period(enr["student_id"], class_id, period) if is_per_session else None
+    due = compute_due(fee_cls, join_date, period, plan, attended_sessions=attended)
 
     # Months the admin has forgiven — never shown as owed.
     waived_periods = {p["period"] for p in payments if p["status"] == "waived"}
@@ -149,7 +152,8 @@ def _enrollment_out(
     p = previous_period(period)
     while p >= join_period:
         if p not in waived_periods and not is_period_paused(pause_rows, class_id, p):
-            past_due = compute_due(fee_cls, join_date, p, plan)
+            past_attended = count_for_period(enr["student_id"], class_id, p) if is_per_session else None
+            past_due = compute_due(fee_cls, join_date, p, plan, attended_sessions=past_attended)
             received = paid_so_far.get(p, 0)
             remaining = past_due.amount_paise - received
             if remaining > 0:
@@ -186,6 +190,7 @@ def _enrollment_out(
         current=current,
         outstanding=outstanding,
         history=history,
+        attended_today=marked_today(enr["student_id"], class_id) if is_per_session else False,
     )
 
 
@@ -351,6 +356,25 @@ def mark_whatsapp_joined(class_id: str, student=Depends(get_current_student)):
         raise HTTPException(status_code=404, detail="Not enrolled in this class")
     set_whatsapp_joined(student["id"], class_id)
     return {"status": "ok"}
+
+
+@router.post("/me/enrollments/{class_id}/attendance", response_model=DashboardOut)
+def mark_attendance(class_id: str, student=Depends(get_current_student)):
+    """Self-report today's session as attended for a PER_SESSION class — this
+    is what makes it show up as owed (see fees.compute_due). Idempotent:
+    marking twice the same day is a no-op. Returns the refreshed dashboard so
+    the new due appears immediately."""
+    res = get_supabase().table("students").select("*").eq("id", student["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found; complete signup")
+    enr = get_enrollment(student["id"], class_id)
+    if not enr:
+        raise HTTPException(status_code=404, detail="Not enrolled in this class")
+    cls = get_class(class_id)
+    if not cls or cls.get("fee_type") != PER_SESSION:
+        raise HTTPException(status_code=422, detail="This class doesn't use attendance tracking")
+    mark_today(student["id"], class_id, marked_by="student")
+    return _dashboard_for(res.data[0])
 
 
 @router.post("/me/classes", response_model=DashboardOut, status_code=status.HTTP_201_CREATED)

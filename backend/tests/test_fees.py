@@ -137,6 +137,29 @@ def test_per_session_prorata_by_remaining_days():
     assert due.is_prorata is True
 
 
+# ── Per-session billing driven by actual attendance, not the calendar ──────────
+def test_per_session_with_attendance_bills_only_attended_count():
+    # 3 sessions actually marked attended -> 3 * 1000, regardless of how many
+    # Sat/Sun days exist in the month.
+    due = compute_due(PRENATAL, date(2026, 1, 1), "2026-06", attended_sessions=3)
+    assert due.amount_paise == 3000_00
+    assert due.is_prorata is False
+
+
+def test_per_session_with_zero_attendance_is_zero():
+    # Nothing attended yet this period -> nothing owed yet.
+    due = compute_due(PRENATAL, date(2026, 1, 1), "2026-06", attended_sessions=0)
+    assert due.amount_paise == 0
+
+
+def test_per_session_attendance_ignores_join_month_prorata():
+    # Attendance-driven billing has no calendar assumption to prorate — a
+    # mid-month join with 2 attended sessions just owes 2 * 1000.
+    due = compute_due(PRENATAL, date(2026, 6, 20), "2026-06", attended_sessions=2)
+    assert due.amount_paise == 2000_00
+    assert due.is_prorata is False
+
+
 # ── Test Course (session_pack, 1 session, every day) is always flat ────────────
 def test_test_course_is_flat_ten_rupees():
     for join, period in [

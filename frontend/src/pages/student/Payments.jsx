@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDashboard } from '../../context/DashboardContext'
 import { usePayFlow } from '../../hooks/usePayFlow'
+import { api } from '../../lib/api'
 import { rupees } from '../../lib/batches'
 import StatusBadge from '../../components/StatusBadge'
 import DueCard from '../../components/DueCard'
@@ -14,9 +16,11 @@ function periodLabel(period) {
 }
 
 export default function Payments() {
-  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId } = useDashboard()
+  const { data, loading, error, activeEnrollment, activeClassId, setActiveClassId, reload } = useDashboard()
   const { pay, paying, error: payError } = usePayFlow()
   const navigate = useNavigate()
+  const [marking, setMarking] = useState(false)
+  const [markError, setMarkError] = useState('')
 
   const enrollments = data?.enrollments ?? []
   const en = activeEnrollment
@@ -26,6 +30,19 @@ export default function Payments() {
   const historyRows = en?.history ?? []
   // Oldest overdue month first (top priority); `outstanding` is newest→oldest.
   const overdue = [...(en?.outstanding ?? [])].reverse()
+
+  async function markAttended() {
+    setMarkError('')
+    setMarking(true)
+    try {
+      await api(`/api/me/enrollments/${en.batch}/attendance`, { method: 'POST' })
+      await reload()
+    } catch (e) {
+      setMarkError(e.message)
+    } finally {
+      setMarking(false)
+    }
+  }
 
   return (
     <>
@@ -74,7 +91,33 @@ export default function Payments() {
             />
           ))}
 
-          <div className="pay-card" style={overdue.length ? { marginTop: 12 } : undefined}>
+          {en.fee_type === 'per_session' && (
+            <div className="card" style={{ marginTop: overdue.length ? 12 : undefined }}>
+              {en.attended_today ? (
+                <span className="card-title" style={{ color: 'var(--paid)' }}>
+                  ✓ Marked as attended today
+                </span>
+              ) : (
+                <>
+                  <span className="card-title">Did you attend a session today?</span>
+                  <p className="muted" style={{ margin: '6px 0 0', lineHeight: 1.5 }}>
+                    Tap yes once your session happens and it'll be added to what you owe.
+                  </p>
+                  <button
+                    className="btn primary block"
+                    style={{ marginTop: 14 }}
+                    onClick={markAttended}
+                    disabled={marking}
+                  >
+                    {marking ? 'Marking…' : 'Yes, I attended today'}
+                  </button>
+                  {markError && <p className="error" style={{ marginTop: 12 }}>{markError}</p>}
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="pay-card" style={overdue.length || en.fee_type === 'per_session' ? { marginTop: 12 } : undefined}>
             <div className="between">
               <span className="card-title">
                 {en.current.status === 'paid'

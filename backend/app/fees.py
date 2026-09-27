@@ -138,7 +138,11 @@ def is_settled(due_paise: int, received_paise: int) -> bool:
 
 
 def compute_due(
-    cls: dict | None, join_date: date, period: str, plan: str = PLAN_MONTHLY
+    cls: dict | None,
+    join_date: date,
+    period: str,
+    plan: str = PLAN_MONTHLY,
+    attended_sessions: int | None = None,
 ) -> DueAmount:
     """How much a student in class ``cls`` owes for ``period``.
 
@@ -149,8 +153,18 @@ def compute_due(
       * MONTHLY      — pro-rata by days.
       * SESSION_PACK — full = pack price; join month = pack/N × remaining class
                        days (capped at N).
-      * PER_SESSION  — per-session price × scheduled class days in the period.
+      * PER_SESSION  — per-session price × sessions actually attended in the
+                       period (see ``attended_sessions`` below); falls back to
+                       scheduled class days when attendance isn't tracked.
       * ENQUIRY      — nothing to pay online.
+
+    ``attended_sessions``, when given, overrides PER_SESSION's calendar-based
+    count with the number of sessions the student has actually self-reported
+    (or been marked by an admin) as attended in ``period`` — see
+    ``attendance_store``. A session is only billed once it's actually
+    happened, so there's no "join month is pro-rata" concept here: pass 0 for
+    "nothing attended yet this period", not None. None means "don't track
+    attendance for this class", which keeps the old scheduled-day assumption.
 
     ``plan='package_3mo'`` (only when ``cls`` has a ``package_3mo_fee_paise``
     set) overrides all of the above: the full package price is due in the
@@ -231,6 +245,8 @@ def compute_due(
         return DueAmount(period, fee, False)
 
     if fee_type == PER_SESSION:
+        if attended_sessions is not None:
+            return DueAmount(period, fee * attended_sessions, False)
         if is_join_month:
             full_sessions = _count_session_days(year, month, weekdays)
             sessions = _count_session_days(year, month, weekdays, from_day=join_date.day)

@@ -183,6 +183,14 @@ export default function AdminClassDetail() {
           </div>
 
           <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+            {cls.fee_type === 'per_session' && (
+              <button
+                className="btn ghost block"
+                onClick={() => navigate(`/admin/classes/${id}/attendance`)}
+              >
+                View attendance log
+              </button>
+            )}
             <button
               className="btn primary block"
               onClick={() => navigate(`/admin/classes/${id}/edit`)}
