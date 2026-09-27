@@ -16,58 +16,43 @@ import {
 } from '../../components/Icons'
 import { ListSkeleton } from '../../components/Skeleton'
 
-/** A tappable student row (used for search results + the class roster). */
-function StudentCard({ s, onOpen, sub }) {
+/** A numbered list row for one student (used for search results + the class
+ * roster) — its fields shown as label:value pairs rather than table columns. */
+function StudentRow({ s, num, onOpen, subLabel, sub }) {
   return (
     <div
-      className="student-card tappable"
+      className="record-row"
       role="button"
       tabIndex={0}
       onClick={() => onOpen(s.id)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(s.id)}
     >
-      <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
-      <div className="s-info">
-        <div className="s-name">{s.name}</div>
-        <div className="s-sub">{sub}</div>
+      <div className="record-num">{num}</div>
+      <div className="record-body">
+        <div className="record-name">{s.name}</div>
+        <div className="record-fields">
+          <span><b>{subLabel}</b> {sub}</span>
+          {s.batch_deleted ? (
+            <span className="badge deleted">Batch Deleted</span>
+          ) : (
+            <>
+              <span className={`amount-status ${s.status}`}><b>Amount</b> {rupees(s.amount_paise)}</span>
+              <StatusBadge status={s.status} />
+            </>
+          )}
+        </div>
       </div>
-      <div className="s-right">
-        {s.batch_deleted ? (
-          <span className="badge deleted">Batch Deleted</span>
-        ) : (
-          <div className="s-status-row">
-            <span className={`s-amount ${s.status}`}>{rupees(s.amount_paise)}</span>
-            <StatusBadge status={s.status} />
-          </div>
-        )}
-        {s.whatsapp_url && (
-          <a
-            className="wa-btn"
-            href={s.whatsapp_url}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <WhatsAppIcon width={16} height={16} /> Message
-          </a>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** Column headings for the student table — hidden on phone (the cards below
- * stack their own fields), shown on a wide screen where StudentCard becomes
- * an actual table row. */
-function StudentTableHead({ subLabel }) {
-  return (
-    <div className="student-table-head">
-      <span></span>
-      <span>Name</span>
-      <span>{subLabel}</span>
-      <span>Amount</span>
-      <span>Status</span>
-      <span></span>
+      {s.whatsapp_url && (
+        <a
+          className="wa-btn"
+          href={s.whatsapp_url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <WhatsAppIcon width={16} height={16} /> Message
+        </a>
+      )}
     </div>
   )
 }
@@ -251,13 +236,14 @@ export default function AdminStudents() {
           ) : globalResults.length === 0 ? (
             <div className="card empty">No students match “{globalSearch.trim()}”.</div>
           ) : (
-            <div className="stack" style={{ gap: 10 }}>
-              <StudentTableHead subLabel="Class" />
-              {globalResults.map((s) => (
-                <StudentCard
+            <div className="card flush">
+              {globalResults.map((s, i) => (
+                <StudentRow
                   key={`${s.id}-${s.batch}`}
                   s={s}
+                  num={i + 1}
                   onOpen={(id) => navigate(`/admin/students/${id}`)}
+                  subLabel="Class"
                   sub={`${s.batch_label}${s.slot_label ? ` · ${s.slot_label}` : ''}`}
                 />
               ))}
@@ -402,13 +388,14 @@ export default function AdminStudents() {
           {students && students.length > 0 ? 'No students match.' : 'No students in this class for this month.'}
         </div>
       ) : (
-        <div className="stack" style={{ gap: 10, marginTop: 12 }}>
-          <StudentTableHead subLabel="Phone" />
-          {visible.map((s) => (
-            <StudentCard
+        <div className="card flush" style={{ marginTop: 12 }}>
+          {visible.map((s, i) => (
+            <StudentRow
               key={s.id}
               s={s}
+              num={i + 1}
               onOpen={(id) => navigate(`/admin/students/${id}`)}
+              subLabel="Phone"
               sub={formatPhoneDisplay(s.phone)}
             />
           ))}

@@ -36,7 +36,7 @@ function EnrollmentRow({ en, onOpen, showTiming }) {
         </span>
       )}
       <div className="data-end">
-        <div className={`s-amount ${en.status}`} style={{ fontSize: 15 }}>{rupees(en.amount_paise)}</div>
+        <div className={`amount-status ${en.status}`} style={{ fontSize: 15 }}>{rupees(en.amount_paise)}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
           <StatusBadge status={en.status} />
           <ChevronRightIcon width={16} height={16} style={{ color: 'var(--muted)' }} />

@@ -23,12 +23,6 @@
 .admin-sidebar {
   display: none;
 }
-/* Column headings for a StudentCard list — only meaningful once StudentCard
-   itself becomes a table row on a wide screen (see the bottom of this file). */
-.student-table-head {
-  display: none;
-}
-
 /* ── Admin hamburger menu ── */
 .menu-btn {
   position: fixed;
@@ -1347,6 +1341,65 @@ button.menu-item {
 .data-row:not(.head):active {
   background: var(--border-soft);
 }
+
+/* ── Numbered record list — a plain list of entries (each with a serial
+   number and its fields as label:value pairs that wrap naturally), rather
+   than a spreadsheet-style table trying to keep everything in aligned
+   columns. Same markup and look at every screen width — nothing here is
+   width-dependent, so there's no separate desktop treatment to keep in sync. ── */
+.record-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.record-row:last-child {
+  border-bottom: none;
+}
+.record-row:active {
+  background: var(--border-soft);
+}
+.record-num {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--card-2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+.record-body {
+  flex: 1;
+  min-width: 0;
+}
+.record-name {
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.record-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.record-fields b {
+  color: var(--text);
+  font-weight: 700;
+  margin-right: 5px;
+}
+.record-row .wa-btn {
+  flex: none;
+  align-self: center;
+}
 .data-name {
   font-weight: 700;
   line-height: 1.25;
@@ -1387,81 +1440,6 @@ button.menu-item {
      wrap at anyway, but a free-typed payment-method note can be long and
      should wrap instead of overflowing the column on a phone. */
   overflow-wrap: break-word;
-}
-/* A data-row with a trailing action button (WhatsApp remind) as its own grid
-   item, not stacked inside .data-end — it sits under the amount on phone
-   (there's no 4th column), and gets one on a wide screen (see the bottom of
-   this file). */
-.data-row.with-action .wa-btn {
-  grid-column: 3;
-  justify-self: end;
-  margin-top: 4px;
-  min-height: 26px;
-  padding: 0 10px;
-  font-size: 12px;
-}
-/* The head row's blank 4th cell above that action column — only relevant once
-   there IS a 4th column, on a wide screen. */
-.head-action-col {
-  display: none;
-}
-/* A payment row's phone number — an extra grid item (not nested inside
-   .data-sub/.data-end) so it can become its own column on a wide screen. On
-   phone there's no room for that, so it sits under the name instead. */
-.pay-phone {
-  grid-column: 1;
-  display: block;
-  font-size: 12.5px;
-  margin-top: 2px;
-}
-/* On phone, name/class/amount are auto-placed with no explicit row — but
-   pay-phone (an extra grid item, explicit column, auto row) searches for a
-   free row starting from wherever the auto-placement cursor already is, and
-   advancing it past row 1 drags every LATER auto-placed sibling down with it
-   (a real CSS Grid gotcha, not just a desktop-width one). Pinning these to
-   row 1 explicitly keeps them there regardless of where phone ends up. */
-.data-row.payment-row .data-name,
-.data-row.payment-row .data-sub,
-.data-row.payment-row .data-end,
-.data-row.with-action .data-name,
-.data-row.with-action .data-sub,
-.data-row.with-action .data-end,
-.data-row.signup-row .data-name,
-.data-row.signup-row .data-sub,
-.data-row.signup-row .data-end {
-  grid-row: 1;
-}
-.data-row.payment-row .pay-phone,
-.data-row.with-action .pay-phone,
-.data-row.signup-row .pay-phone {
-  grid-row: 2;
-}
-/* Signups keep showing when they signed up on phone too (unlike a payment's
-   paid-on time, which phone already covers via the amount/method stack). */
-.data-row.signup-row .pay-date,
-.data-row.signup-row .pay-time {
-  display: block;
-}
-.pay-partial-tag {
-  color: var(--warn);
-  font-weight: 700;
-  font-size: 11px;
-  margin-left: 6px;
-}
-.pay-method {
-  margin-top: 2px;
-}
-/* Paid-on date/time — only meaningful once a payment row is a real table (a
-   wide screen); on phone the amount/method stack already shows and when it
-   was received isn't critical there. */
-.pay-date,
-.pay-time {
-  display: none;
-}
-/* Column headings that only make sense once a payment row has its extra
-   columns — phone, method, note — on a wide screen. */
-.head-extra-col {
-  display: none;
 }
 /* When none of the rows in a table have a middle column value worth showing
    (e.g. a student whose classes have no fixed timing at all), drop that
@@ -1547,62 +1525,23 @@ button.menu-item {
   gap: 10px;
 }
 
-/* ── Admin: student cards ── */
-.student-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px;
-  animation: card-in 0.28s ease both;
-}
-.student-card .s-info {
-  min-width: 0;
-  flex: 1;
-}
-.student-card .s-name {
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.student-card .s-sub {
-  color: var(--muted);
-  font-size: 13px;
-  margin-top: 2px;
-}
-.student-card .s-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.s-status-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-.s-amount {
-  font-size: 13px;
+/* An amount shown inline in a .record-fields list, colored by status. */
+.amount-status {
   font-weight: 700;
 }
-.s-amount.paid {
+.amount-status.paid {
   color: var(--paid);
 }
-.s-amount.unpaid {
+.amount-status.unpaid {
   color: var(--unpaid);
 }
-.s-amount.waived {
+.amount-status.waived {
   color: var(--muted);
 }
-.s-amount.package {
+.amount-status.package {
   color: var(--package);
 }
-.s-amount.paused {
+.amount-status.paused {
   color: var(--paused);
 }
 .wa-btn {
@@ -2216,14 +2155,6 @@ button.menu-item {
 }
 .li-main.accent {
   color: var(--accent-bright);
-}
-.student-card.tappable {
-  cursor: pointer;
-  transition: transform 0.12s ease, border-color 0.15s ease;
-}
-.student-card.tappable:active {
-  transform: scale(0.99);
-  border-color: var(--accent);
 }
 .btn.contact-cta {
   background: var(--card);
@@ -3051,337 +2982,5 @@ button.menu-item {
   }
   .class-grid {
     grid-template-columns: repeat(4, 1fr);
-  }
-
-  /* ── Student rosters (AdminStudents) become a real table: avatar / name /
-     phone-or-class / amount / status / whatsapp each in their own fixed-width
-     column, sized to actual content (class fits "Senior Citizens Yoga",
-     status fits "Overdue"/"Package"), with vertical rules between columns —
-     instead of the phone card's stacked fields. The wrapper divs that do the
-     mobile stacking are unwrapped via display:contents rather than touching
-     the JSX — same markup, two different layouts. ── */
-  .student-table-head,
-  .student-card {
-    grid-template-columns: 62px 170px 160px 80px 100px 150px;
-  }
-  .student-table-head {
-    display: grid;
-    align-items: center;
-    gap: 0;
-    padding: 4px 0 8px;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .student-table-head > * {
-    padding: 0 14px;
-  }
-  .student-table-head > *:first-child {
-    padding-left: 18px;
-  }
-  .student-table-head > *:last-child {
-    padding-right: 18px;
-  }
-  .student-table-head > *:not(:last-child):not(:first-child) {
-    border-right: 1px solid var(--border-soft);
-  }
-  .student-card {
-    display: grid;
-    align-items: stretch;
-    gap: 0;
-    padding: 0;
-  }
-  .student-card .s-info,
-  .student-card .s-right,
-  .student-card .s-status-row {
-    display: contents;
-  }
-  .student-card .avatar {
-    grid-column: 1;
-    align-self: center;
-    justify-self: start;
-    margin-left: 18px;
-  }
-  .student-card .s-name {
-    grid-column: 2;
-    display: flex;
-    align-items: center;
-    padding: 12px 14px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .student-card .s-sub {
-    grid-column: 3;
-    display: flex;
-    align-items: center;
-    margin-top: 0;
-    padding: 12px 14px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .student-card .s-amount {
-    grid-column: 4;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 12px 14px;
-    border-right: 1px solid var(--border-soft);
-    text-align: right;
-    font-size: 14px;
-  }
-  .student-card .badge {
-    grid-column: 5;
-    align-self: center;
-    justify-self: start;
-    margin: 0 14px;
-  }
-  .student-card .wa-btn {
-    grid-column: 6;
-    align-self: center;
-    justify-self: end;
-    margin: 0 18px 0 0;
-  }
-
-  /* ── Payments Pending/Unpaid rows: Name / Phone / Class / Due / WhatsApp.
-     Columns are sized to their actual content (phone is always "+91" + 10
-     digits; class is sized for the longest class name, "Senior Citizens
-     Yoga") rather than stretching, with a vertical rule between columns like
-     a real table. Each cell stretches to the row's full height so that rule
-     runs top to bottom; the cell centers its own content within that. ── */
-  .data-row.with-action {
-    grid-template-columns: 170px 115px 160px 90px 150px;
-    align-items: stretch;
-    gap: 0;
-    padding: 0;
-  }
-  .data-row.with-action .data-name {
-    grid-column: 1;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px 11px 18px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .data-row.with-action .pay-phone {
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    margin-top: 0;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .data-row.with-action .data-sub {
-    grid-column: 3;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .data-row.with-action .data-end {
-    grid-column: 4;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-  }
-  .data-row.with-action .wa-btn {
-    grid-column: 5;
-    grid-row: 1;
-    align-self: center;
-    justify-self: end;
-    margin: 0 18px 0 0;
-    min-height: 34px;
-    padding: 0 14px;
-    font-size: 13px;
-  }
-  .data-row.with-action .head-action-col {
-    display: block;
-    grid-column: 5;
-  }
-  .data-row.with-action .head-extra-col {
-    display: block;
-  }
-
-  /* ── Payments Collected/Paid rows: Name / Phone / Class / Paid / Paid on /
-     Method, each sized to its actual content — phone is a fixed "+91" + 10
-     digits, class fits the longest class name, paid is 5 digits + ₹, paid-on
-     shows date and time stacked (so it doesn't need to be wide) — with
-     Method as the one flexible column and vertical rules between columns,
-     modeled on a real transactions table (e.g. Razorpay's dashboard). ── */
-  .data-row.payment-row {
-    grid-template-columns: 170px 115px 160px 80px 78px 68px minmax(90px, 1fr);
-    align-items: stretch;
-    gap: 0;
-    padding: 0;
-    font-size: 13px;
-  }
-  .data-row.payment-row .data-end {
-    display: contents;
-  }
-  .data-row.payment-row .data-name {
-    grid-column: 1;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px 11px 18px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13.5px;
-    -webkit-line-clamp: 1;
-  }
-  .data-row.payment-row .pay-phone {
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    margin-top: 0;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .data-row.payment-row .data-sub {
-    grid-column: 3;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13px;
-  }
-  .data-row.payment-row .pay-amount {
-    grid-column: 4;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    text-align: right;
-    font-weight: 700;
-    font-size: 13.5px;
-  }
-  .data-row.payment-row .pay-date {
-    grid-column: 5;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 12.5px;
-    color: var(--muted);
-  }
-  .data-row.payment-row .pay-time {
-    grid-column: 6;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 12.5px;
-    color: var(--muted);
-  }
-  .data-row.payment-row .pay-method {
-    grid-column: 7;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    margin-top: 0;
-    padding: 11px 18px 11px 14px;
-    font-size: 13px;
-    overflow-wrap: break-word;
-  }
-  .data-row.payment-row .head-extra-col {
-    display: block;
-  }
-
-  /* ── All-signups rows: Name / Phone / Class / Signed up / Time. No amount or
-     method here, so every column is fixed-width — any leftover space just
-     trails after the last column instead of being forced into one of them. ── */
-  .data-row.signup-row {
-    grid-template-columns: 170px 115px 160px 90px 80px;
-    align-items: stretch;
-    gap: 0;
-    padding: 0;
-    font-size: 13px;
-  }
-  .data-row.signup-row .data-end {
-    display: contents;
-  }
-  .data-row.signup-row .data-name {
-    grid-column: 1;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px 11px 18px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13.5px;
-    -webkit-line-clamp: 1;
-  }
-  .data-row.signup-row .pay-phone {
-    grid-column: 2;
-    display: flex;
-    align-items: center;
-    margin-top: 0;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .data-row.signup-row .data-sub {
-    grid-column: 3;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 13px;
-  }
-  .data-row.signup-row .pay-date {
-    grid-column: 4;
-    display: flex;
-    align-items: center;
-    padding: 11px 14px;
-    border-right: 1px solid var(--border-soft);
-    font-size: 12.5px;
-    color: var(--muted);
-  }
-  .data-row.signup-row .pay-time {
-    grid-column: 5;
-    display: flex;
-    align-items: center;
-    padding: 11px 18px 11px 14px;
-    font-size: 12.5px;
-    color: var(--muted);
-  }
-  .data-row.signup-row .head-extra-col {
-    display: block;
-  }
-
-  /* Head-row cells for all three tables: plain padding + a vertical rule to
-     match the data rows below, without needing every label its own class. */
-  .data-row.head.with-action > *,
-  .data-row.head.payment-row > *,
-  .data-row.head.signup-row > * {
-    padding: 8px 14px;
-  }
-  .data-row.head.with-action > *:first-child,
-  .data-row.head.payment-row > *:first-child,
-  .data-row.head.signup-row > *:first-child {
-    padding-left: 18px;
-  }
-  .data-row.head.with-action > *:last-child,
-  .data-row.head.payment-row > *:last-child,
-  .data-row.head.signup-row > *:last-child {
-    padding-right: 18px;
-  }
-  .data-row.head.with-action > *:not(:last-child),
-  .data-row.head.payment-row > *:not(:last-child),
-  .data-row.head.signup-row > *:not(:last-child) {
-    border-right: 1px solid var(--border-soft);
   }
 }

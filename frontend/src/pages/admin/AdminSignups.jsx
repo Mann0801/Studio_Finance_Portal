@@ -55,29 +55,25 @@ export default function AdminSignups() {
       ) : signups.length === 0 ? (
         <div className="card empty">No signups yet.</div>
       ) : (
-        <div className="card flush signup-table" style={{ marginTop: 12 }}>
-          <div className="data-row head signup-row">
-            <span>Name</span>
-            <span className="head-extra-col">Phone</span>
-            <span>Class</span>
-            <span className="head-extra-col">Signed up</span>
-            <span className="head-extra-col">Time</span>
-          </div>
+        <div className="card flush" style={{ marginTop: 12 }}>
           {signups.map((s, i) => (
             <div
-              className="data-row signup-row"
+              className="record-row"
               key={`${s.id}-${s.batch}-${i}`}
               role="button"
               tabIndex={0}
               onClick={() => navigate(`/admin/students/${s.id}`)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
             >
-              <span className="data-name">{s.name}</span>
-              <span className="pay-phone muted">{formatPhoneDisplay(s.phone)}</span>
-              <span className="data-sub">{s.batch_label}</span>
-              <div className="data-end">
-                <div className="pay-date">{dateOnly(s.signed_up_at)}</div>
-                <div className="pay-time">{timeOnly(s.signed_up_at)}</div>
+              <div className="record-num">{i + 1}</div>
+              <div className="record-body">
+                <div className="record-name">{s.name}</div>
+                <div className="record-fields">
+                  <span><b>Phone</b> {formatPhoneDisplay(s.phone)}</span>
+                  <span><b>Class</b> {s.batch_label}</span>
+                  <span><b>Signed up</b> {dateOnly(s.signed_up_at)}</span>
+                  <span><b>Time</b> {timeOnly(s.signed_up_at)}</span>
+                </div>
               </div>
             </div>
           ))}

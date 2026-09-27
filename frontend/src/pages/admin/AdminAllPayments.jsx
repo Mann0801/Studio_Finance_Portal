@@ -98,38 +98,32 @@ export default function AdminAllPayments() {
                 <div className="card empty">No payments received this month yet.</div>
               ) : (
                 <div className="card flush">
-                  <div className="data-row head payment-row">
-                    <span>Name</span>
-                    <span className="head-extra-col">Phone</span>
-                    <span>Class</span>
-                    <span style={{ textAlign: 'right' }}>Paid</span>
-                    <span className="head-extra-col">Paid on</span>
-                    <span className="head-extra-col">Time</span>
-                    <span className="head-extra-col">Method</span>
-                  </div>
-                  {collected.map((p) => (
+                  {collected.map((p, i) => (
                     <div
-                      className="data-row payment-row"
+                      className="record-row"
                       key={p.id}
                       role="button"
                       tabIndex={0}
                       onClick={() => navigate(`/admin/students/${p.student_id}`)}
                       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${p.student_id}`)}
                     >
-                      <span className="data-name">{p.name}</span>
-                      <span className="pay-phone muted">{formatPhoneDisplay(p.phone)}</span>
-                      <span className="data-sub data-sub-2line">
-                        <span>{p.batch_label}</span>
-                        {p.slot_label && <span className="data-sub-timing">{p.slot_label}</span>}
-                      </span>
-                      <div className="data-end">
-                        <div className="pay-amount" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)' }}>
-                          {rupees(p.amount_paise)}
-                          {p.is_partial && <span className="pay-partial-tag">partial</span>}
+                      <div className="record-num">{i + 1}</div>
+                      <div className="record-body">
+                        <div className="record-name">{p.name}</div>
+                        <div className="record-fields">
+                          <span><b>Phone</b> {formatPhoneDisplay(p.phone)}</span>
+                          <span><b>Class</b> {p.batch_label}{p.slot_label ? ` · ${p.slot_label}` : ''}</span>
+                          <span className="amount-status" style={{ color: p.is_partial ? 'var(--warn)' : 'var(--paid)' }}>
+                            <b>Paid</b> {rupees(p.amount_paise)}{p.is_partial ? ' (partial)' : ''}
+                          </span>
+                          {p.paid_at && (
+                            <>
+                              <span><b>Paid on</b> {dateOnly(p.paid_at)}</span>
+                              <span><b>Time</b> {timeOnly(p.paid_at)}</span>
+                            </>
+                          )}
+                          <span><b>Method</b> {p.method}</span>
                         </div>
-                        <span className="pay-date muted">{p.paid_at ? dateOnly(p.paid_at) : '—'}</span>
-                        <span className="pay-time muted">{p.paid_at ? timeOnly(p.paid_at) : ''}</span>
-                        <div className="pay-method muted">{p.method}</div>
                       </div>
                     </div>
                   ))}
@@ -144,36 +138,26 @@ export default function AdminAllPayments() {
                 <div className="card empty">Everyone's paid for this month 🎉</div>
               ) : (
                 <div className="card flush">
-                  <div className="data-row head with-action">
-                    <span>Name</span>
-                    <span className="head-extra-col">Phone</span>
-                    <span>Class</span>
-                    <span style={{ textAlign: 'right' }}>Due</span>
-                    <span className="head-action-col"></span>
-                  </div>
-                  {pending.map((s) => (
+                  {pending.map((s, i) => (
                     <div
-                      className="data-row with-action"
+                      className="record-row"
                       key={`${s.id}-${s.batch}`}
                       role="button"
                       tabIndex={0}
                       onClick={() => navigate(`/admin/students/${s.id}`)}
                       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
                     >
-                      <span className="data-name">{s.name}</span>
-                      <span className="data-sub data-sub-2line">
-                        <span>{s.batch_label}</span>
-                        {s.slot_label && <span className="data-sub-timing">{s.slot_label}</span>}
-                      </span>
-                      <div className="data-end">
-                        <div style={{ color: 'var(--unpaid)', fontWeight: 700, fontSize: 16 }}>
-                          {rupees(Math.max(s.due_paise - s.paid_paise, 0))}
+                      <div className="record-num">{i + 1}</div>
+                      <div className="record-body">
+                        <div className="record-name">{s.name}</div>
+                        <div className="record-fields">
+                          <span><b>Phone</b> {formatPhoneDisplay(s.phone)}</span>
+                          <span><b>Class</b> {s.batch_label}{s.slot_label ? ` · ${s.slot_label}` : ''}</span>
+                          <span className="amount-status unpaid">
+                            <b>Due</b> {rupees(Math.max(s.due_paise - s.paid_paise, 0))}{s.status === 'partial' ? ' (part-paid)' : ''}
+                          </span>
                         </div>
-                        {s.status === 'partial' && (
-                          <div style={{ color: 'var(--warn)', fontWeight: 700 }}>part-paid</div>
-                        )}
                       </div>
-                      <span className="pay-phone muted">{formatPhoneDisplay(s.phone)}</span>
                       {s.whatsapp_url && (
                         <a
                           className="wa-btn"

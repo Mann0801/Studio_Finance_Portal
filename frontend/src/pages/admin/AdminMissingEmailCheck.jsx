@@ -71,29 +71,27 @@ export default function AdminMissingEmailCheck() {
           {tab === 'missing' ? 'Everyone has a recovery email on file 🎉' : 'No one has added a recovery email yet.'}
         </div>
       ) : (
-        <div className="stack" style={{ gap: 10 }}>
-          {rows.map((s) => (
+        <div className="card flush">
+          {rows.map((s, i) => (
             <div
               key={`${s.id}-${s.batch}`}
-              className="student-card tappable"
+              className="record-row"
               role="button"
               tabIndex={0}
               onClick={() => navigate(`/admin/students/${s.id}`)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
             >
-              <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
-              <div className="s-info">
-                <div className="s-name">{s.name}</div>
-                <div className="s-sub">
-                  {s.batch_label}
-                  {s.slot_label ? ` · ${s.slot_label}` : ''}
-                  {s.batch_deleted ? ' · Batch Deleted' : ''}
-                </div>
-                {tab === 'has' && <div className="s-sub">{s.email}</div>}
-              </div>
-              <div className="s-right">
-                <div className="s-status-row">
-                  <span className={`s-amount ${s.status}`}>{rupees(s.amount_paise)}</span>
+              <div className="record-num">{i + 1}</div>
+              <div className="record-body">
+                <div className="record-name">{s.name}</div>
+                <div className="record-fields">
+                  <span>
+                    <b>Class</b> {s.batch_label}
+                    {s.slot_label ? ` · ${s.slot_label}` : ''}
+                    {s.batch_deleted ? ' · Batch Deleted' : ''}
+                  </span>
+                  {tab === 'has' && <span><b>Email</b> {s.email}</span>}
+                  <span className={`amount-status ${s.status}`}><b>Amount</b> {rupees(s.amount_paise)}</span>
                   <StatusBadge status={s.status} />
                 </div>
               </div>

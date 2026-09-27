@@ -57,32 +57,28 @@ export default function AdminJoinDateCheck() {
       ) : mismatched.length === 0 ? (
         <div className="card empty">Everyone's join date looks right 🎉</div>
       ) : (
-        <div className="stack" style={{ gap: 10 }}>
-          {mismatched.map((s) => (
+        <div className="card flush">
+          {mismatched.map((s, i) => (
             <div
               key={`${s.id}-${s.batch}`}
-              className="student-card tappable"
+              className="record-row"
               role="button"
               tabIndex={0}
               onClick={() => navigate(`/admin/students/${s.id}`)}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && navigate(`/admin/students/${s.id}`)}
             >
-              <div className="avatar">{s.name.charAt(0).toUpperCase()}</div>
-              <div className="s-info">
-                <div className="s-name">{s.name}</div>
-                <div className="s-sub">
-                  {s.batch_label}
-                  {s.slot_label ? ` · ${s.slot_label}` : ''}
-                  {s.batch_deleted ? ' · Batch Deleted' : ''}
-                  {s.is_prorata ? ' · pro-rated' : ''}
-                </div>
-              </div>
-              <div className="s-right">
-                <div className="s-status-row">
-                  <span className="s-amount unpaid">{fmtDate(s.join_date)}</span>
-                </div>
-                <div className="s-status-row">
-                  <span className={`s-amount ${s.status}`}>{rupees(s.amount_paise)}</span>
+              <div className="record-num">{i + 1}</div>
+              <div className="record-body">
+                <div className="record-name">{s.name}</div>
+                <div className="record-fields">
+                  <span>
+                    <b>Class</b> {s.batch_label}
+                    {s.slot_label ? ` · ${s.slot_label}` : ''}
+                    {s.batch_deleted ? ' · Batch Deleted' : ''}
+                    {s.is_prorata ? ' · pro-rated' : ''}
+                  </span>
+                  <span className="amount-status unpaid"><b>Join date</b> {fmtDate(s.join_date)}</span>
+                  <span className={`amount-status ${s.status}`}><b>Amount</b> {rupees(s.amount_paise)}</span>
                   <StatusBadge status={s.status} />
                 </div>
               </div>
