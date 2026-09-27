@@ -263,7 +263,7 @@ export default function AdminEnrollmentDetail() {
                   <span className="muted">Days as member</span>
                   <span className="li-main" style={{ fontSize: 14 }}>{en.days_member} days</span>
                 </div>
-                {en.plan && en.plan !== 'monthly' && cls && (
+                {cls && hasAnyPlan(cls) && (
                   <div className="list-item">
                     <span className="muted">Plan</span>
                     <span className="li-main" style={{ fontSize: 14 }}>
@@ -508,7 +508,9 @@ export default function AdminEnrollmentDetail() {
                   </a>
                 )}
                 <button type="button" className="btn ghost block" onClick={startEdit}>
-                  <EditIcon width={14} height={14} /> Edit timing / join date
+                  <EditIcon width={14} height={14} />
+                  {' '}
+                  {hasAnyPlan(cls) ? 'Edit timing / join date / plan' : 'Edit timing / join date'}
                 </button>
                 {pauseOpen && !isPaused && (
                   <p className="muted small" style={{ margin: 0 }}>
